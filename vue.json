@@ -1,0 +1,97 @@
+{
+    "background_color": "white",
+    "window_size": [
+        974,
+        611
+    ],
+    "window_position": [
+        112,
+        240
+    ],
+    "X_axis": {
+        "lim": [
+            -0.5,
+            10.5
+        ],
+        "scale": "linear",
+        "ticks": {
+            "size": 10.0,
+            "style": "normal",
+            "weight": "normal",
+            "color": "black"
+        }
+    },
+    "Y_axis": {
+        "lim": [
+            -5.0,
+            105.0
+        ],
+        "scale": "linear",
+        "ticks": {
+            "size": 10.0,
+            "style": "normal",
+            "weight": "normal",
+            "color": "black"
+        }
+    },
+    "title": {
+        "fontsize": 12.0,
+        "fontstyle": "normal",
+        "fontweight": "normal",
+        "color": "black"
+    },
+    "xlabel": {
+        "fontsize": 10.0,
+        "fontstyle": "normal",
+        "fontweight": "normal",
+        "color": "black"
+    },
+    "ylabel": {
+        "fontsize": 10.0,
+        "fontstyle": "normal",
+        "fontweight": "normal",
+        "color": "black"
+    },
+    "curves": {
+        "0": {
+            "color": "#1f77b4",
+            "linewidth": 1.5,
+            "linestyle": "-",
+            "marker": "None",
+            "markersize": 6.0,
+            "label": "Weather data, \u00b0C, First curve"
+        },
+        "1": {
+            "color": "#ff7f0e",
+            "linewidth": 1.5,
+            "linestyle": "-",
+            "marker": "None",
+            "markersize": 6.0,
+            "label": "Weather data, \u00b0C, Second curve"
+        }
+    },
+    "cartouche": {
+        "cartouche_title_grid": [
+            "description",
+            "units",
+            "base",
+            "source",
+            "history",
+            "references",
+            "comment"
+        ],
+        "cartouche_font": {
+            "size": "",
+            "color": ""
+        }
+    },
+    "legend": {
+        "displayed_keys": [
+            "description",
+            "units",
+            "comment"
+        ],
+        "Is_legend_display": true,
+        "Is_title_display": false
+    }
+}
