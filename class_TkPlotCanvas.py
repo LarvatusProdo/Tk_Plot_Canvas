@@ -14,6 +14,152 @@ import numpy as np
 import copy
 import json
 
+class Windwo_font_parameter(tk.Toplevel):
+    def __init__(self, master, frame_to_modifiy=""):
+        super().__init__(master)
+        self.title(f"Modification du {frame_to_modifiy}")
+        self.geometry("400x400+500+100")
+        self["bg"] = "#f0f0f0"
+
+        self.frame_window = ttk.Frame(self)
+        self.frame_window.pack(fill="both", expand=True, anchor="nw")
+
+        
+        self.padx_echelle = (5, 5)
+        self.pady_echelle = (5, 5)
+
+        self.dict_font_parameters = {}
+        if frame_to_modifiy == "cartouche" : 
+            label_frame_title = ttk.LabelFrame(self.frame_window, text="Paramètre pour le nom des colonnes :" )
+            label_frame_title.pack(fill="both", side="top", padx=10, pady=10)
+
+            label_frame_line = ttk.LabelFrame(self.frame_window, text="Paramètre pour les lignes :" )
+            label_frame_line.pack(fill="both", side="top", padx=10, pady=10)
+
+            self._fill_label_frame(label_frame_title, nom_frame="Cartouche, title")
+            self._fill_label_frame(label_frame_line, nom_frame="Cartouche, line")
+
+        self.button_apply = ttk.Button(self.frame_window, text="Appliquer les changement")
+        self.button_apply.pack(fill="x", side="top", padx=10, pady=10)
+
+    def _fill_label_frame(self, label_frame, nom_frame = ""):
+        
+        row_start = 0
+        column_start = 0
+
+        ttk.Label(label_frame, text="Police :").grid(row=row_start, column=column_start, sticky="e", padx=self.padx_echelle, pady=self.pady_echelle)
+        list_police = ["Arial", "Helvetica", "Time New Roman"]
+        combo_police = ttk.Combobox(label_frame, values=list_police, state="readonly", width=10)
+        combo_police.grid(row=row_start, column=column_start + 1, sticky="w", padx=5, pady=5)
+        combo_police.current(0)  # Set to current style of ticks or "normal" by default
+        row_start +=1
+
+        ttk.Label(label_frame, text="Taille de la police :").grid(row=row_start, column=column_start, sticky="e", padx=self.padx_echelle, pady=self.pady_echelle)
+            # Spinbox to choose the size of the ticks on the axis
+        spinbox_size_police = ttk.Spinbox(label_frame, from_=0, to=20, increment=1)
+        spinbox_size_police.grid(row=row_start, column=column_start + 1,columnspan=2, sticky="w", padx=5, pady=5)
+        spinbox_size_police.delete(0, "end")
+        #self.spinbox_size_police_title.insert(0, int(axes_axis.get_ticklabels()[0].get_fontsize()) if axes_axis.get_ticklabels() else 10)  # Set to current size of x ticks or 10 by default
+        row_start +=1
+
+        # Combobox to choose the style of the frame
+        ttk.Label(label_frame, text="Styles de la police:").grid(row=row_start, column=column_start, sticky="e", padx=self.padx_echelle, pady=self.pady_echelle) 
+        self.list_style_police = ["normal", "italic", "oblique"]
+        combo_style_police = ttk.Combobox(label_frame, values=self.list_style_police, state="readonly", width=10)
+        combo_style_police.grid(row=row_start, column=column_start + 1, sticky="w", padx=5, pady=5)
+        #index_style = list_style_police.index(label_frame.get_ticklabels()[0].get_fontstyle()) if axes_axis.get_ticklabels() else 0 
+        combo_style_police.current(0)  # Set to current style of ticks or "normal" by default
+        
+         # Checkbutton to choose if frame is bold or not
+        var_checkbutton_gras = tk.BooleanVar(value=False)
+        checkbutton_bold = ttk.Checkbutton(label_frame, text="Gras", variable= var_checkbutton_gras)
+        checkbutton_bold.grid(row=row_start, column=column_start + 2, sticky="w", padx=5, pady=5)
+        checkbutton_bold.configure(state=["selected"])  # Ensure the checkbutton is not in an indeterminate state
+        row_start +=1
+        
+        # Button to choose the color :
+        ttk.Label(label_frame, text="Couleur de la police:").grid(row=row_start, column=column_start, sticky="e", padx=self.padx_echelle, pady=self.pady_echelle)
+        button_couleur = tk.Button(label_frame, width=3) # command TODO 
+        button_couleur.grid(row=row_start, column=column_start + 1, sticky="w", padx=5, pady=5)
+        button_couleur.configure(command=partial(self.choisir_couleur_police, button_couleur))
+        
+        self.dict_font_parameters[nom_frame] = {
+            "combo_police" : combo_police,
+            "spinbox size police" : spinbox_size_police,
+            "combobox style police" : combo_style_police,
+            "checkbutton bold" : [checkbutton_bold , var_checkbutton_gras],
+            "button_couleur" : button_couleur
+        }
+
+    def set_widget_with_cartouch_font(self):
+        # Bind fonction apply style : 
+        self.button_apply.configure(command=self._update_cartouch)
+
+        # 'Cartouche_titre.TLabel': 
+        style = self.master.master.style.configure('Cartouche_titre.TLabel')
+        style_font = style["font"].split(" ")
+        index_police = self.list_style_police.index(int(style_font[0])) if style_font[0] in self.list_style_police else 0
+        self.dict_font_parameters["Cartouche, title"]["combo_police"].current(index_police)
+        self.dict_font_parameters["Cartouche, title"]["spinbox size police"].insert(0, int(style_font[1]))
+        self.dict_font_parameters["Cartouche, title"]["checkbutton bold"][0].state(["selected"] if style_font[2] == "bold" else ["!selected"])
+        self.dict_font_parameters["Cartouche, title"]["checkbutton bold"][1].set( style_font[2] == "bold" )
+
+        if len(style_font) > 3:
+            index_police = self.list_style_police.index(int(style_font[0])) if style_font[0] in self.list_style_police else 0
+            self.dict_font_parameters["Cartouche, title"][ "combobox style police"].current(index_police)
+
+        self.dict_font_parameters["Cartouche, title"]["button_couleur"].configure(bg=style["foreground"])
+
+        # 'Cartouche.TLabel':  
+
+        style = self.master.master.style.configure('Cartouche.TLabel')
+        style_font = style["font"].split(" ")
+        index_police = self.list_style_police.index(int(style_font[0])) if style_font[0] in self.list_style_police else 0
+        self.dict_font_parameters["Cartouche, line"]["combo_police"].current(index_police)
+        self.dict_font_parameters["Cartouche, line"]["spinbox size police"].insert(0, int(style_font[1]))
+        self.dict_font_parameters["Cartouche, line"]["checkbutton bold"][0].state(["selected"] if style_font[2] == "bold" else ["!selected"])
+        self.dict_font_parameters["Cartouche, line"]["checkbutton bold"][1].set( style_font[2] == "bold" )
+
+        if len(style_font) > 3:
+            index_police = self.list_style_police.index(int(style_font[0])) if style_font[0] in self.list_style_police else 0
+            self.dict_font_parameters["Cartouche, line"][ "combobox style police"].current(index_police)
+
+        self.dict_font_parameters["Cartouche, line"]["button_couleur"].configure(bg=style["foreground"])
+
+    def _update_cartouch(self):
+        # Pour le titre : 
+        police =  self.dict_font_parameters["Cartouche, title"]["combo_police"].get()
+        size = self.dict_font_parameters["Cartouche, title"]["spinbox size police"].get()
+        bold = "bold" if  self.dict_font_parameters["Cartouche, title"]["checkbutton bold"][1].get() == True else "normal"
+        style = self.dict_font_parameters["Cartouche, title"][ "combobox style police"].get()
+        
+        if style != "normal":
+            self.master.master.style.configure('Cartouche_titre.TLabel', font=(police, int(size), style, bold))
+        else :
+            self.master.master.style.configure('Cartouche_titre.TLabel', font=(police, int(size), bold))
+
+        bg_button = self.dict_font_parameters["Cartouche, title"]["button_couleur"].cget("bg")
+        self.master.master.style.configure('Cartouche_titre.TLabel', foreground = bg_button)
+
+        # Pour le titre : 
+        police =  self.dict_font_parameters["Cartouche, line"]["combo_police"].get()
+        size = self.dict_font_parameters["Cartouche, line"]["spinbox size police"].get()
+        bold = "bold" if  self.dict_font_parameters["Cartouche, line"]["checkbutton bold"][1].get() == True else "normal"
+        style = self.dict_font_parameters["Cartouche, line"][ "combobox style police"].get()
+        
+        if style != "normal":
+            self.master.master.style.configure('Cartouche.TLabel', font=(police, int(size), style, bold))
+        else :
+            self.master.master.style.configure('Cartouche.TLabel', font=(police, int(size), bold))
+
+        bg_button = self.dict_font_parameters["Cartouche, line"]["button_couleur"].cget("bg")
+        self.master.master.style.configure('Cartouche.TLabel', foreground = bg_button)
+
+    def choisir_couleur_police(self, widget):
+        color_code = colorchooser.askcolor(master = self ,title="Choisir une couleur de police")
+        if color_code:
+            # Update the color button background
+           widget.configure(bg=color_code[1])  # Update button color
 
 class Menu_graphique(tk.Toplevel):
     def __init__(self, master, notebook_shown=""):
@@ -88,11 +234,11 @@ class Menu_graphique(tk.Toplevel):
         padx_echelle = (5, 5)
         pady_echelle = (5, 5)
 
-        ttk.Label(self.tab_echelle, text="Modification des échelles:", style='Cartouche_titre.TLabel').grid(row=0, column=0, sticky="w", padx=5, pady=10, columnspan=6)
+        ttk.Label(self.tab_echelle, text="Modification des échelles:", style='Titre_parammetre.TLabel').grid(row=0, column=0, sticky="w", padx=5, pady=10, columnspan=6)
 
         # Frame for axe X : 
         frame_axe_x = ttk.LabelFrame(self.tab_echelle, text="Axe X :", padding=(10, 10))
-        frame_axe_x.grid(row=1, column=0, columnspan=2, sticky="we", padx=padx_echelle, pady=pady_echelle)
+        frame_axe_x.grid(row=1, column=0, sticky="we", padx=padx_echelle, pady=pady_echelle)
 
         ttk.Label(frame_axe_x, text="Valeur min:").grid(row=0, column=0, sticky="e", padx=padx_echelle, pady=pady_echelle)
         ttk.Label(frame_axe_x, text="Valeur max:").grid(row=1, column=0, sticky="e", padx=padx_echelle, pady=pady_echelle)
@@ -113,7 +259,7 @@ class Menu_graphique(tk.Toplevel):
 
         # Frame for axe Y : 
         frame_axe_y = ttk.LabelFrame(self.tab_echelle, text="Axe Y :", padding=(10, 10))
-        frame_axe_y.grid(row=1, column=2, columnspan=2, sticky="we", padx=padx_echelle, pady=pady_echelle)
+        frame_axe_y.grid(row=1, column=2, sticky="we", padx=padx_echelle, pady=pady_echelle)
 
         ttk.Label(frame_axe_y, text="Valeur min:").grid(row=0, column=0, sticky="e", padx=padx_echelle, pady=pady_echelle)
         ttk.Label(frame_axe_y, text="Valeur max:").grid(row=1, column=0, sticky="e", padx=padx_echelle, pady=pady_echelle)
@@ -133,8 +279,8 @@ class Menu_graphique(tk.Toplevel):
         self._frame_echelle_style(frame_axe_y, "y", self.master.axes.yaxis, row_start=4, column_start=0, padx_echelle=(5, 5), pady_echelle=(5, 5))
 
         # Apply and Auto buttons
-        ttk.Button(self.tab_echelle, text="Appliquer", command=self._on_echelle_update, width=30).grid(row=2, column=0, columnspan=3,padx=padx_echelle, pady=pady_echelle, sticky="we")
-        ttk.Button(self.tab_echelle, text="Auto", command=self._on_zoom_auto, width=30).grid(row=2, column=3, columnspan=6, padx=padx_echelle, pady=pady_echelle, sticky="we")
+        ttk.Button(self.tab_echelle, text="Appliquer", command=self._on_echelle_update, width=30).grid(row=2, column=0, padx=padx_echelle, pady=pady_echelle, sticky="we")
+        ttk.Button(self.tab_echelle, text="Auto", command=self._on_zoom_auto, width=30).grid(row=2, column=2, padx=padx_echelle, pady=pady_echelle, sticky="we")
 
         pass
     
@@ -156,18 +302,16 @@ class Menu_graphique(tk.Toplevel):
         combo.current(index_style)  # Set to current style of ticks or "normal" by default
         
          # Checkbutton to choose if the ticks on the x axis are bold or not
-        var_checkbutton_gras = tk.BooleanVar(value=False)
-        checkbutton = ttk.Checkbutton(frame, text="Gras", variable=var_checkbutton_gras)
+        bool_bold = axes_axis.get_ticklabels()[0].get_fontweight() == "bold" if len(axes_axis.get_ticklabels()) > 0 else False
+        var_checkbutton_gras = tk.BooleanVar(value= bool_bold) #TODO 
+        checkbutton = ttk.Checkbutton(frame, text="Gras", variable = var_checkbutton_gras)
         checkbutton.grid(row=row_start + 1, column=column_start + 2, sticky="w", padx=5, pady=5)
-        checkbutton.configure(state=["selected"] if var_checkbutton_gras.get() == True else ["!selected"])  # Ensure the checkbutton is not in an indeterminate state
+        checkbutton.state(["selected"] if var_checkbutton_gras.get() == True else ["!selected"])  # Ensure the checkbutton is not in an indeterminate state
 
             # Button to choose the color of the ticks on the axis
         ttk.Label(frame, text="Couleur de la police:").grid(row=row_start + 2, column=column_start, sticky="e", padx=padx_echelle, pady=pady_echelle)
         button_couleur_xticks = tk.Button(frame, command=partial(self.choisir_couleur_police, self.master._canvas, f"{axis_type}, ticks"), width=2, height=1, bg=axes_axis.get_ticklabels()[0].get_color() if axes_axis.get_ticklabels() else "#000000")
         button_couleur_xticks.grid(row=row_start + 2, column=column_start + 1, sticky="w", padx=5, pady=5)
-
-           
-           
 
         self.dict_widget_font[f"{axis_type}, ticks"] = {
             "axis": axes_axis,
@@ -179,9 +323,13 @@ class Menu_graphique(tk.Toplevel):
 
     def fill__frame_cartouche_menu(self):
         # Add controls for cartouche here
-        label = ttk.Label(self.tab_cartouche, text="Paramètres du cartouche:", style='Cartouche_titre.TLabel')
-        label.grid(row=0, column=0, sticky="w", padx=5, pady=10, columnspan=6 )
-       
+        label = ttk.Label(self.tab_cartouche, text="Paramètres du cartouche:", style='Titre_parammetre.TLabel')
+        label.grid(row=0, column=0, sticky="w", padx=5, pady=10, columnspan=4 )
+
+        # Bonton pour moodifier font du cartouche : 
+        button_modify_font = ttk.Button(self.tab_cartouche, text="Paramètres du cartouche:", 
+                                        command=self._cartouch_show_font_parameters )
+        button_modify_font.grid(row=0, column=4, sticky="w", padx=5, pady=10, columnspan=2 )
         # 
         initialize_cartouche_frame = True
 
@@ -194,7 +342,7 @@ class Menu_graphique(tk.Toplevel):
             column_index = 1
             if initialize_cartouche_frame :
                 for key in label_dict:
-                    ttk.Label(self.tab_cartouche, text="Indice", style='Cartouche_titre.TLabel').grid(row=1, column=0, sticky="w", padx=5, pady=5)
+                    ttk.Label(self.tab_cartouche, text="Indice", style='Titre_parammetre.TLabel').grid(row=1, column=0, sticky="w", padx=5, pady=5)
                     if not any(key == combo['values'] for combo in self.list_combobox_cartouche):
                         list_values_combo = [""] + list(label_dict.keys())
                         
@@ -220,7 +368,7 @@ class Menu_graphique(tk.Toplevel):
                 initialize_cartouche_frame = False
                 column_index = 1
 
-            ttk.Label(self.tab_cartouche, text=str(index+1), style='Cartouche_titre.TLabel').grid(row=index+2, column=0, sticky="e", padx=5, pady=5)
+            ttk.Label(self.tab_cartouche, text=str(index+1), style='Titre_parammetre.TLabel').grid(row=index+2, column=0, sticky="e", padx=5, pady=5)
            
             for combobox in self.list_combobox_cartouche:
                 key_to_show = combobox.get()
@@ -291,6 +439,11 @@ class Menu_graphique(tk.Toplevel):
                     entry_widget.delete(0, tk.END)
                     entry_widget.insert(0, "")
 
+
+    def _cartouch_show_font_parameters(self):
+        font_cartouch = Windwo_font_parameter(self, frame_to_modifiy="cartouche")
+        font_cartouch.set_widget_with_cartouch_font()
+    
 
 
     def fill__frame_courbe(self):
@@ -381,7 +534,7 @@ class Menu_graphique(tk.Toplevel):
 
     def fill__frame_axes(self):
         
-        ttk.Label(self.tab_axes, text="Modification des axes et titres:", style='Cartouche_titre.TLabel').grid(row=0, column=0, sticky="w", padx=5, pady=10, columnspan=2)
+        ttk.Label(self.tab_axes, text="Modification des axes et titres:", style='Titre_parammetre.TLabel').grid(row=0, column=0, sticky="w", padx=5, pady=10, columnspan=2)
 
         # Add controls for axes and title here
         padx_axes = (5, 5)
@@ -553,7 +706,7 @@ class Menu_graphique(tk.Toplevel):
 
     def fill__frame_legende(self):
         # Add controls for legend properties here
-        ttk.Label(self.tab_legende, text="Paramètres de la légende:", style='Cartouche_titre.TLabel').grid(row=0, column=0, sticky="w", padx=5, pady=10, columnspan=2)
+        ttk.Label(self.tab_legende, text="Paramètres de la légende:", style='Titre_parammetre.TLabel').grid(row=0, column=0, sticky="w", padx=5, pady=10, columnspan=2)
         
         # Checkbutton to show/hide legend on the canvas
         self.checkbutton_var_legende = tk.BooleanVar(value=self.master.axes.get_legend() is not None)
@@ -579,7 +732,7 @@ class Menu_graphique(tk.Toplevel):
             label_dict = self.master._line_labels[index]
             column_index = 0
             if len(self.list_combobox_legende) == 0:
-                ttk.Label(self.tab_legende, text="Indice", style='Cartouche_titre.TLabel').grid(row=2, column=column_index, sticky="w", padx=5, pady=5)
+                ttk.Label(self.tab_legende, text="Indice", style='Titre_parammetre.TLabel').grid(row=2, column=column_index, sticky="w", padx=5, pady=5)
                 
                 for key in label_dict:
                     # Only add a combobox for this key if it doesn't already exist in the legend title grid (to avoid duplicate comboboxes for the same key across different lines)
@@ -605,7 +758,7 @@ class Menu_graphique(tk.Toplevel):
                         combobox.current(0)  # Set to "None" by default
                     column_index += 1
                 
-            ttk.Label(self.tab_legende, text=str(index+1), style='Cartouche_titre.TLabel').grid(row=index+3, column=0, sticky="e", padx=5, pady=5)
+            ttk.Label(self.tab_legende, text=str(index+1), style='Titre_parammetre.TLabel').grid(row=index+3, column=0, sticky="e", padx=5, pady=5)
             column_index = 0
             # Update the entries in the legend frame for each line based on the selected keys in the comboboxes
             for combobox in self.list_combobox_legende:
@@ -718,6 +871,7 @@ class TkPlotCanvas(ttk.Frame):
             dpi: Dots-per-inch for the Matplotlib figure.
             figsize: Figure size in inches (width, height).
             bg_color: Background color for the widgets and plot.
+            load_view : json file associated to a previous view saved 
             **kwargs: Additional kwargs passed to tk.Frame.
         """
         super().__init__(master, **kwargs)
@@ -768,17 +922,21 @@ class TkPlotCanvas(ttk.Frame):
         self._canvas.get_tk_widget().pack(fill="both", expand=True)
 
         # Create context menu.
-        self.menu_click = tk.Menu(self, tearoff=0)
-        self.menu_click.add_command(label="Modiification des courbes", command=partial(self.open_menu_graphique, "Courbes"))
-        self.menu_click.add_command(label="Modification du cartouche", command=partial(self.open_menu_graphique, "Cartouche"))
-        self.menu_click.add_command(label="Modiification des echelles", command=partial(self.open_menu_graphique, "Echelle"))
+        self.menu_click = tk.Menu(self, tearoff=0, bg=bg_color)
         self.menu_click.add_command(label="Modiification des axes et titres", command=partial(self.open_menu_graphique, "Axes et titre"))
+        self.menu_click.add_separator()
+        self.menu_click.add_command(label="Modiification des echelles", command=partial(self.open_menu_graphique, "Echelle"))
+        self.menu_click.add_command(label="Modiification des courbes", command=partial(self.open_menu_graphique, "Courbes"))
+        self.menu_click.add_separator()
+        self.menu_click.add_command(label="Modification du cartouche", command=partial(self.open_menu_graphique, "Cartouche"))    
         self.menu_click.add_command(label="Modiification de la légende", command=partial(self.open_menu_graphique, "Légende"))
         self._canvas.get_tk_widget().bind("<Button-3>", self.do_popup)
 
         # load the view if specified
         if load_view:
             self.parametre_vue = self.load_parameters(load_view)
+        else : 
+            self.parametre_vue = {}
 
     def _initialized_style(self, bg="white"):
         # Set a default style for the application (optional)
@@ -794,7 +952,10 @@ class TkPlotCanvas(ttk.Frame):
         self.style.map('TNotebook.Tab', foreground=[('selected', 'black'), ('!selected', 'gray')], background=[('selected', self.bg_color), ('!selected', self.bg_color)])
 
         self.style.configure('TLabel', background=self.bg_color)
-        self.style.configure('Cartouche_titre.TLabel', font=('Arial', 10, 'bold'))
+        self.style.configure('Cartouche_titre.TLabel', font=('Arial', 10, 'bold'), foreground="black")
+        self.style.configure('Cartouche.TLabel', font=('Arial', 10, 'normal'), foreground="black")
+
+        self.style.configure('Titre_parammetre.TLabel', font=('Arial', 10, 'bold'), foreground="black")
 
         self.style.configure('TEntry', background=self.bg_color)
         self.style.configure('TButton', background=self.bg_color)
@@ -860,7 +1021,7 @@ class TkPlotCanvas(ttk.Frame):
             # Add the values of the metadata in the cartouche
             column_index = 1       
             for key, value in label_to_display.items():
-                self._cartouche_grid[line_index].append(ttk.Label(self._cartouche_frame, text=str(value)))
+                self._cartouche_grid[line_index].append(ttk.Label(self._cartouche_frame, text=str(value), style="Cartouche.TLabel"))
                 self._cartouche_grid[line_index][-1].grid(row=line_index + 1, column=column_index, sticky="w", padx=5, pady=5)
                 column_index += 1   
 
@@ -876,11 +1037,33 @@ class TkPlotCanvas(ttk.Frame):
             label_dict = self._line_labels[index]
             line.set_label(self.get_string_legende(label_dict, shown_keys=self.Is_title_display))  # Update line label based on legend entry values and whether to show key titles
 
-        # Update legend to reflect changes 
-        if self.Is_legend_display:
+        # Update legend to reflect changes if lines are in the canvas
+        if self.Is_legend_display and len(self._lines) > 0:
             self.axes.legend(draggable=True)  
         self._canvas.draw()
 
+    def _update_axis(self, axis_to_update, parameters = {}, axe = "X"):
+        
+        if "ticks" in parameters:
+            tick_params = parameters["ticks"]
+            for tick in axis_to_update.get_ticklabels():
+                tick.set_fontsize(tick_params.get("size"))
+                tick.set_fontstyle(tick_params.get("style"))
+                tick.set_fontweight(tick_params.get("weight"))
+                tick.set_color(tick_params.get("color"))  
+        
+        if "lim" in parameters and axe == "X":
+                self.axes.set_xlim(parameters["lim"])
+        if "scale" in parameters and axe == "X":
+            self.axes.set_xscale(parameters["scale"])
+
+        if "lim" in parameters and axe == "Y":
+            self.axes.set_ylim(parameters["lim"])
+        if "scale" in parameters and axe == "Y":
+            self.axes.set_yscale(parameters["scale"])
+        
+
+        return True
 
     def save_parameters(self):
         
@@ -946,16 +1129,13 @@ class TkPlotCanvas(ttk.Frame):
                     "linestyle": line.get_linestyle(),
                     "marker": line.get_marker(),
                     "markersize": line.get_markersize(),
-                    "label": line.get_label()
                 }
                 for index, line in enumerate(self._lines) 
             },
             "cartouche": {
                 "cartouche_title_grid": [label.cget("text") for label in self._cartouche_title_grid],
-                "cartouche_font": {
-                    "size": self._cartouche_title_grid[0].cget("font") if len(self._cartouche_title_grid) > 0 else None,
-                    "color": self._cartouche_title_grid[0].cget("foreground") if len(self._cartouche_title_grid) > 0 else None,
-                },
+                "cartouche_font_title": self.style.configure('Cartouche_titre.TLabel'),
+                "cartouche_font_line": self.style.configure('Cartouche.TLabel'),
             },
             "legend": {
                 "displayed_keys": [ key for key in self.legend_to_show if key != '' ] if len(self.legend_to_show) > 0 else [],
@@ -996,32 +1176,10 @@ class TkPlotCanvas(ttk.Frame):
             self.master.geometry(f"+{parameters['window_position'][0]}+{parameters['window_position'][1]}")
 
         if "X_axis" in parameters:
-            x_axis_params = parameters["X_axis"]
-            if "ticks" in x_axis_params:
-                tick_params = x_axis_params["ticks"]
-                for tick in self.axes.xaxis.get_ticklabels():
-                    tick.set_fontsize(tick_params.get("size"))
-                    tick.set_fontstyle(tick_params.get("style"))
-                    tick.set_fontweight(tick_params.get("weight"))
-                    tick.set_color(tick_params.get("color"))            
-            if "lim" in x_axis_params:
-                self.axes.set_xlim(x_axis_params["lim"])
-            if "scale" in x_axis_params:
-                self.axes.set_xscale(x_axis_params["scale"])
+            self._update_axis(self.axes.xaxis, parameters["X_axis"], axe= "X" )
 
         if "Y_axis" in parameters:
-            y_axis_params = parameters["Y_axis"]
-            if "ticks" in y_axis_params:
-                tick_params = y_axis_params["ticks"]
-                for tick in self.axes.yaxis.get_ticklabels():
-                    tick.set_fontsize(tick_params.get("size"))
-                    tick.set_fontstyle(tick_params.get("style"))
-                    tick.set_fontweight(tick_params.get("weight"))
-                    tick.set_color(tick_params.get("color"))
-            if "lim" in y_axis_params:
-                self.axes.set_ylim(y_axis_params["lim"])
-            if "scale" in y_axis_params:
-                self.axes.set_yscale(y_axis_params["scale"])
+            self._update_axis(self.axes.xaxis, parameters["Y_axis"], axe= "Y" )
         
         if "title" in parameters:
             self.axes.set_title(self._title_var.get(), parameters["title"])
@@ -1038,14 +1196,16 @@ class TkPlotCanvas(ttk.Frame):
                 line.set_linestyle(curve_params.get("linestyle"))
                 line.set_marker(curve_params.get("marker"))
                 line.set_markersize(curve_params.get("markersize"))
-                line.set_label(curve_params.get("label"))
+
         if "cartouche" in parameters:
             cartouche_params = parameters["cartouche"]
             for index, label in enumerate(self._cartouche_title_grid):
                 if index < len(cartouche_params["cartouche_title_grid"]):
                     label.config(text=cartouche_params["cartouche_title_grid"][index])
-                    label.config(font=cartouche_params["cartouche_font"]["size"])
-                    label.config(foreground=cartouche_params["cartouche_font"]["color"])
+
+            self.style.configure('Cartouche_titre.TLabel',  font= cartouche_params["cartouche_font_title"]["font"], foreground=cartouche_params["cartouche_font_title"]["foreground"] )
+            self.style.configure('Cartouche.TLabel', font= cartouche_params["cartouche_font_line"]["font"], foreground=cartouche_params["cartouche_font_line"]["foreground"] )
+
         if "legend" in parameters:
             legend_params = parameters["legend"]
             self.legend_to_show = legend_params.get("displayed_keys", [])
@@ -1055,7 +1215,7 @@ class TkPlotCanvas(ttk.Frame):
                 
             self.Is_legend_display = legend_params.get("Is_legend_display", False)
             self.Is_title_display = legend_params.get("Is_title_display", False)
-
+    
             self._update_legende()
 
         self._canvas.draw()
@@ -1111,25 +1271,38 @@ class TkPlotCanvas(ttk.Frame):
         if label:           
             label_str = self.get_string_legende(label, shown_keys=self.Is_title_display)
         
+        modif_plot_kwargs = copy.copy(plot_kwargs)   
+        if self.parametre_vue != {}: # Si un fichier json a été chargé : 
+            # Changement de self.parametre_vue, si l'utilisateuur spécifie des attriibues
+            n_lines = len(self._lines) 
+            for key in self.parametre_vue["curves"][str(n_lines)]:
+                if not key in plot_kwargs:
+                    modif_plot_kwargs[key] = self.parametre_vue["curves"][str(n_lines)][key]
 
-        line, = self.axes.plot(x, y, label=label_str, **plot_kwargs)
+        
+        line, = self.axes.plot(x, y, label=label_str, **modif_plot_kwargs)
         self._lines.append(line)
         self._line_labels.append(label)
 
         # Cartouche: Update the cartouche with the metadata of the newly added line.
         self.fill_cartouche_frame(label_to_display=label, line_index=len(self._lines)-1, line_display=True)
 
-        if title is not None:
-            self.axes.set_title(title)
+        if title is not None and "title" in self.parametre_vue :
+            self.axes.set_title(title, self.parametre_vue["title"])
             self._title_var.set(title)
-        if xlabel is not None:
-            self.axes.set_xlabel(xlabel)
+        if xlabel is not None and "xlabel" in self.parametre_vue :
+            self.axes.set_xlabel(xlabel, self.parametre_vue["xlabel"])
             self._xlabel_var.set(xlabel)
-        if ylabel is not None:
-            self.axes.set_ylabel(ylabel)
+        if ylabel is not None and "ylabel" in self.parametre_vue : 
+            self.axes.set_ylabel(ylabel, self.parametre_vue["ylabel"])
             self._ylabel_var.set(ylabel)
 
         self.axes.grid(grid)
+
+        if self.parametre_vue != {}: # Si un fichier json a été chargé : 
+            # Update X et Y axis from self.parameter_vue
+            self._update_axis(self.axes.xaxis, self.parametre_vue.get("X_axis"), axe= "X" )
+            self._update_axis(self.axes.yaxis, self.parametre_vue.get("Y_axis"), axe= "Y" )
 
         if legend and label_str is not None:
             if self.Is_legend_display:
@@ -1146,6 +1319,7 @@ def demo() -> None:
     root.title("Tkinter + Matplotlib Plot Demo")
 
     plot_widget = TkPlotCanvas(root, load_view="vue.json")  # Load parameters from a JSON file if it exists
+    #plot_widget = TkPlotCanvas(root)
     plot_widget.pack(fill="both", expand=True)
 
     x = list(range(11))
@@ -1173,7 +1347,7 @@ def demo() -> None:
     #ds_2.attrs["comment"] = "Second curve"
     # Add a second curve without clearing the first.
 
-    plot_widget.plot(ds_2["time"], ds_2["temperature"], clear=False, label=ds_2.attrs, legend=True)
+    plot_widget.plot(ds_2["time"], ds_2["temperature"], clear=False, label=ds_2.attrs, legend=True, color="black")
     
     root.mainloop()
 

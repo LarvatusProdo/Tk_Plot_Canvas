@@ -5,8 +5,8 @@
         611
     ],
     "window_position": [
-        112,
-        240
+        196,
+        171
     ],
     "X_axis": {
         "lim": [
@@ -15,9 +15,9 @@
         ],
         "scale": "linear",
         "ticks": {
-            "size": 10.0,
+            "size": 14.0,
             "style": "normal",
-            "weight": "normal",
+            "weight": "bold",
             "color": "black"
         }
     },
@@ -28,46 +28,44 @@
         ],
         "scale": "linear",
         "ticks": {
-            "size": 10.0,
+            "size": 14.0,
             "style": "normal",
-            "weight": "normal",
+            "weight": "bold",
             "color": "black"
         }
     },
     "title": {
-        "fontsize": 12.0,
+        "fontsize": 14.0,
         "fontstyle": "normal",
-        "fontweight": "normal",
-        "color": "black"
+        "fontweight": "bold",
+        "color": "#000000"
     },
     "xlabel": {
-        "fontsize": 10.0,
+        "fontsize": 14.0,
         "fontstyle": "normal",
-        "fontweight": "normal",
-        "color": "black"
+        "fontweight": "bold",
+        "color": "#000000"
     },
     "ylabel": {
-        "fontsize": 10.0,
+        "fontsize": 14.0,
         "fontstyle": "normal",
-        "fontweight": "normal",
-        "color": "black"
+        "fontweight": "bold",
+        "color": "#000000"
     },
     "curves": {
         "0": {
-            "color": "#1f77b4",
+            "color": "#ff0000",
             "linewidth": 1.5,
-            "linestyle": "-",
+            "linestyle": "--",
             "marker": "None",
-            "markersize": 6.0,
-            "label": "Weather data, \u00b0C, First curve"
+            "markersize": 6.0
         },
         "1": {
-            "color": "#ff7f0e",
+            "color": "black",
             "linewidth": 1.5,
             "linestyle": "-",
             "marker": "None",
-            "markersize": 6.0,
-            "label": "Weather data, \u00b0C, Second curve"
+            "markersize": 6.0
         }
     },
     "cartouche": {
@@ -80,9 +78,13 @@
             "references",
             "comment"
         ],
-        "cartouche_font": {
-            "size": "",
-            "color": ""
+        "cartouche_font_title": {
+            "foreground": "#c3063c",
+            "font": "Arial 15 bold"
+        },
+        "cartouche_font_line": {
+            "foreground": "black",
+            "font": "Arial 10 normal"
         }
     },
     "legend": {
