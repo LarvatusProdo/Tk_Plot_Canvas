@@ -48,15 +48,15 @@ class Windwo_font_parameter(tk.Toplevel):
         column_start = 0
 
         ttk.Label(label_frame, text="Police :").grid(row=row_start, column=column_start, sticky="e", padx=self.padx_echelle, pady=self.pady_echelle)
-        list_police = ["Arial", "Helvetica", "Time New Roman"]
-        combo_police = ttk.Combobox(label_frame, values=list_police, state="readonly", width=10)
-        combo_police.grid(row=row_start, column=column_start + 1, sticky="w", padx=5, pady=5)
+        list_police = list(tk.font.families())
+        combo_police = ttk.Combobox(label_frame, values=list_police, state="readonly", width=20)
+        combo_police.grid(row=row_start, column=column_start + 1, sticky="w", columnspan=2, padx=5, pady=5)
         combo_police.current(0)  # Set to current style of ticks or "normal" by default
         row_start +=1
 
         ttk.Label(label_frame, text="Taille de la police :").grid(row=row_start, column=column_start, sticky="e", padx=self.padx_echelle, pady=self.pady_echelle)
             # Spinbox to choose the size of the ticks on the axis
-        spinbox_size_police = ttk.Spinbox(label_frame, from_=0, to=20, increment=1)
+        spinbox_size_police = ttk.Spinbox(label_frame, from_=0, to=20, increment=1, width=10)
         spinbox_size_police.grid(row=row_start, column=column_start + 1,columnspan=2, sticky="w", padx=5, pady=5)
         spinbox_size_police.delete(0, "end")
         #self.spinbox_size_police_title.insert(0, int(axes_axis.get_ticklabels()[0].get_fontsize()) if axes_axis.get_ticklabels() else 10)  # Set to current size of x ticks or 10 by default
@@ -91,40 +91,29 @@ class Windwo_font_parameter(tk.Toplevel):
             "button_couleur" : button_couleur
         }
 
+    def _set_widget_frame(self, style= "", nom_frame ="" ):
+ 
+        style = self.master.master.style.configure(style)
+        style_font = style["font"].split(" ")
+        index_police = self.list_style_police.index(int(style_font[0])) if style_font[0] in self.list_style_police else 0
+        self.dict_font_parameters[nom_frame]["combo_police"].current(index_police)
+        self.dict_font_parameters[nom_frame]["spinbox size police"].insert(0, int(style_font[1]))
+        self.dict_font_parameters[nom_frame]["checkbutton bold"][0].state(["selected"] if style_font[2] == "bold" else ["!selected"])
+        self.dict_font_parameters[nom_frame]["checkbutton bold"][1].set( style_font[2] == "bold" )
+
+        if len(style_font) > 3:
+            index_police = self.list_style_police.index(int(style_font[0])) if style_font[0] in self.list_style_police else 0
+            self.dict_font_parameters[nom_frame][ "combobox style police"].current(index_police)
+
+        self.dict_font_parameters[nom_frame]["button_couleur"].configure(bg=style["foreground"])
+
     def set_widget_with_cartouch_font(self):
         # Bind fonction apply style : 
         self.button_apply.configure(command=self._update_cartouch)
 
-        # 'Cartouche_titre.TLabel': 
-        style = self.master.master.style.configure('Cartouche_titre.TLabel')
-        style_font = style["font"].split(" ")
-        index_police = self.list_style_police.index(int(style_font[0])) if style_font[0] in self.list_style_police else 0
-        self.dict_font_parameters["Cartouche, title"]["combo_police"].current(index_police)
-        self.dict_font_parameters["Cartouche, title"]["spinbox size police"].insert(0, int(style_font[1]))
-        self.dict_font_parameters["Cartouche, title"]["checkbutton bold"][0].state(["selected"] if style_font[2] == "bold" else ["!selected"])
-        self.dict_font_parameters["Cartouche, title"]["checkbutton bold"][1].set( style_font[2] == "bold" )
-
-        if len(style_font) > 3:
-            index_police = self.list_style_police.index(int(style_font[0])) if style_font[0] in self.list_style_police else 0
-            self.dict_font_parameters["Cartouche, title"][ "combobox style police"].current(index_police)
-
-        self.dict_font_parameters["Cartouche, title"]["button_couleur"].configure(bg=style["foreground"])
-
-        # 'Cartouche.TLabel':  
-
-        style = self.master.master.style.configure('Cartouche.TLabel')
-        style_font = style["font"].split(" ")
-        index_police = self.list_style_police.index(int(style_font[0])) if style_font[0] in self.list_style_police else 0
-        self.dict_font_parameters["Cartouche, line"]["combo_police"].current(index_police)
-        self.dict_font_parameters["Cartouche, line"]["spinbox size police"].insert(0, int(style_font[1]))
-        self.dict_font_parameters["Cartouche, line"]["checkbutton bold"][0].state(["selected"] if style_font[2] == "bold" else ["!selected"])
-        self.dict_font_parameters["Cartouche, line"]["checkbutton bold"][1].set( style_font[2] == "bold" )
-
-        if len(style_font) > 3:
-            index_police = self.list_style_police.index(int(style_font[0])) if style_font[0] in self.list_style_police else 0
-            self.dict_font_parameters["Cartouche, line"][ "combobox style police"].current(index_police)
-
-        self.dict_font_parameters["Cartouche, line"]["button_couleur"].configure(bg=style["foreground"])
+        self._set_widget_frame(style='Cartouche_titre.TLabel', nom_frame="Cartouche, title")
+        self._set_widget_frame(style='Cartouche.TLabel', nom_frame="Cartouche, line")
+        
 
     def _update_cartouch(self):
         # Pour le titre : 
@@ -132,7 +121,7 @@ class Windwo_font_parameter(tk.Toplevel):
         size = self.dict_font_parameters["Cartouche, title"]["spinbox size police"].get()
         bold = "bold" if  self.dict_font_parameters["Cartouche, title"]["checkbutton bold"][1].get() == True else "normal"
         style = self.dict_font_parameters["Cartouche, title"][ "combobox style police"].get()
-        
+
         if style != "normal":
             self.master.master.style.configure('Cartouche_titre.TLabel', font=(police, int(size), style, bold))
         else :
