@@ -1019,6 +1019,7 @@ class TkPlotCanvas(ttk.Frame):
         if "ticks" in parameters:
             tick_params = parameters["ticks"]
             for tick in axis_to_update.get_ticklabels():
+                tick.set_fontname(tick_params.get("name"))
                 tick.set_fontsize(tick_params.get("size"))
                 tick.set_fontstyle(tick_params.get("style"))
                 tick.set_fontweight(tick_params.get("weight"))
@@ -1060,6 +1061,7 @@ class TkPlotCanvas(ttk.Frame):
                 "lim": self.axes.get_xlim(),
                 "scale": self.axes.get_xscale(),
                 "ticks": {
+                    "name" : self.axes.xaxis.get_ticklabels()[0].get_fontname() if len(self.axes.xaxis.get_ticklabels()) > 0 else None,
                     "size": self.axes.xaxis.get_ticklabels()[0].get_fontsize() if len(self.axes.xaxis.get_ticklabels()) > 0 else None,
                     "style": self.axes.xaxis.get_ticklabels()[0].get_fontstyle() if len(self.axes.xaxis.get_ticklabels()) > 0 else None,
                     "weight": self.axes.xaxis.get_ticklabels()[0].get_fontweight() if len(self.axes.xaxis.get_ticklabels()) > 0 else None,
@@ -1070,6 +1072,7 @@ class TkPlotCanvas(ttk.Frame):
             "lim": self.axes.get_ylim(),
             "scale": self.axes.get_yscale(),
             "ticks": {
+                "name" : self.axes.yaxis.get_ticklabels()[0].get_fontname() if len(self.axes.yaxis.get_ticklabels()) > 0 else None,
                 "size": self.axes.yaxis.get_ticklabels()[0].get_fontsize() if len(self.axes.yaxis.get_ticklabels()) > 0 else None,
                 "style": self.axes.yaxis.get_ticklabels()[0].get_fontstyle() if len(self.axes.yaxis.get_ticklabels()) > 0 else None,
                 "weight": self.axes.yaxis.get_ticklabels()[0].get_fontweight() if len(self.axes.yaxis.get_ticklabels()) > 0 else None,
@@ -1077,18 +1080,21 @@ class TkPlotCanvas(ttk.Frame):
                 },
             },
             "title": {
+                "fontname" : self.axes.title.get_fontproperties().get_name(), 
                 "fontsize": self.axes.title.get_fontsize(),
                 "fontstyle": self.axes.title.get_fontproperties().get_style(),
                 "fontweight": self.axes.title.get_fontproperties().get_weight(),
                 "color": self.axes.title.get_color()
             },
             "xlabel": {
+                "fontname" : self.axes.xaxis.label.get_fontproperties().get_name(), 
                 "fontsize": self.axes.xaxis.label.get_fontsize(),
                 "fontstyle": self.axes.xaxis.label.get_fontproperties().get_style(),
                 "fontweight": self.axes.xaxis.label.get_fontproperties().get_weight(),
                 "color": self.axes.xaxis.label.get_color()
             },
             "ylabel": {
+                "fontname" : self.axes.yaxis.label.get_fontproperties().get_name(), 
                 "fontsize": self.axes.yaxis.label.get_fontsize(),
                 "fontstyle": self.axes.yaxis.label.get_fontproperties().get_style(),
                 "fontweight": self.axes.yaxis.label.get_fontproperties().get_weight(),

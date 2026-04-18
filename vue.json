@@ -10,11 +10,12 @@
     ],
     "X_axis": {
         "lim": [
-            -0.5,
-            10.5
+            0.0,
+            100.0
         ],
         "scale": "linear",
         "ticks": {
+            "name": "Arial",
             "size": 14.0,
             "style": "normal",
             "weight": "bold",
@@ -23,30 +24,34 @@
     },
     "Y_axis": {
         "lim": [
-            -5.0,
-            105.0
+            0.0,
+            10.0
         ],
         "scale": "linear",
         "ticks": {
+            "name": "Arial",
             "size": 14.0,
             "style": "normal",
             "weight": "bold",
-            "color": "black"
+            "color": "#00ff00"
         }
     },
     "title": {
-        "fontsize": 14.0,
+        "fontname": "Arial",
+        "fontsize": 12.0,
         "fontstyle": "normal",
-        "fontweight": "bold",
+        "fontweight": "normal",
         "color": "#000000"
     },
     "xlabel": {
+        "fontname": "Arial",
         "fontsize": 14.0,
         "fontstyle": "normal",
         "fontweight": "bold",
-        "color": "#000000"
+        "color": "#ff80ff"
     },
     "ylabel": {
+        "fontname": "Arial",
         "fontsize": 14.0,
         "fontstyle": "normal",
         "fontweight": "bold",
