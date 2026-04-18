@@ -14,7 +14,7 @@ import numpy as np
 import copy
 import json
 
-class Windwo_font_parameter(tk.Toplevel):
+class Window_font_parameter(tk.Toplevel):
     def __init__(self, master, frame_to_modifiy=""):
         super().__init__(master)
         self.title(f"Modification du {frame_to_modifiy}")
@@ -24,22 +24,42 @@ class Windwo_font_parameter(tk.Toplevel):
         self.frame_window = ttk.Frame(self)
         self.frame_window.pack(fill="both", expand=True, anchor="nw")
 
-        
+        self.button_apply = ttk.Button(self.frame_window, text="Appliquer les changement")
+
         self.padx_echelle = (5, 5)
         self.pady_echelle = (5, 5)
 
         self.dict_font_parameters = {}
         if frame_to_modifiy == "cartouche" : 
-            label_frame_title = ttk.LabelFrame(self.frame_window, text="Paramètre pour le nom des colonnes :" )
+            label_frame_title = ttk.LabelFrame(self.frame_window, text="Paramètres pour le nom des colonnes :" )
             label_frame_title.pack(fill="both", side="top", padx=10, pady=10)
 
-            label_frame_line = ttk.LabelFrame(self.frame_window, text="Paramètre pour les lignes :" )
+            label_frame_line = ttk.LabelFrame(self.frame_window, text="Paramètres pour les lignes :" )
             label_frame_line.pack(fill="both", side="top", padx=10, pady=10)
 
             self._fill_label_frame(label_frame_title, nom_frame="Cartouche, title")
             self._fill_label_frame(label_frame_line, nom_frame="Cartouche, line")
 
-        self.button_apply = ttk.Button(self.frame_window, text="Appliquer les changement")
+
+        elif frame_to_modifiy in ["xlabel", "ylabel"]  : 
+            label_frame_title = ttk.LabelFrame(self.frame_window, text="Paramètres du nom de l'axe :" )
+            label_frame_title.pack(fill="both", side="top", padx=10, pady=10)
+            
+            label_frame_line = ttk.LabelFrame(self.frame_window, text="Paramètres de l'échelle :" )
+            label_frame_line.pack(fill="both", side="top", padx=10, pady=10)
+            
+            self._fill_label_frame(label_frame_title, nom_frame= frame_to_modifiy +", nom")
+            self._fill_label_frame(label_frame_line, nom_frame=frame_to_modifiy + ", tick")
+
+            self._set_widget_with_axis_font(frame_to_modifiy, self.master.master.axes )
+
+        elif frame_to_modifiy == "Graphique title" : 
+            label_frame_title = ttk.LabelFrame(self.frame_window, text="Paramètres du titre :" )
+            label_frame_title.pack(fill="both", side="top", padx=10, pady=10)
+            self._fill_label_frame(label_frame_title, nom_frame= frame_to_modifiy +", nom")
+
+            self._set_widget_with_axis_font(frame_to_modifiy, self.master.master.axes )
+        
         self.button_apply.pack(fill="x", side="top", padx=10, pady=10)
 
     def _fill_label_frame(self, label_frame, nom_frame = ""):
@@ -79,7 +99,7 @@ class Windwo_font_parameter(tk.Toplevel):
         
         # Button to choose the color :
         ttk.Label(label_frame, text="Couleur de la police:").grid(row=row_start, column=column_start, sticky="e", padx=self.padx_echelle, pady=self.pady_echelle)
-        button_couleur = tk.Button(label_frame, width=3) # command TODO 
+        button_couleur = tk.Button(label_frame, width=3)
         button_couleur.grid(row=row_start, column=column_start + 1, sticky="w", padx=5, pady=5)
         button_couleur.configure(command=partial(self.choisir_couleur_police, button_couleur))
         
@@ -91,7 +111,9 @@ class Windwo_font_parameter(tk.Toplevel):
             "button_couleur" : button_couleur
         }
 
-    def _set_widget_frame(self, style= "", nom_frame ="" ):
+
+    # Fonction pour le cartouche : 
+    def _set_widget_frame_cartouche(self, style= "", nom_frame ="" ):
  
         style = self.master.master.style.configure(style)
         style_font = style["font"].split(" ")
@@ -111,8 +133,8 @@ class Windwo_font_parameter(tk.Toplevel):
         # Bind fonction apply style : 
         self.button_apply.configure(command=self._update_cartouch)
 
-        self._set_widget_frame(style='Cartouche_titre.TLabel', nom_frame="Cartouche, title")
-        self._set_widget_frame(style='Cartouche.TLabel', nom_frame="Cartouche, line")
+        self._set_widget_frame_cartouche(style='Cartouche_titre.TLabel', nom_frame="Cartouche, title")
+        self._set_widget_frame_cartouche(style='Cartouche.TLabel', nom_frame="Cartouche, line")
         
 
     def _update_cartouch(self):
@@ -143,6 +165,99 @@ class Windwo_font_parameter(tk.Toplevel):
 
         bg_button = self.dict_font_parameters["Cartouche, line"]["button_couleur"].cget("bg")
         self.master.master.style.configure('Cartouche.TLabel', foreground = bg_button)
+
+    # Fonction pour les axes : 
+    def _set_widget_with_axis_font(self, nom_axe, objet_axis):
+
+        # Bind fonction apply style : 
+        self.button_apply.configure(command=partial(self._update_axis, nom_axe, objet_axis))
+
+        # get current font properties of the axis or title
+        if nom_axe == "Graphique title":
+            current_font = objet_axis.title.get_fontproperties()
+            current_color = objet_axis.title.get_color()
+        elif nom_axe == "xlabel":
+            current_font = objet_axis.xaxis.label.get_fontproperties()
+            current_color = objet_axis.xaxis.label.get_color()    
+        elif nom_axe == "ylabel":
+            current_font = objet_axis.yaxis.label.get_fontproperties()
+            current_color = objet_axis.yaxis.label.get_color()  
+
+        # pour le nom de l'axe : 
+        nom_frame = nom_axe+', nom'
+            # Get the family name of the current font and set the combobox to that value
+        list_police = list(tk.font.families())
+        index_police = list_police.index(current_font.get_name()) if current_font.get_name() in list_police else 0
+        self.dict_font_parameters[nom_frame]["combo_police"].current(index_police)
+        self.dict_font_parameters[nom_frame]["combobox style police"].set(current_font.get_style())
+        self.dict_font_parameters[nom_frame]["spinbox size police"].insert(0, int(current_font.get_size()))
+        self.dict_font_parameters[nom_frame]["checkbutton bold"][0].state(["selected"] if current_font.get_weight() == "bold" else ["!selected"])
+        self.dict_font_parameters[nom_frame]["checkbutton bold"][1].set( current_font.get_weight() == "bold" )
+
+        self.dict_font_parameters[nom_frame]["button_couleur"].configure(bg=current_color)
+
+        if nom_axe in ["xlabel", "ylabel"]  : 
+            if nom_axe == "xlabel":
+                axe = objet_axis.xaxis
+            else : 
+                axe = objet_axis.yaxis
+
+            # pour l'axe tick : 
+            nom_frame = nom_axe+', tick'
+            index_police = list_police.index(axe.get_ticklabels()[0].get_fontname()) if axe.get_ticklabels()[0].get_fontname() in list_police else 0
+            self.dict_font_parameters[nom_frame]["combo_police"].current(index_police)
+            index_style = self.list_style_police.index(axe.get_ticklabels()[0].get_fontstyle()) if axe.get_ticklabels() else 0 
+            self.dict_font_parameters[nom_frame]["combobox style police"].current(index_style)  # Set to current style of ticks or "normal" by default
+            self.dict_font_parameters[nom_frame]["spinbox size police"].insert(0, int(axe.get_ticklabels()[0].get_fontsize()) if axe.get_ticklabels() else 10)  # Set to current size of x ticks or 10 by default
+            self.dict_font_parameters[nom_frame]["checkbutton bold"][0].state(["selected"] if axe.get_ticklabels()[0].get_fontweight() else ["!selected"])
+            self.dict_font_parameters[nom_frame]["checkbutton bold"][1].set( axe.get_ticklabels()[0].get_fontweight() == "bold" )
+
+            self.dict_font_parameters[nom_frame]["button_couleur"].configure(bg=axe.get_ticklabels()[0].get_color() if axe.get_ticklabels() else "#000000")
+
+    def _update_axis(self, nom_axe, objet_axis):
+
+        nom_frame = nom_axe+', nom'
+        # Pour le titre : 
+        police =  self.dict_font_parameters[nom_frame]["combo_police"].get()
+        size = self.dict_font_parameters[nom_frame]["spinbox size police"].get()
+        weight = "bold" if  self.dict_font_parameters[nom_frame]["checkbutton bold"][1].get() == True else "normal"
+        style = self.dict_font_parameters[nom_frame][ "combobox style police"].get()
+        color = self.dict_font_parameters[nom_frame]["button_couleur"].cget("bg")
+
+        # Apply the changes to the axes and title based on the user input in the entries and font controls.
+        if nom_axe == "Graphique title":
+            objet_axis.set_title(self.master._title_var.get(), fontfamily= police, fontsize=size, fontstyle=style, fontweight=weight, color=color)
+        else : 
+            # pour l'axe tick : 
+            nom_frame = nom_axe+', tick'
+            police_tick =  self.dict_font_parameters[nom_frame]["combo_police"].get()
+            size_tick = self.dict_font_parameters[nom_frame]["spinbox size police"].get()
+            weight_tick = "bold" if  self.dict_font_parameters[nom_frame]["checkbutton bold"][1].get() == True else "normal"
+            style_tick = self.dict_font_parameters[nom_frame][ "combobox style police"].get()
+            color_tick = self.dict_font_parameters[nom_frame]["button_couleur"].cget("bg")
+
+            if nom_axe == "xlabel":
+                objet_axis.set_xlabel(self.master._xlabel_var.get(), fontfamily= police, fontsize=size, fontstyle=style, fontweight=weight, color=color)
+                axe = objet_axis.xaxis
+                for tick in axe.get_ticklabels():
+                    tick.set_fontname(police_tick)
+                    tick.set_fontsize(size_tick)
+                    tick.set_fontstyle(style_tick)
+                    tick.set_fontweight(weight_tick)
+                    tick.set_color(color_tick)
+
+            elif nom_axe == "ylabel":
+                objet_axis.set_ylabel(self.master._ylabel_var.get(), fontfamily= police, fontsize=size, fontstyle=style, fontweight=weight, color=color)
+                axe = objet_axis.yaxis
+                for tick in axe.get_ticklabels():
+                    tick.set_fontname(police_tick)
+                    tick.set_fontsize(size_tick)
+                    tick.set_fontstyle(style_tick)
+                    tick.set_fontweight(weight_tick)
+                    tick.set_color(color_tick)
+    
+        self.master.master._canvas.draw()
+
 
     def choisir_couleur_police(self, widget):
         color_code = colorchooser.askcolor(master = self ,title="Choisir une couleur de police")
@@ -184,11 +299,6 @@ class Menu_graphique(tk.Toplevel):
         self.tab_axes = ttk.Frame(self._notebook)
         self._notebook.add(self.tab_axes, text="Axes et titre", padding=self.padding_notebook)
         self.fill__frame_axes()
-
-        # Tab Echelle:
-        self.tab_echelle = ttk.Frame(self._notebook)
-        self._notebook.add(self.tab_echelle, text="Echelle", padding=self.padding_notebook)
-        self.fill__frame_echelle()
         
         # Tab 3: Cartouche
         self.tab_cartouche = ttk.Frame(self._notebook)
@@ -208,8 +318,6 @@ class Menu_graphique(tk.Toplevel):
         # Show the specified tab on open
         if notebook_shown == "Axes et titre":
             self._notebook.select(self.tab_axes)
-        elif notebook_shown == "Echelle":
-            self._notebook.select(self.tab_echelle)    
         elif notebook_shown == "Cartouche":
             self._notebook.select(self.tab_cartouche)
         elif notebook_shown == "Courbes":
@@ -217,98 +325,6 @@ class Menu_graphique(tk.Toplevel):
         elif notebook_shown == "Légende":
             self._notebook.select(self.tab_legende)
 
-   
-    def fill__frame_echelle(self):
-        # Add controls for axes scaling here
-        padx_echelle = (5, 5)
-        pady_echelle = (5, 5)
-
-        ttk.Label(self.tab_echelle, text="Modification des échelles:", style='Titre_parammetre.TLabel').grid(row=0, column=0, sticky="w", padx=5, pady=10, columnspan=6)
-
-        # Frame for axe X : 
-        frame_axe_x = ttk.LabelFrame(self.tab_echelle, text="Axe X :", padding=(10, 10))
-        frame_axe_x.grid(row=1, column=0, sticky="we", padx=padx_echelle, pady=pady_echelle)
-
-        ttk.Label(frame_axe_x, text="Valeur min:").grid(row=0, column=0, sticky="e", padx=padx_echelle, pady=pady_echelle)
-        ttk.Label(frame_axe_x, text="Valeur max:").grid(row=1, column=0, sticky="e", padx=padx_echelle, pady=pady_echelle)
-
-        self._xlim_min_var = tk.StringVar(value="")
-        ttk.Entry(frame_axe_x, textvariable=self._xlim_min_var, width=15).grid(row=0, column=1, columnspan=2, sticky="we")
-        self._xlim_max_var = tk.StringVar(value="")
-        ttk.Entry(frame_axe_x, textvariable=self._xlim_max_var, width=15).grid(row=1, column=1, columnspan=2, sticky="we")
-
-        ttk.Label(frame_axe_x, text="Echelle:").grid(row=2, column=0, sticky="e", padx=padx_echelle, pady=pady_echelle)
-        self._xscale_var = tk.StringVar(value="linear")
-        ttk.Combobox(frame_axe_x, textvariable=self._xscale_var, values=["linear", "log"], state="readonly", width=8).grid(row=2, column=1, columnspan=2, sticky="we")
-
-        ttk.Separator(frame_axe_x, orient='horizontal').grid(row=3, column=0, columnspan=3, sticky="we", pady=(10, 5))
-       
-        # tick parameters for x axis:
-        self._frame_echelle_style(frame_axe_x, "x", self.master.axes.xaxis, row_start=4, column_start=0, padx_echelle=(5, 5), pady_echelle=(5, 5))
-
-        # Frame for axe Y : 
-        frame_axe_y = ttk.LabelFrame(self.tab_echelle, text="Axe Y :", padding=(10, 10))
-        frame_axe_y.grid(row=1, column=2, sticky="we", padx=padx_echelle, pady=pady_echelle)
-
-        ttk.Label(frame_axe_y, text="Valeur min:").grid(row=0, column=0, sticky="e", padx=padx_echelle, pady=pady_echelle)
-        ttk.Label(frame_axe_y, text="Valeur max:").grid(row=1, column=0, sticky="e", padx=padx_echelle, pady=pady_echelle)
-
-        self._ylim_min_var = tk.StringVar(value="")
-        ttk.Entry(frame_axe_y, textvariable=self._ylim_min_var, width=15).grid(row=0, column=1, columnspan=2, sticky="we")
-        
-        self._ylim_max_var = tk.StringVar(value="")
-        ttk.Entry(frame_axe_y, textvariable=self._ylim_max_var, width=15).grid(row=1, column=1, columnspan=2, sticky="we")
-
-        ttk.Label(frame_axe_y, text="Echelle:").grid(row=2, column=0, sticky="e", padx=padx_echelle, pady=pady_echelle)
-        self._yscale_var = tk.StringVar(value="linear")
-        ttk.Combobox(frame_axe_y, textvariable=self._yscale_var, values=["linear", "log"], state="readonly", width=8).grid(row=2, column=1,columnspan=2, sticky="we")
-        ttk.Separator(frame_axe_y, orient='horizontal').grid(row=3, column=0, columnspan=3, sticky="we", pady=(10, 5))
-
-        # tick parameters for y axis:
-        self._frame_echelle_style(frame_axe_y, "y", self.master.axes.yaxis, row_start=4, column_start=0, padx_echelle=(5, 5), pady_echelle=(5, 5))
-
-        # Apply and Auto buttons
-        ttk.Button(self.tab_echelle, text="Appliquer", command=self._on_echelle_update, width=30).grid(row=2, column=0, padx=padx_echelle, pady=pady_echelle, sticky="we")
-        ttk.Button(self.tab_echelle, text="Auto", command=self._on_zoom_auto, width=30).grid(row=2, column=2, padx=padx_echelle, pady=pady_echelle, sticky="we")
-
-        pass
-    
-    def _frame_echelle_style(self, frame, axis_type, axes_axis, row_start=0, column_start=0, padx_echelle=(5, 5), pady_echelle=(5, 5)):
-                
-        ttk.Label(frame, text="Taille de la police :").grid(row=row_start, column=column_start, sticky="e", padx=padx_echelle, pady=pady_echelle)
-            # Spinbox to choose the size of the ticks on the axis
-        spinbox_ticks = ttk.Spinbox(frame, from_=0, to=20, increment=1)
-        spinbox_ticks.grid(row=row_start, column=column_start + 1,columnspan=2, sticky="w", padx=5, pady=5)
-        spinbox_ticks.delete(0, "end")
-        spinbox_ticks.insert(0, int(axes_axis.get_ticklabels()[0].get_fontsize()) if axes_axis.get_ticklabels() else 10)  # Set to current size of x ticks or 10 by default
-
-            # Combobox to choose the style of the ticks on the x axis
-        ttk.Label(frame, text="Styles de la police:").grid(row=row_start + 1, column=column_start, sticky="e", padx=padx_echelle, pady=pady_echelle) 
-        list_style_police = ["normal", "italic", "oblique"]
-        combo = ttk.Combobox(frame, values=list_style_police, state="readonly", width=10)
-        combo.grid(row=row_start + 1, column=column_start + 1, sticky="w", padx=5, pady=5)
-        index_style = list_style_police.index(axes_axis.get_ticklabels()[0].get_fontstyle()) if axes_axis.get_ticklabels() else 0 
-        combo.current(index_style)  # Set to current style of ticks or "normal" by default
-        
-         # Checkbutton to choose if the ticks on the x axis are bold or not
-        bool_bold = axes_axis.get_ticklabels()[0].get_fontweight() == "bold" if len(axes_axis.get_ticklabels()) > 0 else False
-        var_checkbutton_gras = tk.BooleanVar(value= bool_bold) #TODO 
-        checkbutton = ttk.Checkbutton(frame, text="Gras", variable = var_checkbutton_gras)
-        checkbutton.grid(row=row_start + 1, column=column_start + 2, sticky="w", padx=5, pady=5)
-        checkbutton.state(["selected"] if var_checkbutton_gras.get() == True else ["!selected"])  # Ensure the checkbutton is not in an indeterminate state
-
-            # Button to choose the color of the ticks on the axis
-        ttk.Label(frame, text="Couleur de la police:").grid(row=row_start + 2, column=column_start, sticky="e", padx=padx_echelle, pady=pady_echelle)
-        button_couleur_xticks = tk.Button(frame, command=partial(self.choisir_couleur_police, self.master._canvas, f"{axis_type}, ticks"), width=2, height=1, bg=axes_axis.get_ticklabels()[0].get_color() if axes_axis.get_ticklabels() else "#000000")
-        button_couleur_xticks.grid(row=row_start + 2, column=column_start + 1, sticky="w", padx=5, pady=5)
-
-        self.dict_widget_font[f"{axis_type}, ticks"] = {
-            "axis": axes_axis,
-            "size": spinbox_ticks,
-            "style": combo,
-            "weight": var_checkbutton_gras,
-            "color": button_couleur_xticks
-        }
 
     def fill__frame_cartouche_menu(self):
         # Add controls for cartouche here
@@ -430,7 +446,7 @@ class Menu_graphique(tk.Toplevel):
 
 
     def _cartouch_show_font_parameters(self):
-        font_cartouch = Windwo_font_parameter(self, frame_to_modifiy="cartouche")
+        font_cartouch = Window_font_parameter(self, frame_to_modifiy="cartouche")
         font_cartouch.set_widget_with_cartouch_font()
     
 
@@ -532,116 +548,91 @@ class Menu_graphique(tk.Toplevel):
 
         # Frame for title : 
         frame_title = ttk.LabelFrame(self.tab_axes, text="Titre", padding=(10, 10))
-        frame_title.grid(row=1, column=0, columnspan=2, sticky="we", padx=padx_axes, pady=pady_axes)
+        frame_title.grid(row=1, column=0, columnspan=4, sticky="we", padx=padx_axes, pady=pady_axes)
 
         ttk.Label(frame_title, text="Titre:").grid(row=1, column=0, sticky="e", padx=padx_axes, pady=pady_axes)
         self._title_var = tk.StringVar(value="")
-        self._title_entry = ttk.Entry(frame_title, textvariable=self._title_var, width=25)
-        self._title_entry.grid(row=1, column=1, columnspan=2, padx=(0, 4), sticky="w")
+        self._title_entry = ttk.Entry(frame_title, textvariable=self._title_var, width=50)
+        self._title_entry.grid(row=1, column=1, padx=(0, 4), sticky="w")
         self._title_var.set(self.master.axes.get_title())
-        self.frame_font_axes_title(frame_title, "title", row_start=2, column_start=0)
+        button_font_title = ttk.Button(frame_title, text="Modifier la police", 
+                            command= partial(Window_font_parameter, self, frame_to_modifiy="Graphique title") )
+        button_font_title.grid(row=1, column=2, padx=(10, 5), sticky="ew")
 
         # frame for X axis : 
         fame_x_axis = ttk.LabelFrame(self.tab_axes, text="Axe X", padding=(10, 10))
-        fame_x_axis.grid(row=1, column=2, columnspan=2, sticky="we", padx=padx_axes, pady=pady_axes)
+        fame_x_axis.grid(row=2, column=0, columnspan=2, sticky="we", padx=padx_axes, pady=pady_axes)
         ttk.Label(fame_x_axis, text="Abscisse:").grid(row=1, column=0, sticky="e", padx=padx_axes, pady=pady_axes)
         self._xlabel_var = tk.StringVar(value="")
         self._xlabel_entry = ttk.Entry(fame_x_axis, textvariable=self._xlabel_var, width=25)
         self._xlabel_entry.grid(row=1, column=1, columnspan=2, padx=(0, 4), sticky="w")
         self._xlabel_var.set(self.master.axes.get_xlabel())
-        self.frame_font_axes_title(fame_x_axis, "xlabel", row_start=2, column_start=0)
+        
+        ttk.Separator(fame_x_axis, orient='horizontal').grid(row=5, column=0, columnspan=3, sticky="we", pady=(10, 5))
+
+            # Modifier les axes : 
+        ttk.Label(fame_x_axis, text="Valeur min:").grid(row=6, column=0, sticky="e", padx=padx_axes, pady=pady_axes)
+        ttk.Label(fame_x_axis, text="Valeur max:").grid(row=7, column=0, sticky="e", padx=padx_axes, pady=pady_axes)
+
+        self._xlim_min_var = tk.StringVar(value="")
+        ttk.Entry(fame_x_axis, textvariable=self._xlim_min_var, width=15).grid(row=6, column=1, sticky="we")
+        self._xlim_max_var = tk.StringVar(value="")
+        ttk.Entry(fame_x_axis, textvariable=self._xlim_max_var, width=15).grid(row=7, column=1, sticky="we")
+
+        ttk.Label(fame_x_axis, text="Echelle:").grid(row=8, column=0, sticky="e", padx=padx_axes, pady=pady_axes)
+        self._xscale_var = tk.StringVar(value="linear")
+        ttk.Combobox(fame_x_axis, textvariable=self._xscale_var, values=["linear", "log"], state="readonly", width=8).grid(row=8, column=1, columnspan=2, sticky="we")
+        ttk.Button(fame_x_axis, text="Auto", command=self._on_zoom_auto, width=5).grid(row=6,column=2, rowspan=2, padx=padx_axes, pady=pady_axes, sticky="we")
+
+        ttk.Separator(fame_x_axis, orient='horizontal').grid(row=9, column=0, columnspan=3, sticky="we", pady=(10, 5))
+
+            # Bouton police : 
+        button_font_xlabel = ttk.Button(fame_x_axis, text="Modifier la police", 
+                            command= partial(Window_font_parameter, self, frame_to_modifiy="xlabel") )
+        button_font_xlabel.grid(row=10, column=0, columnspan=3, padx=(5, 5), sticky="ew")
 
         # frame for Y axis : 
         fame_y_axis = ttk.LabelFrame(self.tab_axes, text="Axe Y", padding=(10, 10))
-        fame_y_axis.grid(row=1, column=4, columnspan=2, sticky="we", padx=padx_axes, pady=pady_axes)
+        fame_y_axis.grid(row=2, column=2, columnspan=2, sticky="we", padx=padx_axes, pady=pady_axes)
         ttk.Label(fame_y_axis, text="Ordonnée:").grid(row=1, column=0, sticky="e", padx=padx_axes, pady=pady_axes)
         self._ylabel_var = tk.StringVar(value="")
         self._ylabel_entry = ttk.Entry(fame_y_axis, textvariable=self._ylabel_var, width=25)
         self._ylabel_entry.grid(row=1, column=1, columnspan=2, padx=(0, 4), sticky="w")
         self._ylabel_var.set(self.master.axes.get_ylabel())
-        self.frame_font_axes_title(fame_y_axis, "ylabel", row_start=2, column_start=0)
+
+        ttk.Separator(fame_y_axis, orient='horizontal').grid(row=5, column=0, columnspan=3, sticky="we", pady=(10, 5))
+         # Modifier les axes : 
+        ttk.Label(fame_y_axis, text="Valeur min:").grid(row=6, column=0, sticky="e", padx=padx_axes, pady=pady_axes)
+        ttk.Label(fame_y_axis, text="Valeur max:").grid(row=7, column=0, sticky="e", padx=padx_axes, pady=pady_axes)
+
+        self._ylim_min_var = tk.StringVar(value="")
+        ttk.Entry(fame_y_axis, textvariable=self._ylim_min_var, width=15).grid(row=6, column=1, sticky="we")
+        self._ylim_max_var = tk.StringVar(value="")
+        ttk.Entry(fame_y_axis, textvariable=self._ylim_max_var, width=15).grid(row=7, column=1, sticky="we")
+        ttk.Button(fame_y_axis, text="Auto", command=self._on_zoom_auto, width=5).grid(row=6,column=2, rowspan=2, padx=padx_axes, pady=pady_axes, sticky="we")
+
+        ttk.Label(fame_y_axis, text="Echelle:").grid(row=8, column=0, sticky="e", padx=padx_axes, pady=pady_axes)
+        self._yscale_var = tk.StringVar(value="linear")
+        ttk.Combobox(fame_y_axis, textvariable=self._yscale_var, values=["linear", "log"], state="readonly", width=8).grid(row=8, column=1, columnspan=2, sticky="we")
+
+        ttk.Separator(fame_y_axis, orient='horizontal').grid(row=9, column=0, columnspan=3, sticky="we", pady=(10, 5))
+
+        # Bouton police :
+        button_font_ylabel = ttk.Button(fame_y_axis, text="Modifier la police", 
+                            command= partial(Window_font_parameter, self, frame_to_modifiy="ylabel") )
+        button_font_ylabel.grid(row=10, column=0, columnspan=3, padx=(5, 5), sticky="ew")
 
 
         # Apply button to update axes and title:
-        ttk.Button(self.tab_axes, text="Appliquer les changements", command=self._apply_axes_changes, width=20).grid(row=0, column=4, columnspan=2, padx=padx_axes, pady=pady_axes, sticky="we")
-
-    def frame_font_axes_title(self, frame, axis_type, row_start=0, column_start=0):
-
-        # get current font properties of the axis or title
-        if axis_type == "title":
-            current_font = self.master.axes.title.get_fontproperties()
-            current_color = self.master.axes.title.get_color()
-        elif axis_type == "xlabel":
-            current_font = self.master.axes.xaxis.label.get_fontproperties()
-            current_color = self.master.axes.xaxis.label.get_color()    
-        elif axis_type == "ylabel":
-            current_font = self.master.axes.yaxis.label.get_fontproperties()
-            current_color = self.master.axes.yaxis.label.get_color()  
-
-        # Add controls for font properties of axes and title here
-            # Size de la police :
-        ttk.Label(frame, text="Taille de la police:").grid(row=row_start, column=column_start, sticky="e", padx=5, pady=5)
-        size_spinbox = ttk.Spinbox(frame, from_=8, to=30, increment=1, width=5)
-        size_spinbox.grid(row=row_start, column=column_start+1, padx=5, pady=5, sticky="w")
-        size_spinbox.delete(0, "end")
-        size_spinbox.insert(0, int(current_font.get_size()))
-
-            # Style de la police :
-        ttk.Label(frame, text="Style de la police:").grid(row=row_start+1, column=column_start, sticky="e", padx=5, pady=5)
-        style_combobox = ttk.Combobox(frame, values=["normal", "italic", "oblique"], state="readonly", width=10)
-        style_combobox.grid(row=row_start+1, column=column_start+1, padx=5, pady=5, sticky="w")
-        style_combobox.set(current_font.get_style())
-        variable_checkbutton_gras = tk.BooleanVar(value=current_font.get_weight() == "bold")
-
-        checkbutton_gras = ttk.Checkbutton(frame, text="Gras", variable=variable_checkbutton_gras)
-        checkbutton_gras.grid(row=row_start+1, column=column_start+2, padx=5, pady=5, sticky="w")
-        checkbutton_gras.configure(state=["selected"] if variable_checkbutton_gras.get() == True else ["!selected"])  # Ensure the checkbutton is not in an indeterminate state
-    
-        # Couleur de la police :
-        ttk.Label(frame, text="Couleur de la police:").grid(row=row_start+2, column=column_start, sticky="e", padx=5, pady=5)
- 
-        color_button = tk.Button(frame, 
-                    background=current_color,
-                    width=3,
-                    height=1,
-                    command=lambda: self.choisir_couleur_police(self.master._canvas, axis_type))
-        color_button.grid(row=row_start+2, column=column_start+1, padx=5, pady=5, sticky="w")
-
-        self.dict_widget_font[axis_type] = {
-            "size": size_spinbox,
-            "style": style_combobox,
-            "weight": variable_checkbutton_gras,
-            "color": color_button
-        }
-
+        ttk.Button(self.tab_axes, text="Appliquer les changements", command=self._apply_axes_changes, width=20).grid(row=0, column=2, columnspan=2, padx=padx_axes, pady=pady_axes, sticky="we")
 
     def _apply_axes_changes(self):
-   
-        # Apply the changes to the axes and title based on the user input in the entries and font controls.
-        for axis_type, widgets in self.dict_widget_font.items():
-            size = int(widgets["size"].get())
-            style = widgets["style"].get()
-            weight = "bold" if widgets["weight"].get() else "normal"
-            color = widgets["color"].cget("bg")
-
-            if axis_type == "title":
-                self.master.axes.set_title(self._title_var.get(), fontsize=size, fontstyle=style, fontweight=weight, color=color)
-            elif axis_type == "xlabel":
-                self.master.axes.set_xlabel(self._xlabel_var.get(), fontsize=size, fontstyle=style, fontweight=weight, color=color)
-            elif axis_type == "ylabel":
-                self.master.axes.set_ylabel(self._ylabel_var.get(), fontsize=size, fontstyle=style, fontweight=weight, color=color)
+        # Mise à jour des titre et x/y labels : 
+        self.master.axes.set_title(self._title_var.get())
+        self.master.axes.set_xlabel(self._xlabel_var.get())
+        self.master.axes.set_ylabel(self._ylabel_var.get())
         
-        self.master._canvas.draw()
-
-
-    def choisir_couleur_police(self, canvas, axis_type):
-        color_code = colorchooser.askcolor(title="Choisir une couleur de police")
-        if color_code:
-            # Update the color button background
-            self.dict_widget_font[axis_type]["color"].configure(bg=color_code[1])  # Update button color
-
-    # fonction pour appliquer les changements d'échelle : 
-    def _on_echelle_update(self):
+        # Mise à jour de l'échelle : 
         # Get the new axis limits and scale types from the entries and comboboxes, and apply them to the plot.
         try:
             x_min = float(self._xlim_min_var.get()) if self._xlim_min_var.get() else None
@@ -671,25 +662,18 @@ class Menu_graphique(tk.Toplevel):
         except ValueError:
             tk.messagebox.showerror("Invalid input", "Please enter valid numeric values for axis limits.")
 
-        # Set the ticks parameters for x and y axes based on the user input in the spinboxes and comboboxes:
-        for axis_tick in self.dict_widget_font:
-            if "ticks" in axis_tick:
-                axis = self.dict_widget_font[axis_tick]["axis"]
-                size = int(self.dict_widget_font[axis_tick]["size"].get())
-                style = self.dict_widget_font[axis_tick]["style"].get()
-                weight = "bold" if self.dict_widget_font[axis_tick]["weight"].get() else "normal"
-                color = self.dict_widget_font[axis_tick]["color"].cget("bg")
-                for tick in axis.get_ticklabels():
-                    tick.set_fontsize(size)
-                    tick.set_fontstyle(style)
-                    tick.set_fontweight(weight)
-                    tick.set_color(color)
         self.master._canvas.draw()
-
-
+    
     def _on_zoom_auto(self):
         self.master.axes.autoscale()
         self.master._canvas.draw()
+
+
+    def choisir_couleur_police(self, canvas, axis_type):
+        color_code = colorchooser.askcolor(title="Choisir une couleur de police")
+        if color_code:
+            # Update the color button background
+            self.dict_widget_font[axis_type]["color"].configure(bg=color_code[1])  # Update button color
 
 
 
@@ -914,7 +898,6 @@ class TkPlotCanvas(ttk.Frame):
         self.menu_click = tk.Menu(self, tearoff=0, bg=bg_color)
         self.menu_click.add_command(label="Modiification des axes et titres", command=partial(self.open_menu_graphique, "Axes et titre"))
         self.menu_click.add_separator()
-        self.menu_click.add_command(label="Modiification des echelles", command=partial(self.open_menu_graphique, "Echelle"))
         self.menu_click.add_command(label="Modiification des courbes", command=partial(self.open_menu_graphique, "Courbes"))
         self.menu_click.add_separator()
         self.menu_click.add_command(label="Modification du cartouche", command=partial(self.open_menu_graphique, "Cartouche"))    
