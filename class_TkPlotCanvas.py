@@ -14,7 +14,16 @@ import copy
 import json
 import xarray as xr
 
+"""Tkinter plotting widgets with Matplotlib integration.
+
+This module provides a Tkinter-based plotting canvas with embedded
+Matplotlib figures, a context menu for customizing axes, curves,
+cartouche metadata, and legend settings, and support for saving/loading views.
+"""
+
 class Window_font_parameter(tk.Toplevel):
+    """Dialog window to edit font properties for titles, axes, and cartouche labels."""
+
     def __init__(self, master, frame_to_modifiy=""):
         super().__init__(master)
         self.title(f"Modification du {frame_to_modifiy}")
@@ -63,6 +72,11 @@ class Window_font_parameter(tk.Toplevel):
         self.button_apply.pack(fill="x", side="top", padx=10, pady=10)
 
     def _fill_label_frame(self, label_frame, nom_frame = ""):
+        """Create font control widgets in the provided label frame.
+
+        The widgets include font family, size, style, bold toggle, and a
+        color chooser button for the selected frame component.
+        """
         
         row_start = 0
         column_start = 0
@@ -114,6 +128,7 @@ class Window_font_parameter(tk.Toplevel):
 
     # Fonction pour le cartouche : 
     def _set_widget_frame_cartouche(self, style= "", nom_frame ="" ):
+        """Initialize the cartouche font editor controls from an existing ttk style."""
  
         style = self.master.master.style.configure(style)
         style_font = style["font"].split(" ")
@@ -130,7 +145,7 @@ class Window_font_parameter(tk.Toplevel):
         self.dict_font_parameters[nom_frame]["button_couleur"].configure(bg=style["foreground"])
 
     def set_widget_with_cartouch_font(self):
-        # Bind fonction apply style : 
+        """Prepare the cartouche font editor and bind the apply button."""
         self.button_apply.configure(command=self._update_cartouch)
 
         self._set_widget_frame_cartouche(style='Cartouche_titre.TLabel', nom_frame="Cartouche, title")
@@ -138,7 +153,7 @@ class Window_font_parameter(tk.Toplevel):
         
 
     def _update_cartouch(self):
-        # Pour le titre : 
+        """Apply the selected cartouche font settings to the ttk styles."""
         police =  self.dict_font_parameters["Cartouche, title"]["combo_police"].get()
         size = self.dict_font_parameters["Cartouche, title"]["spinbox size police"].get()
         bold = "bold" if  self.dict_font_parameters["Cartouche, title"]["checkbutton bold"][1].get() == True else "normal"
@@ -168,8 +183,8 @@ class Window_font_parameter(tk.Toplevel):
 
     # Fonction pour les axes : 
     def _set_widget_with_axis_font(self, nom_axe, objet_axis):
+        """Load the current axis or title font settings into the editor controls."""
 
-        # Bind fonction apply style : 
         self.button_apply.configure(command=partial(self._update_axis, nom_axe, objet_axis))
 
         # get current font properties of the axis or title
@@ -215,6 +230,7 @@ class Window_font_parameter(tk.Toplevel):
             self.dict_font_parameters[nom_frame]["button_couleur"].configure(bg=axe.get_ticklabels()[0].get_color() if axe.get_ticklabels() else "#000000")
 
     def _update_axis(self, nom_axe, objet_axis):
+        """Apply axis or title font settings selected in the dialog to the Matplotlib axis."""
 
         nom_frame = nom_axe+', nom'
         # Pour le titre : 
@@ -260,12 +276,15 @@ class Window_font_parameter(tk.Toplevel):
 
 
     def choisir_couleur_police(self, widget):
+        """Open a color chooser and update the font color button background."""
         color_code = colorchooser.askcolor(master = self ,title="Choisir une couleur de police")
         if color_code:
             # Update the color button background
            widget.configure(bg=color_code[1])  # Update button color
 
 class Menu_graphique(tk.Toplevel):
+    """Dialog window to edit plot, curve, cartouche, and legend settings."""
+
     def __init__(self, master, notebook_shown=""):
         super().__init__(master)
         self.title("Menu de modification de la courbe")
@@ -327,7 +346,7 @@ class Menu_graphique(tk.Toplevel):
 
 
     def fill__frame_cartouche_menu(self):
-        # Add controls for cartouche here
+        """Create the cartouche configuration tab with metadata selection controls."""
         label = ttk.Label(self.tab_cartouche, text="Paramètres du cartouche:", style='Titre_parammetre.TLabel')
         label.grid(row=0, column=0, sticky="w", padx=5, pady=10, columnspan=4 )
 
@@ -386,6 +405,7 @@ class Menu_graphique(tk.Toplevel):
                     entry_key.insert(0,label_dict[key_to_show])
 
     def _on_entry_cartouche_update(self, event, line_index=None, column_index=None):
+        """Update the cartouche metadata value for the selected line and column."""
         entry_widget = event.widget
         new_value = entry_widget.get()
         key_selected = self.list_combobox_cartouche[column_index].get()
@@ -404,6 +424,7 @@ class Menu_graphique(tk.Toplevel):
 
 
     def _on_cartouche_update(self, event, combo_selected=None, column_index=None):
+        """Refresh the cartouche headers and values when a metadata key is selected."""
         
         key_selected = combo_selected.get()
         # Update the cartouche display based on the selected metadata keys and values.
@@ -452,6 +473,7 @@ class Menu_graphique(tk.Toplevel):
 
 
     def fill__frame_courbe(self):
+        """Create the curve properties tab and populate it with widgets for each plotted line."""
         
         self.style.configure('Courbe.TLabel', font=('Arial', 10, 'bold'))
 
@@ -471,6 +493,7 @@ class Menu_graphique(tk.Toplevel):
         pass
     
     def affiche_parametres_courbe(self, line, index, list_widget):
+        """Display editable properties for a specific curve and store the widgets."""
         
         
         label = line.get_label()
@@ -506,6 +529,7 @@ class Menu_graphique(tk.Toplevel):
 
 
     def choisir_couleur(self, index):
+        """Open a color chooser to select a new curve color and update the plot."""
         color_code = colorchooser.askcolor(title="Choisir une couleur")
         if color_code:
             self.master._lines[index].set_color(color_code[1])
@@ -513,6 +537,12 @@ class Menu_graphique(tk.Toplevel):
             self.list_widget[index][0].configure(bg=color_code[1])  # Update button color
 
     def update_line_property(self, property_name, event=None, index=None):
+        """
+        Update the line property based on the user input in the corresponding widget.
+         property_name: The name of the line property to update (e.g., 'linewidth', 'linestyle', 'marker', 'markersize').
+         event: The event object from the widget (if applicable).
+         index: The index of the line to update.
+        """
         widget = event.widget if event else None
         if property_name == 'linewidth':
             value_linewidth = self.list_widget[index][1].get()
@@ -530,6 +560,7 @@ class Menu_graphique(tk.Toplevel):
         self.master._canvas.draw()
 
     def fill__frame_axes(self):
+        """Create the axes and title configuration tab with controls for labels, limits, and scale."""
         
         ttk.Label(self.tab_axes, text="Modification des axes et titres:", style='Titre_parammetre.TLabel').grid(row=0, column=0, sticky="w", padx=5, pady=10, columnspan=2)
 
@@ -636,8 +667,8 @@ class Menu_graphique(tk.Toplevel):
 
 
     def _apply_axes_changes(self):
+        """Apply the axes, title, and xarray selection changes from the axes tab."""
   
-        # Mise à jour des titre et x/y labels : 
         current_font = self.master.axes.title.get_fontproperties()
         current_color = self.master.axes.title.get_color()
         self.master.axes.set_title(self._title_var.get(), fontfamily=current_font.get_name(), fontsize=current_font.get_size(), fontstyle=current_font.get_style(), fontweight=current_font.get_weight(), color=current_color)
@@ -721,7 +752,7 @@ class Menu_graphique(tk.Toplevel):
 
 
     def fill__frame_legende(self):
-        # Add controls for legend properties here
+        """Create the legend settings tab with controls to show/hide and customize legend entries."""
         ttk.Label(self.tab_legende, text="Paramètres de la légende:", style='Titre_parammetre.TLabel').grid(row=0, column=0, sticky="w", padx=5, pady=10, columnspan=2)
         
         # Checkbutton to show/hide legend on the canvas
@@ -817,8 +848,8 @@ class Menu_graphique(tk.Toplevel):
         self.master._canvas.draw()
 
     def _apply_legend_changes(self):
+        """Apply the legend configuration and update the lines and displayed legend."""
         
-        # Determine whether to show column titles in the legend based on the checkbutton state
         show_key_titles = self.checkbutton_var_title_column_legende.get()
 
         # Apply the changes to the legend based on the user input in the entries.
@@ -963,7 +994,7 @@ class TkPlotCanvas(ttk.Frame):
             self.parametre_vue = {}
 
     def _initialized_style(self, bg="white"):
-        # Set a default style for the application (optional)
+        """Configure default ttk styles for the plot canvas and surrounding widgets."""
         self.style = ttk.Style()
 
         self.bg_color = bg
@@ -991,12 +1022,14 @@ class TkPlotCanvas(ttk.Frame):
 
 
     def do_popup(self, event):
+        """Show the context menu at the mouse cursor position."""
         try:
             self.menu_click.tk_popup(event.x_root, event.y_root)
         finally:
             self.menu_click.grab_release()
 
     def open_menu_graphique(self, menu_type):
+        """Open the graphical settings dialog and close any previous instance."""
         try : 
             self.open_menu_graphique.destroy()  # Ferme le menu précédent s'il existe
         except Exception:
@@ -1004,7 +1037,15 @@ class TkPlotCanvas(ttk.Frame):
         self.open_menu_graphique = Menu_graphique(self, notebook_shown=menu_type)
 
     def fill_cartouche_frame(self, label_to_display: Optional[dict] = None, line_index: int = 0, line_display: bool = True) -> None:
+        """
+        Fill the cartouche frame with metadata information for a given line index.
+        Args:            
+            label_to_display: A dictionary of metadata to display in the cartouche, where keys are the metadata names and values are the corresponding values to display.
+            line_index: The index of the line for which to display the metadata in the cartouche.
+            line_display: Whether to display the line style and marker in the cartouche.
+        """
         
+        # Clear previous cartouche content for this line index
         if len(self._cartouche_grid) > line_index+1 : 
             for widget in self._cartouche_grid[line_index]:
                 widget.destroy()
@@ -1050,12 +1091,14 @@ class TkPlotCanvas(ttk.Frame):
                 column_index += 1   
 
     def get_string_legende(self, label_dict, shown_keys = False):
+        """Build the legend string from a metadata dictionary based on selected display keys."""
         if shown_keys:
             return ", ".join(f"{key}: {value}" for key, value in label_dict.items() if key in self.legend_to_show)
         else:
             return ", ".join(f"{value}" for key, value in label_dict.items() if key in self.legend_to_show)
 
     def _update_legende(self):
+        """Refresh legend labels and redraw the legend when settings change."""
 
         for index, line in enumerate(self._lines):
             label_dict = self._line_labels[index]
@@ -1067,6 +1110,7 @@ class TkPlotCanvas(ttk.Frame):
         self._canvas.draw()
 
     def _update_axis(self, axis_to_update, parameters = {}, axe = "X"):
+        """Apply saved axis settings such as tick font, limits, and scale type."""
         
         if "ticks" in parameters:
             tick_params = parameters["ticks"]
@@ -1193,7 +1237,8 @@ class TkPlotCanvas(ttk.Frame):
 
 
     def load_parameters(self, path_to_load=None, parameters_to_load = None):
-        
+        """Load parameters from a JSON file and apply them to the plot to restore a previous view. If parameters_to_load is provided, it will be used directly instead of loading from a file."""
+
         if  parameters_to_load is not None:
              parameters = parameters_to_load
         else:
@@ -1367,8 +1412,6 @@ class TkPlotCanvas(ttk.Frame):
         ds: xr.Dataset,
         *,
         title: Optional[str] = None,
-        xlabel: Optional[str] = None,
-        ylabel: Optional[str] = None,
         grid: bool = True,
         clear: bool = True,
         legend: bool = False,
@@ -1381,8 +1424,6 @@ class TkPlotCanvas(ttk.Frame):
         Args:
             ds: xarray Dataset containing the data to plot.
             title: Optional plot title.
-            xlabel: Optional x-axis label.
-            ylabel: Optional y-axis label.
             grid: Whether to show a grid.
             clear: Whether to clear previous plot before plotting.
             legend: Whether to show a legend (if labels are provided).
@@ -1498,7 +1539,11 @@ class TkPlotCanvas(ttk.Frame):
         self._canvas.draw()
 
     def update_cartouche_frame(self):
-        # TODO
+        """Update the cartouche frame to reflect any changes in the metadata of the plotted lines."""
+        for index, line in enumerate(self._lines):
+            label_dict = self._line_labels[index]
+            self.fill_cartouche_frame(label_to_display=label_dict, line_index=index, line_display=True)
+
         pass
 
 def demo() -> None:
