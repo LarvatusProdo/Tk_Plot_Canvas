@@ -9,6 +9,7 @@ from functools import partial
 import matplotlib
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
+import matplotlib.font_manager as fm
 from tkinter import colorchooser
 import copy
 import json
@@ -82,7 +83,17 @@ class Window_font_parameter(tk.Toplevel):
         column_start = 0
 
         ttk.Label(label_frame, text="Police :").grid(row=row_start, column=column_start, sticky="e", padx=self.padx_echelle, pady=self.pady_echelle)
-        list_police = list(tk.font.families())
+        # Filter to only fonts available in both Tkinter and Matplotlib
+        matplotlib_fonts = set(fm.FontManager().get_font_names())
+        list_police = []
+        for family in tk.font.families():
+            if family in matplotlib_fonts:
+                try:
+                    tk.font.Font(family=family)
+                    list_police.append(family)
+                except tk.TclError:
+                    pass
+
         combo_police = ttk.Combobox(label_frame, values=list_police, state="readonly", width=20)
         combo_police.grid(row=row_start, column=column_start + 1, sticky="w", columnspan=2, padx=5, pady=5)
         combo_police.current(0)  # Set to current style of ticks or "normal" by default
@@ -201,7 +212,15 @@ class Window_font_parameter(tk.Toplevel):
         # pour le nom de l'axe : 
         nom_frame = nom_axe+', nom'
             # Get the family name of the current font and set the combobox to that value
-        list_police = list(tk.font.families())
+        matplotlib_fonts = set(fm.FontManager().get_font_names())
+        list_police = []
+        for family in tk.font.families():
+            if family in matplotlib_fonts:
+                try:
+                    tk.font.Font(family=family)
+                    list_police.append(family)
+                except tk.TclError:
+                    pass
         index_police = list_police.index(current_font.get_name()) if current_font.get_name() in list_police else 0
         self.dict_font_parameters[nom_frame]["combo_police"].current(index_police)
         self.dict_font_parameters[nom_frame]["combobox style police"].set(current_font.get_style())
@@ -1274,11 +1293,20 @@ class TkPlotCanvas(ttk.Frame):
             self._update_axis(self.axes.xaxis, parameters["Y_axis"], axe= "Y" )
         
         if "title" in parameters:
-            self.axes.set_title(self._title_var.get(), parameters["title"])
+            title_params = parameters["title"].copy()
+            if title_params.get("fontname") not in fm.FontManager().get_font_names():
+                title_params["fontname"] = 'DejaVu Sans'
+            self.axes.set_title(self._title_var.get(), **title_params)
         if "xlabel" in parameters:
-            self.axes.set_xlabel(self._xlabel_var.get(), parameters["xlabel"])
+            xlabel_params = parameters["xlabel"].copy()
+            if xlabel_params.get("fontname") not in fm.FontManager().get_font_names():
+                xlabel_params["fontname"] = 'DejaVu Sans'
+            self.axes.set_xlabel(self._xlabel_var.get(), **xlabel_params)
         if "ylabel" in parameters:
-            self.axes.set_ylabel(self._ylabel_var.get(), parameters["ylabel"])
+            ylabel_params = parameters["ylabel"].copy()
+            if ylabel_params.get("fontname") not in fm.FontManager().get_font_names():
+                ylabel_params["fontname"] = 'DejaVu Sans'
+            self.axes.set_ylabel(self._ylabel_var.get(), **ylabel_params)
 
         for index, line in enumerate(self._lines):
             if "curves" in parameters and str(index) in parameters["curves"]:

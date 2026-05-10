@@ -15,8 +15,8 @@
         ],
         "scale": "linear",
         "ticks": {
-            "name": "DejaVu Sans",
-            "size": 14.0,
+            "name": "Times New Roman",
+            "size": 17.0,
             "style": "normal",
             "weight": "bold",
             "color": "black"
@@ -29,30 +29,30 @@
         ],
         "scale": "linear",
         "ticks": {
-            "name": "DejaVu Sans",
-            "size": 14.0,
+            "name": "Times New Roman",
+            "size": 17.0,
             "style": "normal",
             "weight": "bold",
             "color": "black"
         }
     },
     "title": {
-        "fontname": "Arial",
-        "fontsize": 14.0,
+        "fontname": "Times New Roman",
+        "fontsize": 20.0,
         "fontstyle": "normal",
         "fontweight": "bold",
         "color": "black"
     },
     "xlabel": {
-        "fontname": "DejaVu Sans",
-        "fontsize": 14.0,
+        "fontname": "Times New Roman",
+        "fontsize": 17.0,
         "fontstyle": "normal",
         "fontweight": "bold",
         "color": "black"
     },
     "ylabel": {
-        "fontname": "DejaVu Sans",
-        "fontsize": 14.0,
+        "fontname": "Times New Roman",
+        "fontsize": 17.0,
         "fontstyle": "normal",
         "fontweight": "bold",
         "color": "black"
