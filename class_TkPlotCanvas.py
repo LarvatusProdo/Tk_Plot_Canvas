@@ -10,9 +10,9 @@ import matplotlib
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 from tkinter import colorchooser
-import numpy as np
 import copy
 import json
+import xarray as xr
 
 class Window_font_parameter(tk.Toplevel):
     def __init__(self, master, frame_to_modifiy=""):
@@ -463,7 +463,6 @@ class Menu_graphique(tk.Toplevel):
         label = ttk.Label(self.tab_courbe, text="Style de ligne:", style='Courbe.TLabel').grid(row=1, column=2, sticky="w", padx=5, pady=5)
         label = ttk.Label(self.tab_courbe, text="Marqueur:", style='Courbe.TLabel').grid(row=1, column=3, sticky="w", padx=5, pady=5)
         label = ttk.Label(self.tab_courbe, text="Taille du marqueur:", style='Courbe.TLabel').grid(row=1, column=4, sticky="w", padx=5, pady=5)
-        label = ttk.Label(self.tab_courbe, text="Label:", style='Courbe.TLabel').grid(row=1, column=5, sticky="w", padx=5, pady=5)
 
         self.list_widget = []
         for index, line in enumerate(self.master._lines):
@@ -481,60 +480,53 @@ class Menu_graphique(tk.Toplevel):
         marker = line.get_marker()
         markersize = line.get_markersize()
 
-        button_color = tk.Button(self.tab_courbe, bg=color, command=partial(self.choisir_couleur, line, index), width=5)
+        button_color = tk.Button(self.tab_courbe, bg=color, command=partial(self.choisir_couleur, index), width=5)
         button_color.grid(row=index+2, column=0, padx=5, pady=5)
 
-        spinbox_linewidth = ttk.Spinbox(self.tab_courbe, from_=0.5, to=10.0, increment=0.5, width=5, command=partial(self.update_line_property, line, 'linewidth', index=index))
+        spinbox_linewidth = ttk.Spinbox(self.tab_courbe, from_=0.5, to=10.0, increment=0.5, width=5, command=partial(self.update_line_property, 'linewidth', index=index))
         spinbox_linewidth.grid(row=index+2, column=1, padx=5, pady=5)
         spinbox_linewidth.set(linewidth)
         
         combobox_linestyle = ttk.Combobox(self.tab_courbe, values=["-", "--", "-.", "None"], state="readonly", width=8)
         combobox_linestyle.grid(row=index+2, column=2, padx=5, pady=5)
         combobox_linestyle.current(combobox_linestyle['values'].index(linestyle))
-        combobox_linestyle.bind("<<ComboboxSelected>>", partial(self.update_line_property, line, 'linestyle', index=index))
+        combobox_linestyle.bind("<<ComboboxSelected>>", partial(self.update_line_property, 'linestyle', index=index))
 
         combobox_marker = ttk.Combobox(self.tab_courbe, values=["o", "s", "^", "None"], state="readonly", width=8)
         combobox_marker.grid(row=index+2, column=3, padx=5, pady=5)
         combobox_marker.current(combobox_marker['values'].index(marker))
-        combobox_marker.bind("<<ComboboxSelected>>", partial(self.update_line_property, line, 'marker', index=index))
+        combobox_marker.bind("<<ComboboxSelected>>", partial(self.update_line_property, 'marker', index=index))
 
         
-        spinbox_markersize = ttk.Spinbox(self.tab_courbe, from_=1, to=20, increment=1, width=5, command=partial(self.update_line_property, line, 'markersize', index=index))
+        spinbox_markersize = ttk.Spinbox(self.tab_courbe, from_=1, to=20, increment=1, width=5, command=partial(self.update_line_property, 'markersize', index=index))
         spinbox_markersize.grid(row=index+2, column=4, padx=5, pady=5)
         spinbox_markersize.set(markersize)
-
-        entry_label = ttk.Entry(self.tab_courbe, width=100)
-        entry_label.grid(row=index+2, column=5, padx=5, pady=5)
-        entry_label.insert(0, label)
-        entry_label.bind("<FocusOut>", partial(self.update_line_property, line, 'label', index=index))
    
-        list_widget.append([button_color, spinbox_linewidth, combobox_linestyle, combobox_marker, spinbox_markersize, entry_label])
+        list_widget.append([button_color, spinbox_linewidth, combobox_linestyle, combobox_marker, spinbox_markersize])
 
 
-    def choisir_couleur(self, line, index):
+    def choisir_couleur(self, index):
         color_code = colorchooser.askcolor(title="Choisir une couleur")
         if color_code:
-            line.set_color(color_code[1])
+            self.master._lines[index].set_color(color_code[1])
             self.master._canvas.draw()  
             self.list_widget[index][0].configure(bg=color_code[1])  # Update button color
 
-    def update_line_property(self, line, property_name, event=None, index=None):
+    def update_line_property(self, property_name, event=None, index=None):
         widget = event.widget if event else None
         if property_name == 'linewidth':
             value_linewidth = self.list_widget[index][1].get()
-            line.set_linewidth(float(value_linewidth))
+            self.master._lines[index].set_linewidth(float(value_linewidth))
         elif property_name == 'linestyle':
             value_linestyle = self.list_widget[index][2].get()
-            line.set_linestyle(value_linestyle)
+            self.master._lines[index].set_linestyle(value_linestyle)
         elif property_name == 'marker':
             value_marker = self.list_widget[index][3].get()
-            line.set_marker(value_marker)
+            self.master._lines[index].set_marker(value_marker)
         elif property_name == 'markersize':
             value_markersize = self.list_widget[index][4].get()
-            line.set_markersize(float(value_markersize))
-        elif property_name == 'label':
-            line.set_label(widget.get())
-            self.master.axes.legend()  # Update legend to reflect label change
+            self.master._lines[index].set_markersize(float(value_markersize))
+
         self.master._canvas.draw()
 
     def fill__frame_axes(self):
@@ -568,15 +560,15 @@ class Menu_graphique(tk.Toplevel):
         self._xlabel_entry.grid(row=1, column=1, columnspan=2, padx=(0, 4), sticky="w")
         self._xlabel_var.set(self.master.axes.get_xlabel())
         
-        ttk.Separator(fame_x_axis, orient='horizontal').grid(row=5, column=0, columnspan=3, sticky="we", pady=(10, 5))
+        ttk.Separator(fame_x_axis, orient='horizontal').grid(row=5, column=0, columnspan=3, sticky="we", pady=(10, 10))
 
             # Modifier les axes : 
         ttk.Label(fame_x_axis, text="Valeur min:").grid(row=6, column=0, sticky="e", padx=padx_axes, pady=pady_axes)
         ttk.Label(fame_x_axis, text="Valeur max:").grid(row=7, column=0, sticky="e", padx=padx_axes, pady=pady_axes)
 
-        self._xlim_min_var = tk.StringVar(value="")
+        self._xlim_min_var = tk.StringVar(value= self.master.axes.get_xlim()[0].round(4) )
         ttk.Entry(fame_x_axis, textvariable=self._xlim_min_var, width=15).grid(row=6, column=1, sticky="we")
-        self._xlim_max_var = tk.StringVar(value="")
+        self._xlim_max_var = tk.StringVar(value= self.master.axes.get_xlim()[1].round(4) )
         ttk.Entry(fame_x_axis, textvariable=self._xlim_max_var, width=15).grid(row=7, column=1, sticky="we")
 
         ttk.Label(fame_x_axis, text="Echelle:").grid(row=8, column=0, sticky="e", padx=padx_axes, pady=pady_axes)
@@ -584,7 +576,7 @@ class Menu_graphique(tk.Toplevel):
         ttk.Combobox(fame_x_axis, textvariable=self._xscale_var, values=["linear", "log"], state="readonly", width=8).grid(row=8, column=1, columnspan=2, sticky="we")
         ttk.Button(fame_x_axis, text="Auto", command=self._on_zoom_auto, width=5).grid(row=6,column=2, rowspan=2, padx=padx_axes, pady=pady_axes, sticky="we")
 
-        ttk.Separator(fame_x_axis, orient='horizontal').grid(row=9, column=0, columnspan=3, sticky="we", pady=(10, 5))
+        ttk.Separator(fame_x_axis, orient='horizontal').grid(row=9, column=0, columnspan=3, sticky="we", pady=(10, 10))
 
             # Bouton police : 
         button_font_xlabel = ttk.Button(fame_x_axis, text="Modifier la police", 
@@ -600,14 +592,14 @@ class Menu_graphique(tk.Toplevel):
         self._ylabel_entry.grid(row=1, column=1, columnspan=2, padx=(0, 4), sticky="w")
         self._ylabel_var.set(self.master.axes.get_ylabel())
 
-        ttk.Separator(fame_y_axis, orient='horizontal').grid(row=5, column=0, columnspan=3, sticky="we", pady=(10, 5))
+        ttk.Separator(fame_y_axis, orient='horizontal').grid(row=5, column=0, columnspan=3, sticky="we", pady=(10, 10))
          # Modifier les axes : 
         ttk.Label(fame_y_axis, text="Valeur min:").grid(row=6, column=0, sticky="e", padx=padx_axes, pady=pady_axes)
         ttk.Label(fame_y_axis, text="Valeur max:").grid(row=7, column=0, sticky="e", padx=padx_axes, pady=pady_axes)
 
-        self._ylim_min_var = tk.StringVar(value="")
+        self._ylim_min_var = tk.StringVar(value= self.master.axes.get_ylim()[0].round(4) )
         ttk.Entry(fame_y_axis, textvariable=self._ylim_min_var, width=15).grid(row=6, column=1, sticky="we")
-        self._ylim_max_var = tk.StringVar(value="")
+        self._ylim_max_var = tk.StringVar(value= self.master.axes.get_ylim()[1].round(4) )
         ttk.Entry(fame_y_axis, textvariable=self._ylim_max_var, width=15).grid(row=7, column=1, sticky="we")
         ttk.Button(fame_y_axis, text="Auto", command=self._on_zoom_auto, width=5).grid(row=6,column=2, rowspan=2, padx=padx_axes, pady=pady_axes, sticky="we")
 
@@ -615,23 +607,67 @@ class Menu_graphique(tk.Toplevel):
         self._yscale_var = tk.StringVar(value="linear")
         ttk.Combobox(fame_y_axis, textvariable=self._yscale_var, values=["linear", "log"], state="readonly", width=8).grid(row=8, column=1, columnspan=2, sticky="we")
 
-        ttk.Separator(fame_y_axis, orient='horizontal').grid(row=9, column=0, columnspan=3, sticky="we", pady=(10, 5))
+        ttk.Separator(fame_y_axis, orient='horizontal').grid(row=9, column=0, columnspan=3, sticky="we", pady=(10, 10))
 
         # Bouton police :
         button_font_ylabel = ttk.Button(fame_y_axis, text="Modifier la police", 
                             command= partial(Window_font_parameter, self, frame_to_modifiy="ylabel") )
         button_font_ylabel.grid(row=10, column=0, columnspan=3, padx=(5, 5), sticky="ew")
 
-
         # Apply button to update axes and title:
         ttk.Button(self.tab_axes, text="Appliquer les changements", command=self._apply_axes_changes, width=20).grid(row=0, column=2, columnspan=2, padx=padx_axes, pady=pady_axes, sticky="we")
 
+        if len(self.master.list_data_xarray) > 0 :
+            list_dimension = list(self.master.list_data_xarray[0].dims)
+            list_variable = list(self.master.list_data_xarray[0].data_vars)
+            list_to_show = list_dimension + ["---------"] + list_variable
+            ttk.Label(fame_x_axis, text="Variable:").grid(row=2, column=0, sticky="e", padx=padx_axes, pady=pady_axes)
+            ttk.Label(fame_y_axis, text="Variable:").grid(row=2, column=0, sticky="e", padx=padx_axes, pady=pady_axes)
+            self.list_combobox_variable_x = ttk.Combobox(fame_x_axis, values= list_to_show, state="readonly", width=20)
+            self.list_combobox_variable_x.grid(row=2, column=1, columnspan=2, padx=5, pady=5, sticky="we")
+            index = list_to_show.index(self.master.xarray_data["dimension"]) if self.master.xarray_data["dimension"] in list_to_show else 0
+            self.list_combobox_variable_x.current(index)  # Set to the first dimension by default
+
+            self.list_combobox_variable_y = ttk.Combobox(fame_y_axis, values= list_to_show, state="readonly", width=20)
+            self.list_combobox_variable_y.grid(row=2, column=1, columnspan=2, padx=5, pady=5, sticky="we")
+            index = list_to_show.index(self.master.xarray_data["variable"]) if self.master.xarray_data["variable"] in list_to_show else 0
+            self.list_combobox_variable_y.current(index)  # Set to the first dimension by default
+
+
+
     def _apply_axes_changes(self):
+  
         # Mise à jour des titre et x/y labels : 
-        self.master.axes.set_title(self._title_var.get())
+        current_font = self.master.axes.title.get_fontproperties()
+        current_color = self.master.axes.title.get_color()
+        self.master.axes.set_title(self._title_var.get(), fontfamily=current_font.get_name(), fontsize=current_font.get_size(), fontstyle=current_font.get_style(), fontweight=current_font.get_weight(), color=current_color)
         self.master.axes.set_xlabel(self._xlabel_var.get())
         self.master.axes.set_ylabel(self._ylabel_var.get())
         
+        # if list_data_xarray is not empty, update the x and y variables based on the combobox selection
+        if len(self.master.list_data_xarray) > 0 :
+            # Show the variable selected from comboboxes if they are not already shown
+                # Get the selected variable from the comboboxes
+            selected_variable_x = self.list_combobox_variable_x.get()
+            selected_variable_y = self.list_combobox_variable_y.get()   
+            list_variable = list(self.master.list_data_xarray[0].data_vars) + list(self.master.list_data_xarray[0].dims)
+            Is_variable_modified = False
+                # Update the master variables with the selected variables
+            if selected_variable_x != self.master.xarray_data["dimension"] and selected_variable_x in list_variable:
+                Is_variable_modified = True
+                self.master.xarray_data["dimension"] = selected_variable_x
+            if selected_variable_y != self.master.xarray_data["variable"] and selected_variable_y in list_variable:
+                Is_variable_modified = True
+                self.master.xarray_data["variable"] = selected_variable_y   
+
+            if Is_variable_modified:
+                # Save the current parameter_vue : 
+                self.master.parametre_vue = self.master.get_current_parameters()
+
+                # Update the plot to reflect the variable change   
+                self.master.update_plot()           
+
+
         # Mise à jour de l'échelle : 
         # Get the new axis limits and scale types from the entries and comboboxes, and apply them to the plot.
         try:
@@ -667,6 +703,13 @@ class Menu_graphique(tk.Toplevel):
     def _on_zoom_auto(self):
         self.master.axes.autoscale()
         self.master._canvas.draw()
+
+        # Update the entries for axis limits with the new autoscaled limits
+        self._xlim_min_var.set(self.master.axes.get_xlim()[0].round(4))
+        self._xlim_max_var.set(self.master.axes.get_xlim()[1].round(4))
+
+        self._ylim_min_var.set(self.master.axes.get_ylim()[0].round(4))
+        self._ylim_max_var.set(self.master.axes.get_ylim()[1].round(4))
 
 
     def choisir_couleur_police(self, canvas, axis_type):
@@ -892,7 +935,16 @@ class TkPlotCanvas(ttk.Frame):
         # Create the canvas
         self._canvas = FigureCanvasTkAgg(self.figure, master= self._plot_frame)
         self._canvas.draw()
+       
+        toolbar = NavigationToolbar2Tk( self._canvas, self._plot_frame, pack_toolbar=False)
+        toolbar.update()
+        toolbar.pack(side=tk.TOP, fill=tk.X)
         self._canvas.get_tk_widget().pack(fill="both", expand=True)
+
+        # Variable pour les paramètres Xarray : 
+        self.xarray_data = dict( dimension = "", variable = "")
+        self.list_data_xarray = []
+        
 
         # Create context menu.
         self.menu_click = tk.Menu(self, tearoff=0, bg=bg_color)
@@ -1050,6 +1102,16 @@ class TkPlotCanvas(ttk.Frame):
         #  - cartouche parameters (metadata keys)
         #  - legend parameters (location, font properties, key to display in the legend)
 
+        parameters = self.get_current_parameters()
+        
+        with open(path_to_save, 'w') as f:
+            json.dump(parameters, f, indent=4)
+
+    def get_current_parameters(self):
+        """
+        Get the current parameters of the plot to be able to save them in a json file and reload them later to restore the view.
+        """
+        
         parameters = {
 
             "background_color": self.bg_color,
@@ -1100,7 +1162,7 @@ class TkPlotCanvas(ttk.Frame):
                 "fontweight": self.axes.yaxis.label.get_fontproperties().get_weight(),
                 "color": self.axes.yaxis.label.get_color()
             },
-            "curves": { index:
+            "curves": { str(index):
                 {
                     "color": line.get_color(),
                     "linewidth": line.get_linewidth(),
@@ -1120,25 +1182,32 @@ class TkPlotCanvas(ttk.Frame):
                 "Is_legend_display" : self.Is_legend_display,
                 "Is_title_display": self.Is_title_display ,
 
+            },
+            "xarray_data" : {
+                "dimension" : self.xarray_data["dimension"],
+                "variable" : self.xarray_data["variable"]
             }
         }
+
+        return parameters
+
+
+    def load_parameters(self, path_to_load=None, parameters_to_load = None):
         
-        with open(path_to_save, 'w') as f:
-            json.dump(parameters, f, indent=4)
+        if  parameters_to_load is not None:
+             parameters = parameters_to_load
+        else:
+            # Implement loading parameters from a JSON file here
+            if path_to_load is None:
+                path_to_load = tk.filedialog.askopenfilename(initialdir=".", title="Charger les paramètres",
+                                                            defaultextension=".json", filetypes=[("JSON files", "*.json")])
+                
+            if path_to_load =="":
+                return False # TODO 
 
-
-    def load_parameters(self, path_to_load=None):
-        # Implement loading parameters from a JSON file here
-        if path_to_load is None:
-            path_to_load = tk.filedialog.askopenfilename(initialdir=".", title="Charger les paramètres",
-                                                        defaultextension=".json", filetypes=[("JSON files", "*.json")])
+            with open(path_to_load, 'r') as f:
+                parameters = json.load(f)
             
-        if path_to_load =="":
-            return False # TODO 
-
-        with open(path_to_load, 'r') as f:
-            parameters = json.load(f)
-        
         # Apply loaded parameters to the plot (axes limits, scale types, font properties, curve properties, cartouche parameters, legend parameters)
         if "background_color" in parameters:
             self.bg_color = parameters["background_color"]
@@ -1195,6 +1264,10 @@ class TkPlotCanvas(ttk.Frame):
             self.Is_title_display = legend_params.get("Is_title_display", False)
     
             self._update_legende()
+
+       
+        self.xarray_data["dimension"] = parameters["xarray_data"].get("dimension", "")
+        self.xarray_data["variable"] = parameters["xarray_data"].get("variable", "")
 
         self._canvas.draw()
 
@@ -1288,22 +1361,158 @@ class TkPlotCanvas(ttk.Frame):
 
         self._canvas.draw()
 
-    
 
+    def plot_xarray(
+        self,
+        ds: xr.Dataset,
+        *,
+        title: Optional[str] = None,
+        xlabel: Optional[str] = None,
+        ylabel: Optional[str] = None,
+        grid: bool = True,
+        clear: bool = True,
+        legend: bool = False,
+        label: Optional[dict] = None,
+        replot: bool = False,
+        **plot_kwargs,
+        ) -> None:
+        """Plot a curve in the embedded canvas.
+
+        Args:
+            ds: xarray Dataset containing the data to plot.
+            title: Optional plot title.
+            xlabel: Optional x-axis label.
+            ylabel: Optional y-axis label.
+            grid: Whether to show a grid.
+            clear: Whether to clear previous plot before plotting.
+            legend: Whether to show a legend (if labels are provided).
+            label: Optional dict of metadata to display in the legend (e.g., {'name': 'curve', 'value': 42}).
+            **plot_kwargs: Passed to `Axes.plot`.
+        """
+        if clear:
+            self.axes.cla()
+            self._lines.clear()
+            self._line_labels.clear()
+            self._active_line_index = 0
+
+
+        # Construct label string from dict
+        label_str = None
+        if label:           
+            label_str = self.get_string_legende(label, shown_keys=self.Is_title_display)
+        
+        modif_plot_kwargs = copy.copy(plot_kwargs)   
+        if self.parametre_vue != {}: # Si un fichier json a été chargé : 
+            # Changement de self.parametre_vue, si l'utilisateuur spécifie des attriibues
+            n_lines = len(self._lines) 
+            for key in self.parametre_vue["curves"][str(n_lines)]:
+                if not key in plot_kwargs:
+                    modif_plot_kwargs[key] = self.parametre_vue["curves"][str(n_lines)][key]
+
+        # construction des variables associées au xarray : 
+        if not replot :
+            self.list_data_xarray.append(ds)
+            
+        dimension = self.xarray_data["dimension"] if self.xarray_data["dimension"] != "" else list(ds.dims)[0]
+        variable = self.xarray_data["variable"] if self.xarray_data["variable"] != "" else list(ds.data_vars)[0]
+  
+        x = ds[dimension].values
+        y = ds[variable].values
+
+        # On sauvegarde pour le prochain xarray : 
+        self.xarray_data["dimension"] = dimension
+        self.xarray_data["variable"] = variable
+
+        line, = self.axes.plot(x, y, label=label_str, **modif_plot_kwargs)
+        self._lines.append(line)
+        self._line_labels.append(label)
+
+        # Cartouche: Update the cartouche with the metadata of the newly added line.
+        if not replot :
+            self.fill_cartouche_frame(label_to_display=label, line_index=len(self._lines)-1, line_display=True)
+        else :
+            self.update_cartouche_frame()
+
+        if title is not None and "title" in self.parametre_vue :
+            self.axes.set_title(title, self.parametre_vue["title"])
+            self._title_var.set(title)
+
+        if dimension is not None and "xlabel" in self.parametre_vue :
+            # Get unit label from xarray variable attributes if it exists
+            if "units" in ds[dimension].attrs:
+                dimension_label = f"{dimension.capitalize()} ({ds[dimension].attrs['units']})"
+            else:
+                dimension_label = dimension.capitalize()
+
+            self.axes.set_xlabel(dimension_label, self.parametre_vue["xlabel"])
+            self._xlabel_var.set(dimension_label)
+
+        if variable is not None and "ylabel" in self.parametre_vue : 
+            # Get unit label from xarray variable attributes if it exists
+            if "units" in ds[variable].attrs:
+                variable_label = f"{variable.capitalize()} ({ds[variable].attrs['units']})"
+            else:
+                variable_label = variable.capitalize()
+
+            self.axes.set_ylabel(variable_label, self.parametre_vue["ylabel"])
+            self._ylabel_var.set(variable_label)
+
+        self.axes.grid(grid)
+
+        if self.parametre_vue != {}: # Si un fichier json a été chargé : 
+            # Update X et Y axis from self.parameter_vue
+            self._update_axis(self.axes.xaxis, self.parametre_vue.get("X_axis"), axe= "X" )
+            self._update_axis(self.axes.yaxis, self.parametre_vue.get("Y_axis"), axe= "Y" )
+
+        if legend and label_str is not None:
+            if self.Is_legend_display:
+                self.axes.legend(draggable=True)  # Make the legend draggable
+
+        self._canvas.draw()
+    
+    def update_plot(self):
+        """Redraw the canvas to reflect any updates to the plot."""
+        
+        self.clear_plot()  # Clear the plot before re-plotting with updated data or parameters.
+
+        title = self.open_menu_graphique._title_var.get()
+
+        for index, ds in enumerate(self.list_data_xarray):
+            self.plot_xarray(ds, clear=False, replot=True, label= self._line_labels[index], title= title if index == 0 else None, legend=True)
+
+
+        # Reload the legend menu to update the comboboxes and entries based on the loaded parameters
+            # Get the current notebook shown
+        current_notebook = self.open_menu_graphique._notebook if hasattr(self.open_menu_graphique, "_notebook") else None
+            # If a notebook is currently shown, get its name and reopen the menu with the same notebook shown to update the legend menu display based on the loaded parameters
+        if current_notebook is not None:
+            notebook_shown = current_notebook.tab(current_notebook.select(), "text")
+            self.open_menu_graphique.destroy()  # Close the current menu
+            self.open_menu_graphique = Menu_graphique(self, notebook_shown=notebook_shown)  # Reopen the menu with the same notebook shown
+
+    def clear_plot(self):
+        """Clear the plot and reset the canvas."""
+        self.axes.cla()
+        self._lines.clear()
+        self._active_line_index = 0
+        self._canvas.draw()
+
+    def update_cartouche_frame(self):
+        # TODO
+        pass
 
 def demo() -> None:
     """Demo application for the TkPlotCanvas."""
     root = tk.Tk()
     root.title("Tkinter + Matplotlib Plot Demo")
 
-    plot_widget = TkPlotCanvas(root, load_view="vue.json")  # Load parameters from a JSON file if it exists
-    #plot_widget = TkPlotCanvas(root)
+    #plot_widget = TkPlotCanvas(root, load_view="vue.json")  # Load parameters from a JSON file if it exists
+    plot_widget = TkPlotCanvas(root)
     plot_widget.pack(fill="both", expand=True)
 
     x = list(range(11))
     y = [xi**2 for xi in x]
     
-    import xarray as xr
     ds = xr.Dataset(
     data_vars=dict( temperature=("time", y),),
                     coords=dict( time= x),
@@ -1321,14 +1530,48 @@ def demo() -> None:
                 ),
 )
 
-    #ds_2.attrs["references"] = "2"
-    #ds_2.attrs["comment"] = "Second curve"
-    # Add a second curve without clearing the first.
 
+    # Add a second curve without clearing the first.
     plot_widget.plot(ds_2["time"], ds_2["temperature"], clear=False, label=ds_2.attrs, legend=True, color="black")
     
     root.mainloop()
 
+def demo_xarray() -> None:
+    """Demo application for the TkPlotCanvas."""
+    root = tk.Tk()
+    root.title("Tkinter + Matplotlib Plot Demo")
+
+    #plot_widget = TkPlotCanvas(root, load_view="vue.json")  # Load parameters from a JSON file if it exists
+    plot_widget = TkPlotCanvas(root, load_view="vue_xarray.json" )
+    #plot_widget = TkPlotCanvas(root)
+    plot_widget.pack(fill="both", expand=True)
+
+    x = list(range(11))
+    y = [xi**2 for xi in x]
+    y4 = [xi for xi in x]
+    ds = xr.Dataset(    data_vars = { "temperature" : (("time"), y, {"units": "°C"}),
+                                     "humidity" : (("time"),  y4 ,  {"units": "%"}),
+                                    },      
+                        coords=dict( time= x),
+                        attrs=dict(description="Weather data", base="", source="Simulated", history="Created for demo", references="1", comment="First curve") )
+
+    
+    y2 = [xi**1.5 for xi in x]
+    y3 = [xi**5 for xi in x]
+    ds_2 = xr.Dataset( data_vars = { "temperature" : (("time"), y2, {"units": "°C"}),
+                                     "humidity" : (("time"),  y3 ,  {"units": "%"}),
+                                    },
+                        coords=dict( time= x),
+                        attrs=dict(description="Weather data", base="", source="Simulated", history="Created for demo", references="2", comment="Second curve") )
+
+    plot_widget.plot_xarray(ds, clear=False, title=ds.attrs["description"], label=ds.attrs, legend=True)
+    plot_widget.plot_xarray(ds_2, clear=False, label=ds_2.attrs, legend=True)
+    
+
+    root.mainloop()
+
+
 
 if __name__ == "__main__":
-    demo()
+    #demo()
+    demo_xarray()

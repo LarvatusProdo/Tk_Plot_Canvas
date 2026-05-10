@@ -1,0 +1,106 @@
+{
+    "background_color": "white",
+    "window_size": [
+        1073,
+        786
+    ],
+    "window_position": [
+        271,
+        74
+    ],
+    "X_axis": {
+        "lim": [
+            -0.5,
+            10.5
+        ],
+        "scale": "linear",
+        "ticks": {
+            "name": "DejaVu Sans",
+            "size": 14.0,
+            "style": "normal",
+            "weight": "bold",
+            "color": "black"
+        }
+    },
+    "Y_axis": {
+        "lim": [
+            -5.0,
+            105.0
+        ],
+        "scale": "linear",
+        "ticks": {
+            "name": "DejaVu Sans",
+            "size": 14.0,
+            "style": "normal",
+            "weight": "bold",
+            "color": "black"
+        }
+    },
+    "title": {
+        "fontname": "Arial",
+        "fontsize": 14.0,
+        "fontstyle": "normal",
+        "fontweight": "bold",
+        "color": "black"
+    },
+    "xlabel": {
+        "fontname": "DejaVu Sans",
+        "fontsize": 14.0,
+        "fontstyle": "normal",
+        "fontweight": "bold",
+        "color": "black"
+    },
+    "ylabel": {
+        "fontname": "DejaVu Sans",
+        "fontsize": 14.0,
+        "fontstyle": "normal",
+        "fontweight": "bold",
+        "color": "black"
+    },
+    "curves": {
+        "0": {
+            "color": "#80ffff",
+            "linewidth": 6.0,
+            "linestyle": "-",
+            "marker": "None",
+            "markersize": 6.0
+        },
+        "1": {
+            "color": "#0000a0",
+            "linewidth": 5.5,
+            "linestyle": "-",
+            "marker": "None",
+            "markersize": 6.0
+        }
+    },
+    "cartouche": {
+        "cartouche_title_grid": [
+            "description",
+            "base",
+            "source",
+            "history",
+            "references",
+            "comment"
+        ],
+        "cartouche_font_title": {
+            "foreground": "black",
+            "font": "Arial 14 bold"
+        },
+        "cartouche_font_line": {
+            "foreground": "black",
+            "font": "Arial 12 normal"
+        }
+    },
+    "legend": {
+        "displayed_keys": [
+            "description",
+            "source"
+        ],
+        "Is_legend_display": true,
+        "Is_title_display": true
+    },
+    "xarray_data": {
+        "dimension": "time",
+        "variable": "temperature"
+    }
+}
