@@ -192,6 +192,8 @@ class Window_font_parameter(tk.Toplevel):
         bg_button = self.dict_font_parameters["Cartouche, line"]["button_couleur"].cget("bg")
         self.master.master.style.configure('Cartouche.TLabel', foreground = bg_button)
 
+        self.destroy()  # Close the font parameter window after applying changes
+
     # Fonction pour les axes : 
     def _set_widget_with_axis_font(self, nom_axe, objet_axis):
         """Load the current axis or title font settings into the editor controls."""
@@ -292,6 +294,8 @@ class Window_font_parameter(tk.Toplevel):
                     tick.set_color(color_tick)
     
         self.master.master._canvas.draw()
+
+        self.destroy()  # Close the font parameter window after applying changes
 
 
     def choisir_couleur_police(self, widget):
@@ -550,10 +554,18 @@ class Menu_graphique(tk.Toplevel):
     def choisir_couleur(self, index):
         """Open a color chooser to select a new curve color and update the plot."""
         color_code = colorchooser.askcolor(title="Choisir une couleur")
-        if color_code:
+        
+        if color_code and color_code[1]:  # Check if a color was selected (colorchooser returns (None, None) if cancelled)
             self.master._lines[index].set_color(color_code[1])
-            self.master._canvas.draw()  
-            self.list_widget[index][0].configure(bg=color_code[1])  # Update button color
+            
+            # Update the legend to reflect the new color if the line has a label and legend is displayed
+            if self.master.Is_legend_display and self.master._lines[index].get_label() != "_nolegend_":
+                self.master.axes.legend(draggable=True)  # Update the legend to reflect the new color
+            
+            self.master._canvas.draw()  # Redraw the canvas after color and legend update
+
+            # Update the button color to reflect the new line color
+            self.list_widget[index][0].configure(bg=color_code[1])
 
     def update_line_property(self, property_name, event=None, index=None):
         """
