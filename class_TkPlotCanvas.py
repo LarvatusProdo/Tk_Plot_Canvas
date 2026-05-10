@@ -685,12 +685,12 @@ class Menu_graphique(tk.Toplevel):
             list_to_show = list_dimension + ["---------"] + list_variable
             ttk.Label(fame_x_axis, text="Variable:").grid(row=2, column=0, sticky="e", padx=padx_axes, pady=pady_axes)
             ttk.Label(fame_y_axis, text="Variable:").grid(row=2, column=0, sticky="e", padx=padx_axes, pady=pady_axes)
-            self.list_combobox_variable_x = ttk.Combobox(fame_x_axis, values= list_to_show, state="readonly", width=20)
+            self.list_combobox_variable_x = ttk.Combobox(fame_x_axis, values= list_to_show, state="readonly", width=20, style='Combobox_variable.TCombobox')
             self.list_combobox_variable_x.grid(row=2, column=1, columnspan=2, padx=5, pady=5, sticky="we")
             index = list_to_show.index(self.master.xarray_data["dimension"]) if self.master.xarray_data["dimension"] in list_to_show else 0
             self.list_combobox_variable_x.current(index)  # Set to the first dimension by default
 
-            self.list_combobox_variable_y = ttk.Combobox(fame_y_axis, values= list_to_show, state="readonly", width=20)
+            self.list_combobox_variable_y = ttk.Combobox(fame_y_axis, values= list_to_show, state="readonly", width=20, style='Combobox_variable.TCombobox')
             self.list_combobox_variable_y.grid(row=2, column=1, columnspan=2, padx=5, pady=5, sticky="we")
             index = list_to_show.index(self.master.xarray_data["variable"]) if self.master.xarray_data["variable"] in list_to_show else 0
             self.list_combobox_variable_y.current(index)  # Set to the first dimension by default
@@ -954,9 +954,9 @@ class TkPlotCanvas(ttk.Frame):
         """
         super().__init__(master, **kwargs)
 
-        if self._initialized_style :
-            self._initialized_style(bg=bg_color)
+        if not self._initialized_style :
             self._initialized_style = True
+            self._setup_styles(bg=bg_color)
 
         # StringVars to hold the current title and axis labels for synchronization with the menu.
         self._title_var = tk.StringVar(value="")
@@ -1024,7 +1024,7 @@ class TkPlotCanvas(ttk.Frame):
         else : 
             self.parametre_vue = {}
 
-    def _initialized_style(self, bg="white"):
+    def _setup_styles(self, bg="white"):
         """Configure default ttk styles for the plot canvas and surrounding widgets."""
         self.style = ttk.Style()
 
@@ -1045,10 +1045,22 @@ class TkPlotCanvas(ttk.Frame):
 
         self.style.configure('TEntry', background=self.bg_color)
         self.style.configure('TButton', background=self.bg_color)
-        self.style.configure('TCombobox', background=self.bg_color)
+        #self.style.configure('TCombobox', background=self.bg_color)
+       
+        self.style.configure('Combobox_variable.TCombobox', 
+                            fieldbackground='#ADD8E6', 
+                            background='#ADD8E6', 
+                            foreground='black')
+        self.style.map('Combobox_variable.TCombobox', 
+                      fieldbackground=[('readonly', '#ADD8E6')], 
+                      background=[('readonly', '#ADD8E6')],
+                      selectbackground=[('readonly', 'white')],
+                      selectforeground=[('readonly', 'black')])
+
         self.style.configure('TCheckbutton', background=self.bg_color)
         self.style.configure('TLabelframe', background=self.bg_color)
         self.style.configure('TLabelframe.Label', background=self.bg_color, font=('Arial', 10, 'bold'))
+        
         
 
 
