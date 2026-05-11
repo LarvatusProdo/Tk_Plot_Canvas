@@ -553,7 +553,7 @@ class Menu_graphique(tk.Toplevel):
 
     def choisir_couleur(self, index):
         """Open a color chooser to select a new curve color and update the plot."""
-        color_code = colorchooser.askcolor(title="Choisir une couleur")
+        color_code = colorchooser.askcolor(parent= self, title="Choisir une couleur")
         
         if color_code and color_code[1]:  # Check if a color was selected (colorchooser returns (None, None) if cancelled)
             self.master._lines[index].set_color(color_code[1])
@@ -629,15 +629,27 @@ class Menu_graphique(tk.Toplevel):
         ttk.Label(fame_x_axis, text="Valeur max:").grid(row=7, column=0, sticky="e", padx=padx_axes, pady=pady_axes)
 
         self._xlim_min_var = tk.StringVar(value= self.master.axes.get_xlim()[0].round(4) )
-        ttk.Entry(fame_x_axis, textvariable=self._xlim_min_var, width=15).grid(row=6, column=1, sticky="we")
+        entry_x_min = ttk.Entry(fame_x_axis, textvariable=self._xlim_min_var, width=15)
+        entry_x_min.grid(row=6, column=1, sticky="we")
+        entry_x_min.bind('<KeyRelease>', lambda event: self.set_autoscale_false(axis="x"))  # Set autoscale to False when user types in the entry
+        entry_x_min.bind("<Return>", lambda event: self._apply_axes_changes())  # Apply changes when Enter is pressed
+
         self._xlim_max_var = tk.StringVar(value= self.master.axes.get_xlim()[1].round(4) )
-        ttk.Entry(fame_x_axis, textvariable=self._xlim_max_var, width=15).grid(row=7, column=1, sticky="we")
+        entry_x_max = ttk.Entry(fame_x_axis, textvariable=self._xlim_max_var, width=15)
+        entry_x_max.grid(row=7, column=1, sticky="we")  
+        entry_x_max.bind('<KeyRelease>', lambda event: self.set_autoscale_false(axis="x"))  # Set autoscale to False when user types in the entry
+        entry_x_max.bind("<Return>", lambda event: self._apply_axes_changes())  # Apply changes when Enter is pressed
+        
 
         ttk.Label(fame_x_axis, text="Echelle:").grid(row=8, column=0, sticky="e", padx=padx_axes, pady=pady_axes)
         self._xscale_var = tk.StringVar(value="linear")
         ttk.Combobox(fame_x_axis, textvariable=self._xscale_var, values=["linear", "log"], state="readonly", width=8).grid(row=8, column=1, columnspan=2, sticky="we")
-        ttk.Button(fame_x_axis, text="Auto", command=self._on_zoom_auto, width=5).grid(row=6,column=2, rowspan=2, padx=padx_axes, pady=pady_axes, sticky="we")
-
+        
+        self.auto_scale_var_x = tk.BooleanVar(value= self.master.axes.get_autoscalex_on() )
+        checkbutton_autoscale_x = ttk.Checkbutton(fame_x_axis, text="Auto", variable = self.auto_scale_var_x, command= partial(self._on_zoom_auto, axis ="x"), width=5)
+        checkbutton_autoscale_x.grid(row=6,column=2, rowspan=2, padx=padx_axes, pady=pady_axes, sticky="we")
+        
+        
         ttk.Separator(fame_x_axis, orient='horizontal').grid(row=9, column=0, columnspan=3, sticky="we", pady=(10, 10))
 
             # Bouton police : 
@@ -660,10 +672,21 @@ class Menu_graphique(tk.Toplevel):
         ttk.Label(fame_y_axis, text="Valeur max:").grid(row=7, column=0, sticky="e", padx=padx_axes, pady=pady_axes)
 
         self._ylim_min_var = tk.StringVar(value= self.master.axes.get_ylim()[0].round(4) )
-        ttk.Entry(fame_y_axis, textvariable=self._ylim_min_var, width=15).grid(row=6, column=1, sticky="we")
+        entry_y_min = ttk.Entry(fame_y_axis, textvariable=self._ylim_min_var, width=15)
+        entry_y_min.grid(row=6, column=1, sticky="we")
+        entry_y_min.bind('<KeyRelease>', lambda event: self.set_autoscale_false(axis="y"))  # Set autoscale to False when user types in the entry
+        entry_y_min.bind("<Return>", lambda event: self._apply_axes_changes())  # Apply changes when Enter is pressed
+
         self._ylim_max_var = tk.StringVar(value= self.master.axes.get_ylim()[1].round(4) )
-        ttk.Entry(fame_y_axis, textvariable=self._ylim_max_var, width=15).grid(row=7, column=1, sticky="we")
-        ttk.Button(fame_y_axis, text="Auto", command=self._on_zoom_auto, width=5).grid(row=6,column=2, rowspan=2, padx=padx_axes, pady=pady_axes, sticky="we")
+        entry_y_max = ttk.Entry(fame_y_axis, textvariable=self._ylim_max_var, width=15)
+        entry_y_max.grid(row=7, column=1, sticky="we")
+        entry_y_max.bind('<KeyRelease>', lambda event: self.set_autoscale_false(axis="y"))  # Set autoscale to False when user types in the entry
+        entry_y_max.bind("<Return>", lambda event: self._apply_axes_changes())  # Apply changes when Enter is pressed   
+
+        self.auto_scale_var_y = tk.BooleanVar(value = self.master.axes.get_autoscaley_on() )
+        checkbutton_autoscale_y = ttk.Checkbutton(fame_y_axis, text="Auto", variable = self.auto_scale_var_y, command=partial(self._on_zoom_auto, axis="y"), width=5)
+        checkbutton_autoscale_y.grid(row=6,column=2, rowspan=2, padx=padx_axes, pady=pady_axes, sticky="we")
+
 
         ttk.Label(fame_y_axis, text="Echelle:").grid(row=8, column=0, sticky="e", padx=padx_axes, pady=pady_axes)
         self._yscale_var = tk.StringVar(value="linear")
@@ -695,7 +718,12 @@ class Menu_graphique(tk.Toplevel):
             index = list_to_show.index(self.master.xarray_data["variable"]) if self.master.xarray_data["variable"] in list_to_show else 0
             self.list_combobox_variable_y.current(index)  # Set to the first dimension by default
 
-
+    def set_autoscale_false(self, event=None, axis=""):
+        """Set the autoscale checkboxes to False when the user manually changes axis limits."""
+        if axis == "x":
+            self.auto_scale_var_x.set(False)
+        elif axis == "y":
+            self.auto_scale_var_y.set(False)
 
     def _apply_axes_changes(self):
         """Apply the axes, title, and xarray selection changes from the axes tab."""
@@ -762,8 +790,8 @@ class Menu_graphique(tk.Toplevel):
 
         self.master._canvas.draw()
     
-    def _on_zoom_auto(self):
-        self.master.axes.autoscale()
+    def _on_zoom_auto(self, axis="both", tight=True):
+        self.master.axes.autoscale(axis=axis, tight=tight)
         self.master._canvas.draw()
 
         # Update the entries for axis limits with the new autoscaled limits
@@ -992,7 +1020,6 @@ class TkPlotCanvas(ttk.Frame):
         # Track plotted lines so they can be modified after creation.
         self._lines: list = []
         self._line_labels: list = []  # Store original label dicts
-        self._active_line_index: int = 0
 
         # Create the canvas
         self._canvas = FigureCanvasTkAgg(self.figure, master= self._plot_frame)
@@ -1174,6 +1201,12 @@ class TkPlotCanvas(ttk.Frame):
         if "scale" in parameters and axe == "Y":
             self.axes.set_yscale(parameters["scale"])
         
+        if "autoscale" in parameters and axe == "X":
+            self.axes.set_autoscalex_on(parameters["autoscale"])
+
+        if "autoscale" in parameters and axe == "Y":
+            self.axes.set_autoscaley_on(parameters["autoscale"])
+       
 
         return True
 
@@ -1190,9 +1223,11 @@ class TkPlotCanvas(ttk.Frame):
         #  - legend parameters (location, font properties, key to display in the legend)
 
         parameters = self.get_current_parameters()
-        
-        with open(path_to_save, 'w') as f:
-            json.dump(parameters, f, indent=4)
+        try : 
+            with open(path_to_save, 'w') as f:
+                json.dump(parameters, f, indent=4)
+        except Exception as e:
+            tk.messagebox.showerror("Error", f"An error occurred while saving the parameters:\n{e}")
 
     def get_current_parameters(self):
         """
@@ -1209,6 +1244,7 @@ class TkPlotCanvas(ttk.Frame):
             "X_axis": {
                 "lim": self.axes.get_xlim(),
                 "scale": self.axes.get_xscale(),
+                "autoscale": self.axes.get_autoscalex_on(),  # Assuming you want to save the autoscale state for x-axis
                 "ticks": {
                     "name" : self.axes.xaxis.get_ticklabels()[0].get_fontname() if len(self.axes.xaxis.get_ticklabels()) > 0 else None,
                     "size": self.axes.xaxis.get_ticklabels()[0].get_fontsize() if len(self.axes.xaxis.get_ticklabels()) > 0 else None,
@@ -1218,15 +1254,16 @@ class TkPlotCanvas(ttk.Frame):
                 }
             },
             "Y_axis": {
-            "lim": self.axes.get_ylim(),
-            "scale": self.axes.get_yscale(),
-            "ticks": {
-                "name" : self.axes.yaxis.get_ticklabels()[0].get_fontname() if len(self.axes.yaxis.get_ticklabels()) > 0 else None,
-                "size": self.axes.yaxis.get_ticklabels()[0].get_fontsize() if len(self.axes.yaxis.get_ticklabels()) > 0 else None,
-                "style": self.axes.yaxis.get_ticklabels()[0].get_fontstyle() if len(self.axes.yaxis.get_ticklabels()) > 0 else None,
-                "weight": self.axes.yaxis.get_ticklabels()[0].get_fontweight() if len(self.axes.yaxis.get_ticklabels()) > 0 else None,
-                "color": self.axes.yaxis.get_ticklabels()[0].get_color() if len(self.axes.yaxis.get_ticklabels()) > 0 else None
-                },
+                "lim": self.axes.get_ylim(),
+                "scale": self.axes.get_yscale(),
+                "autoscale": self.axes.get_autoscaley_on(),  # Assuming you want to save the autoscale state for x-axis
+                "ticks": {
+                    "name" : self.axes.yaxis.get_ticklabels()[0].get_fontname() if len(self.axes.yaxis.get_ticklabels()) > 0 else None,
+                    "size": self.axes.yaxis.get_ticklabels()[0].get_fontsize() if len(self.axes.yaxis.get_ticklabels()) > 0 else None,
+                    "style": self.axes.yaxis.get_ticklabels()[0].get_fontstyle() if len(self.axes.yaxis.get_ticklabels()) > 0 else None,
+                    "weight": self.axes.yaxis.get_ticklabels()[0].get_fontweight() if len(self.axes.yaxis.get_ticklabels()) > 0 else None,
+                    "color": self.axes.yaxis.get_ticklabels()[0].get_color() if len(self.axes.yaxis.get_ticklabels()) > 0 else None
+                    },
             },
             "title": {
                 "fontname" : self.axes.title.get_fontproperties().get_name(), 
@@ -1290,11 +1327,12 @@ class TkPlotCanvas(ttk.Frame):
                 path_to_load = tk.filedialog.askopenfilename(initialdir=".", title="Charger les paramètres",
                                                             defaultextension=".json", filetypes=[("JSON files", "*.json")])
                 
-            if path_to_load =="":
-                return False # TODO 
+            try:
+                with open(path_to_load, 'r') as f:
+                    parameters = json.load(f)
 
-            with open(path_to_load, 'r') as f:
-                parameters = json.load(f)
+            except Exception as e:
+                parameters = {}
             
         # Apply loaded parameters to the plot (axes limits, scale types, font properties, curve properties, cartouche parameters, legend parameters)
         if "background_color" in parameters:
@@ -1362,9 +1400,11 @@ class TkPlotCanvas(ttk.Frame):
     
             self._update_legende()
 
-       
-        self.xarray_data["dimension"] = parameters["xarray_data"].get("dimension", "")
-        self.xarray_data["variable"] = parameters["xarray_data"].get("variable", "")
+        try :
+            self.xarray_data["dimension"] = parameters["xarray_data"].get("dimension", "")
+            self.xarray_data["variable"] = parameters["xarray_data"].get("variable", "")
+        except Exception:
+            pass
 
         self._canvas.draw()
 
@@ -1411,7 +1451,6 @@ class TkPlotCanvas(ttk.Frame):
             self.axes.cla()
             self._lines.clear()
             self._line_labels.clear()
-            self._active_line_index = 0
 
 
         # Construct label string from dict
@@ -1486,7 +1525,6 @@ class TkPlotCanvas(ttk.Frame):
             self.axes.cla()
             self._lines.clear()
             self._line_labels.clear()
-            self._active_line_index = 0
 
 
         # Construct label string from dict
@@ -1498,16 +1536,18 @@ class TkPlotCanvas(ttk.Frame):
         if self.parametre_vue != {}: # Si un fichier json a été chargé : 
             # Changement de self.parametre_vue, si l'utilisateuur spécifie des attriibues
             n_lines = len(self._lines) 
-            for key in self.parametre_vue["curves"][str(n_lines)]:
-                if not key in plot_kwargs:
-                    modif_plot_kwargs[key] = self.parametre_vue["curves"][str(n_lines)][key]
+            if str(n_lines) in self.parametre_vue["curves"] :
+                for key in self.parametre_vue["curves"][str(n_lines)]:
+                    if not key in plot_kwargs:
+                        modif_plot_kwargs[key] = self.parametre_vue["curves"][str(n_lines)][key]
 
         # construction des variables associées au xarray : 
         if not replot :
             self.list_data_xarray.append(ds)
-            
-        dimension = self.xarray_data["dimension"] if self.xarray_data["dimension"] != "" else list(ds.dims)[0]
-        variable = self.xarray_data["variable"] if self.xarray_data["variable"] != "" else list(ds.data_vars)[0]
+
+        list_dim_var = list(ds.dims) + list(ds.data_vars)
+        dimension = self.xarray_data["dimension"] if self.xarray_data["dimension"] in list_dim_var else list(ds.dims)[0]
+        variable = self.xarray_data["variable"] if self.xarray_data["variable"] in list_dim_var else list(ds.data_vars)[0]
   
         x = ds[dimension].values
         y = ds[variable].values
@@ -1587,7 +1627,6 @@ class TkPlotCanvas(ttk.Frame):
         """Clear the plot and reset the canvas."""
         self.axes.cla()
         self._lines.clear()
-        self._active_line_index = 0
         self._canvas.draw()
 
     def update_cartouche_frame(self):
@@ -1660,9 +1699,18 @@ def demo_xarray() -> None:
                                     },
                         coords=dict( time= x),
                         attrs=dict(description="Weather data", base="", source="Simulated", history="Created for demo", references="2", comment="Second curve") )
+    
+    y2 = [xi for xi in x]
+    y3 = [1 for xi in x]
+    ds_3 = xr.Dataset( data_vars = { "temperature" : (("time"), y2, {"units": "°C"}),
+                                     "humidity" : (("time"),  y3 ,  {"units": "%"}),
+                                    },
+                        coords=dict( time= x),
+                        attrs=dict(description="Weather data", base="", source="Simulated", history="Created for demo", references="3", comment="Second curve") )
 
     plot_widget.plot_xarray(ds, clear=False, title=ds.attrs["description"], label=ds.attrs, legend=True)
     plot_widget.plot_xarray(ds_2, clear=False, label=ds_2.attrs, legend=True)
+    plot_widget.plot_xarray(ds_3, clear=False, label=ds_2.attrs, legend=True)
     
 
     root.mainloop()

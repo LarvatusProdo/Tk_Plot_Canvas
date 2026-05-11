@@ -10,10 +10,11 @@
     ],
     "X_axis": {
         "lim": [
-            -0.5,
-            10.5
+            0.0,
+            10.0
         ],
         "scale": "linear",
+        "autoscale": true,
         "ticks": {
             "name": "Times New Roman",
             "size": 17.0,
@@ -24,10 +25,11 @@
     },
     "Y_axis": {
         "lim": [
-            -5.0,
-            105.0
+            0.0,
+            100.0
         ],
         "scale": "linear",
+        "autoscale": true,
         "ticks": {
             "name": "Times New Roman",
             "size": 17.0,
@@ -68,6 +70,13 @@
         "1": {
             "color": "#0000a0",
             "linewidth": 5.5,
+            "linestyle": "-",
+            "marker": "None",
+            "markersize": 6.0
+        },
+        "2": {
+            "color": "#1f77b4",
+            "linewidth": 1.5,
             "linestyle": "-",
             "marker": "None",
             "markersize": 6.0
