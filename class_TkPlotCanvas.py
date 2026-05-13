@@ -839,7 +839,7 @@ class Menu_graphique(tk.Toplevel):
         ttk.Button(self.tab_legende, text="Position par défaut", command=self._optimize_legend_position, style='TkPlotCanvas.TButton').grid(row=0, column=4, columnspan=2, sticky="we", padx=5, pady=5)
 
         # Button to apply legend changes:
-        ttk.Button(self.tab_legende, text="Appliquer les changements", command=self._apply_legend_changes, width=20, style='TkPlotCanvas.TButton').grid(row=0, column=6, columnspan=3, padx=5, pady=5, sticky="we")
+        ttk.Button(self.tab_legende, text="Appliquer les changements", command=self._apply_legend_changes, style='TkPlotCanvas.TButton').grid(row=0, column=6, columnspan=3, padx=5, pady=5, sticky="we")
 
         # Choice of metadata to display in the legende
         self.list_combobox_legende = []
@@ -907,10 +907,10 @@ class Menu_graphique(tk.Toplevel):
 
     def _toggle_legend(self):
         if self.checkbutton_var_legende.get():
-            self.master.axes.legend()  # Show legend
+            self.master.axes.legend(draggable=True)  # Show legend
             self.master.Is_legend_display = True
         else:
-            legend = self.master.axes.get_legend()
+            legend = self.master.axes.legend(draggable=True) 
             if legend:
                 legend.remove()  # Hide legend
                 self.master.Is_legend_display = False
@@ -940,7 +940,7 @@ class Menu_graphique(tk.Toplevel):
         self.master.legend_to_show = [self.list_combobox_legende[i].get() for i in range(len(self.list_combobox_legende))] 
 
         if self.checkbutton_var_legende.get():
-            self.master.axes.legend()  # Update legend to reflect changes
+            self.master.axes.legend(draggable=True)  # Update legend to reflect changes
         self.master._canvas.draw()
 
     def _optimize_legend_position(self):
