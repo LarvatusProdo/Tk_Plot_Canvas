@@ -48,8 +48,7 @@ plot_canvas.pack(fill=tk.BOTH, expand=True)
 import numpy as np
 x = np.linspace(0, 10, 100)
 y = np.sin(x)
-plot_canvas.axes.plot(x, y, label='Sine wave')
-plot_canvas._canvas.draw()
+plot_canvas.plot(x, y, label='Sine wave')
 
 root.mainloop()
 ```
