@@ -10,8 +10,8 @@
     ],
     "X_axis": {
         "lim": [
-            0.0,
-            10.0
+            19723.0,
+            20058.0
         ],
         "scale": "linear",
         "autoscale": true,
@@ -26,7 +26,7 @@
     "Y_axis": {
         "lim": [
             0.0,
-            100.0
+            121.0
         ],
         "scale": "linear",
         "autoscale": true,
@@ -61,21 +61,28 @@
     },
     "curves": {
         "0": {
-            "color": "#80ffff",
+            "color": "#0000ff",
             "linewidth": 6.0,
             "linestyle": "-",
             "marker": "None",
             "markersize": 6.0
         },
         "1": {
-            "color": "#0000a0",
+            "color": "#ff0000",
             "linewidth": 5.5,
             "linestyle": "-",
             "marker": "None",
             "markersize": 6.0
         },
         "2": {
-            "color": "#1f77b4",
+            "color": "#00ff00",
+            "linewidth": 1.5,
+            "linestyle": "-",
+            "marker": "None",
+            "markersize": 6.0
+        },
+        "3": {
+            "color": "#00ffff",
             "linewidth": 1.5,
             "linestyle": "-",
             "marker": "None",
