@@ -15,6 +15,7 @@ import copy
 import json
 import xarray as xr
 import os
+from numpy import datetime64
 
 from vertical_frame import VerticalScrolledFrame
 """Tkinter plotting widgets with Matplotlib integration.
@@ -791,12 +792,18 @@ class Menu_graphique(tk.Toplevel):
                 self.master.axes.set_ylim(top=y_max)
 
             # Update scale types
-            self.master.axes.set_xscale(self._xscale_var.get())
+            if not self.master.Is_Date_on_x_axis : 
+                self.master.axes.set_xscale(self._xscale_var.get())
             self.master.axes.set_yscale(self._yscale_var.get())
-
             
         except ValueError:
             tk.messagebox.showerror("Invalid input", "Please enter valid numeric values for axis limits.")
+
+        # Update the autoscale settings based on the checkboxes
+        if self.auto_scale_var_x.get() :
+            self.master.axes.autoscale(axis="x", tight=True)
+        if self.auto_scale_var_y.get() :
+            self.master.axes.autoscale(axis="y", tight=True)
 
         self.master._canvas.draw()
     
@@ -1003,6 +1010,7 @@ class TkPlotCanvas(ttk.Frame):
         self.legend_to_show = []
         self.Is_legend_display = False
         self.Is_title_display = False
+        self.Is_Date_on_x_axis = False
 
         # Panedwindow for resizable layout
         self.panedwindow = ttk.Panedwindow(self, orient=tk.VERTICAL)
@@ -1197,9 +1205,10 @@ class TkPlotCanvas(ttk.Frame):
             elif "lim" in parameters :
                 self.axes.set_xlim(parameters["lim"])
             
-            if "scale" in parameters :
-                self.axes.set_xscale(parameters["scale"])
-            
+            if "scale" in parameters and not self.Is_Date_on_x_axis:
+                self.axes.set_xscale(parameters["scale"])           
+
+
         if axe == "Y":
             if "autoscale" in parameters :
                 if parameters["autoscale"] : 
@@ -1483,6 +1492,10 @@ class TkPlotCanvas(ttk.Frame):
                 if not key in plot_kwargs:
                     modif_plot_kwargs[key] = self.parametre_vue["curves"][str(n_lines)][key]
 
+        if type(x[0]) == datetime64:
+            self.Is_Date_on_x_axis = True
+            self.axes.xaxis_date()  # Set x-axis to date format if x data is datetime
+
         
         line, = self.axes.plot(x, y, label=label_str, **modif_plot_kwargs)
         self._lines.append(line)
@@ -1565,9 +1578,13 @@ class TkPlotCanvas(ttk.Frame):
         list_dim_var = list(ds.dims) + list(ds.data_vars)
         dimension = self.xarray_data["dimension"] if self.xarray_data["dimension"] in list_dim_var else list(ds.dims)[0]
         variable = self.xarray_data["variable"] if self.xarray_data["variable"] in list_dim_var else list(ds.data_vars)[0]
-  
+
         x = ds[dimension].values
         y = ds[variable].values
+
+        if type(x[0]) == datetime64:
+            self.Is_Date_on_x_axis = True
+            self.axes.xaxis_date()  # Set x-axis to date format if x data is datetime
 
         # On sauvegarde pour le prochain xarray : 
         self.xarray_data["dimension"] = dimension
@@ -1738,6 +1755,7 @@ def demo_xarray() -> None:
     plot_widget.plot_xarray(ds_2, clear=False, label=ds_2.attrs, legend=True)
     plot_widget.plot_xarray(ds_3, clear=False, label=ds_2.attrs, legend=True)
     
+
     root.mainloop()
 
 
