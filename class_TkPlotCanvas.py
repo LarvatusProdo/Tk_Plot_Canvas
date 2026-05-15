@@ -16,6 +16,7 @@ import json
 import xarray as xr
 import os
 from numpy import datetime64
+from numpy import timedelta64
 
 from vertical_frame import VerticalScrolledFrame
 """Tkinter plotting widgets with Matplotlib integration.
@@ -1671,95 +1672,103 @@ class TkPlotCanvas(ttk.Frame):
 
         pass
 
-def demo() -> None:
-    """Demo application for the TkPlotCanvas."""
-    root = tk.Tk()
-    root.title("Tkinter + Matplotlib Plot Demo")
-
-    #plot_widget = TkPlotCanvas(root, load_view="vue.json")  # Load parameters from a JSON file if it exists
-    plot_widget = TkPlotCanvas(root)
-    plot_widget.pack(fill="both", expand=True)
-
-    x = list(range(11))
-    y = [xi**2 for xi in x]
-    
-    ds = xr.Dataset(
-    data_vars=dict( temperature=("time", y),),
-                    coords=dict( time= x),
-                    attrs=dict(description="Weather data", units="°C", base="", source="Simulated", history="Created for demo", references="1", comment="First curve"
-                ),
-)
-
-    plot_widget.plot(ds["time"], ds["temperature"], title=ds.attrs["description"], xlabel="time", ylabel="Temperature", label=ds.attrs, legend=True)
-    
-    y2 = [xi**1.5 for xi in x]
-    ds_2 = xr.Dataset(
-    data_vars=dict( temperature=("time", y2),),
-                    coords=dict( time= x),
-                    attrs=dict(description="Weather data", units="°C", base="", source="Simulated", history="Created for demo", references="2", comment="Second curve"
-                ),
-)
-
-
-    # Add a second curve without clearing the first.
-    plot_widget.plot(ds_2["time"], ds_2["temperature"], clear=False, label=ds_2.attrs, legend=True, color="black")
-    
-    root.mainloop()
-
-def demo_xarray() -> None:
-    """Demo application for the TkPlotCanvas."""
-    root = tk.Tk()
-    root.title("Tkinter + Matplotlib Plot Demo")
-
-    #plot_widget = TkPlotCanvas(root, load_view="vue.json")  # Load parameters from a JSON file if it exists
-    plot_widget = TkPlotCanvas(root, load_view="vue_xarray.json" )
-    #plot_widget = TkPlotCanvas(root)
-    plot_widget.pack(fill="both", expand=True)
-    
-    ds_temperature = xr.open_dataset("C:/Users/benja/Documents/Prgrammation/Scripts/2024_temperature_2m.nc")
-    ds_temperature = ds_temperature.rename({"valid_time": "time", "t2m": "temperature"})  # Renommer les dimensions et variables pour plus de clarté
-    ds_temperature = ds_temperature.mean(dim=["latitude", "longitude"])  # Moyenne spatiale pour obtenir une série temporelle globale
-    ds_temperature["temperature"] = ds_temperature["temperature"] - 273.15  # Convertir de Kelvin à Celsius
-    ds_temperature["temperature"].attrs["units"] = "°C"  # Ajouter les unités aux attributs de la variable
-    #print(ds_temperature)
-    plot_widget.plot_xarray(ds_temperature, clear=False, title="Temperature 2m", label= dict(description="Weather data", base="", source="", history="", references="1", comment="") , legend=True)
-
-    x = ds_temperature["time"].values
-    x_test = list(range(len(x)))
-    y = [xi**2 for xi in x_test]
-    y4 = [xi for xi in x_test]
-    ds = xr.Dataset(    data_vars = { "temperature" : (("time"), y, {"units": "°C"}),
-                                     "humidity" : (("time"),  y4 ,  {"units": "%"}),
-                                    },      
-                        coords=dict( time= x),
-                        attrs=dict(description="Weather data", base="", source="Simulated", history="Created for demo", references="1", comment="First curve") )
-
-    
-    y2 = [xi**1.5 for xi in x_test]
-    y3 = [xi**5 for xi in x_test]
-    ds_2 = xr.Dataset( data_vars = { "temperature" : (("time"), y2, {"units": "°C"}),
-                                     "humidity" : (("time"),  y3 ,  {"units": "%"}),
-                                    },
-                        coords=dict( time= x),
-                        attrs=dict(description="Weather data", base="", source="Simulated", history="Created for demo", references="2", comment="Second curve") )
-    
-    y2 = [xi for xi in x_test]
-    y3 = [1 for xi in x_test]
-    ds_3 = xr.Dataset( data_vars = { "temperature" : (("time"), y2, {"units": "°C"}),
-                                     "humidity" : (("time"),  y3 ,  {"units": "%"}),
-                                    },
-                        coords=dict( time= x),
-                        attrs=dict(description="Weather data", base="", source="Simulated", history="Created for demo", references="3", comment="Second curve") )
-
-    plot_widget.plot_xarray(ds, clear=False, title=ds.attrs["description"], label=ds.attrs, legend=True)
-    plot_widget.plot_xarray(ds_2, clear=False, label=ds_2.attrs, legend=True)
-    plot_widget.plot_xarray(ds_3, clear=False, label=ds_2.attrs, legend=True)
-    
-
-    root.mainloop()
-
-
-
 if __name__ == "__main__":
+
+    def demo() -> None:
+        """Demo application for the TkPlotCanvas."""
+        root = tk.Tk()
+        root.title("Tkinter + Matplotlib Plot Demo")
+
+        #plot_widget = TkPlotCanvas(root, load_view="vue.json")  # Load parameters from a JSON file if it exists
+        plot_widget = TkPlotCanvas(root)
+        plot_widget.pack(fill="both", expand=True)
+
+        x = list(range(11))
+        y = [xi**2 for xi in x]
+        
+        ds = xr.Dataset(
+        data_vars=dict( temperature=("time", y),),
+                        coords=dict( time= x),
+                        attrs=dict(description="Weather data", units="°C", base="", source="Simulated", history="Created for demo", references="1", comment="First curve"
+                    ),
+    )
+
+        plot_widget.plot(ds["time"], ds["temperature"], title=ds.attrs["description"], xlabel="time", ylabel="Temperature", label=ds.attrs, legend=True)
+        
+        y2 = [xi**1.5 for xi in x]
+        ds_2 = xr.Dataset(
+        data_vars=dict( temperature=("time", y2),),
+                        coords=dict( time= x),
+                        attrs=dict(description="Weather data", units="°C", base="", source="Simulated", history="Created for demo", references="2", comment="Second curve"
+                    ),
+    )
+
+
+        # Add a second curve without clearing the first.
+        plot_widget.plot(ds_2["time"], ds_2["temperature"], clear=False, label=ds_2.attrs, legend=True, color="black")
+        
+        root.mainloop()
+
+    def demo_xarray() -> None:
+        """Demo application for the TkPlotCanvas."""
+        root = tk.Tk()
+        root.title("Tkinter + Matplotlib Plot Demo")
+
+        #plot_widget = TkPlotCanvas(root, load_view="vue.json")  # Load parameters from a JSON file if it exists
+        plot_widget = TkPlotCanvas(root, load_view="vue_xarray.json" )
+        #plot_widget = TkPlotCanvas(root)
+        plot_widget.pack(fill="both", expand=True)
+        
+        current_path =  os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + "/"
+        try :
+            ds_temperature = xr.open_dataset(current_path + "2024_temperature_2m.nc")
+            ds_temperature = ds_temperature.rename({"valid_time": "time", "t2m": "temperature"})  # Renommer les dimensions et variables pour plus de clarté
+            ds_temperature = ds_temperature.mean(dim=["latitude", "longitude"])  # Moyenne spatiale pour obtenir une série temporelle globale
+            ds_temperature["temperature"] = ds_temperature["temperature"] - 273.15  # Convertir de Kelvin à Celsius
+            ds_temperature["temperature"].attrs["units"] = "°C"  # Ajouter les unités aux attributs de la variable
+            #print(ds_temperature)
+            plot_widget.plot_xarray(ds_temperature, clear=False, title="Temperature 2m", label= dict(description="Weather data", base="", source="", history="", references="1", comment="") , legend=True)
+
+            x = ds_temperature["time"].values
+
+        except FileNotFoundError : 
+            pass
+        x_test = [datetime64("2024-01") + timedelta64(i, "M") for i in range(12)]
+
+        y = [i**2 for i in range(len(x_test))]
+        y4 = [i for i in range(len(x_test))]
+        ds = xr.Dataset(    data_vars = { "temperature" : (("time"), y, {"units": "°C"}),
+                                        "humidity" : (("time"),  y4 ,  {"units": "%"}),
+                                        },      
+                            coords=dict( time= x_test),
+                            attrs=dict(description="Weather data", base="", source="Simulated", history="Created for demo", references="1", comment="First curve") )
+
+        
+        y2 = [i**1.5 for i in range(len(x_test))]
+        y3 = [i*10 for i in range(len(x_test))]
+        ds_2 = xr.Dataset( data_vars = { "temperature" : (("time"), y2, {"units": "°C"}),
+                                        "humidity" : (("time"),  y3 ,  {"units": "%"}),
+                                        },
+                            coords=dict( time= x_test),
+                            attrs=dict(description="Weather data", base="", source="Simulated", history="Created for demo", references="2", comment="Second curve") )
+        
+        y2 = [i for i in range(len(x_test))]
+        y3 = [1 for i in range(len(x_test))]
+        ds_3 = xr.Dataset( data_vars = { "temperature" : (("time"), y2, {"units": "°C"}),
+                                        "humidity" : (("time"),  y3 ,  {"units": "%"}),
+                                        },
+                            coords=dict( time= x_test),
+                            attrs=dict(description="Weather data", base="", source="Simulated", history="Created for demo", references="3", comment="Second curve") )
+
+        plot_widget.plot_xarray(ds, clear=False, title=ds.attrs["description"], label=ds.attrs, legend=True)
+        plot_widget.plot_xarray(ds_2, clear=False, label=ds_2.attrs, legend=True)
+        plot_widget.plot_xarray(ds_3, clear=False, label=ds_2.attrs, legend=True)
+        
+
+        root.mainloop()
+
+
+
+
     #demo()
     demo_xarray()
