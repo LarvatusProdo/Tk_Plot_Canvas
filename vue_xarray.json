@@ -92,11 +92,8 @@
     "cartouche": {
         "cartouche_title_grid": [
             "description",
-            "",
-            "",
-            "",
-            "",
-            ""
+            "history",
+            "comment"
         ],
         "cartouche_font_title": {
             "foreground": "black",
@@ -107,7 +104,8 @@
             "foreground": "black",
             "font": "Arial 12 normal",
             "background": "white"
-        }
+        },
+        "Is_cartouche_display": true
     },
     "legend": {
         "displayed_keys": [

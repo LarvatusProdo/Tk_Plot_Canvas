@@ -18,7 +18,9 @@ class VerticalScrolledFrame():
     if you subclass this there is no built in way for the children to access it.
     You need to provide the controller separately.
     """
-    def __init__(self, master, x_bar = False, bg_canvas ="", height_canvas = "7c" , style_frame ="TFrame", **kwargs):
+    def __init__(self, master, 
+                        x_bar = False, side_Y_bar = tk.RIGHT, side_X_bar = tk.BOTTOM,
+                        bg_canvas ="", height_canvas = "7c" , style_frame ="TFrame", **kwargs):
         
   
         
@@ -31,13 +33,13 @@ class VerticalScrolledFrame():
             bg_canvas = self.style_window.lookup(style_frame, 'background', default = "white")
 
         self.vsb = tk.Scrollbar(self.outer, orient=tk.VERTICAL)
-        self.vsb.pack(fill=tk.Y, side=tk.RIGHT)
+        self.vsb.pack(fill=tk.Y, side= side_Y_bar)
 
         if x_bar:
             self.hsb = tk.Scrollbar(self.outer, orient=tk.HORIZONTAL)
-            self.hsb.pack(fill=tk.X, side=tk.BOTTOM)
+            self.hsb.pack(fill=tk.X, side = side_X_bar)
            
-        self.canvas = tk.Canvas(self.outer, highlightthickness=0, width=width, height=height_canvas, bg=bg_canvas)
+        self.canvas = tk.Canvas(self.outer, bd=0,  highlightthickness=0, width=width, height=height_canvas, bg=bg_canvas)
         self.canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         self.canvas['yscrollcommand'] = self.vsb.set
         self.canvas['xscrollcommand'] = self.hsb.set if x_bar else None

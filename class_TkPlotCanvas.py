@@ -382,10 +382,10 @@ class Menu_graphique(tk.Toplevel):
         label.grid(row=0, column=0, sticky="w", padx=5, pady=10, columnspan=3 )
 
         # Checkbutton pour l'affichage du cartouche : 
-        self.Is_cartouche_shown_var = tk.BooleanVar(value= True ) #TODO : value to apply
+        self.Is_cartouche_display_var = tk.BooleanVar(value= self.master.Is_cartouche_display ) #TODO : value to apply
         checkbutton_cartouche_shown = ttk.Checkbutton(self.tab_cartouche, 
                                                             text = "Affichage du cartouche",
-                                                            variable=self.Is_cartouche_shown_var,
+                                                            variable=self.Is_cartouche_display_var,
                                                             style='TkPlotCanvas.TCheckbutton',
                                                             command= self.show_hide_cartouche)
         checkbutton_cartouche_shown.grid(row=0, column=3, sticky="w", padx=5, pady=10, columnspan=1 )
@@ -523,14 +523,16 @@ class Menu_graphique(tk.Toplevel):
     
     def show_hide_cartouche(self):
         
-        
-        if not self.Is_cartouche_shown_var.get() == True : 
+        if not self.Is_cartouche_display_var.get() == True : 
             self.master.panedwindow.forget(self.master._cartouche_frame)
-            self.Is_cartouche_shown_var.set( False ) 
+            self.Is_cartouche_display_var.set( False ) 
+            self.master.Is_cartouche_display = False    
         else :
             self.master.panedwindow.add(self.master._cartouche_frame, weight=0)
-            self.Is_cartouche_shown_var.set(True)
-            
+            self.Is_cartouche_display_var.set(True)
+            self.master.Is_cartouche_display = True
+        
+        print(self.master.Is_cartouche_display)
 
     def fill__frame_courbe(self):
         """Create the curve properties tab and populate it with widgets for each plotted line."""
@@ -575,7 +577,7 @@ class Menu_graphique(tk.Toplevel):
         combobox_linestyle.current(combobox_linestyle['values'].index(linestyle))
         combobox_linestyle.bind("<<ComboboxSelected>>", partial(self.update_line_property, 'linestyle', index=index))
 
-        combobox_marker = ttk.Combobox(self.tab_courbe, values=["o", "s", "^", "None"], state="readonly", width=8)
+        combobox_marker = ttk.Combobox(self.tab_courbe, values=["o", "s", "^", "x", "None"], state="readonly", width=8)
         combobox_marker.grid(row=index+2, column=3, padx=5, pady=5)
         combobox_marker.current(combobox_marker['values'].index(marker))
         combobox_marker.bind("<<ComboboxSelected>>", partial(self.update_line_property, 'marker', index=index))
@@ -1042,6 +1044,7 @@ class TkPlotCanvas(ttk.Frame):
         self.Is_legend_display = False
         self.Is_title_display = False
         self.Is_Date_on_x_axis = False
+        self.Is_cartouche_display = False
 
         # Panedwindow for resizable layout
         self.panedwindow = ttk.Panedwindow(self, orient=tk.VERTICAL)
@@ -1352,6 +1355,7 @@ class TkPlotCanvas(ttk.Frame):
                 "cartouche_title_grid": [label.cget("text") for label in self._cartouche_title_grid],
                 "cartouche_font_title": self.style.configure('Cartouche_titre.TLabel'),
                 "cartouche_font_line": self.style.configure('Cartouche.TLabel'),
+                "Is_cartouche_display": self.Is_cartouche_display,
             },
             "legend": {
                 "displayed_keys": [ key for key in self.legend_to_show if key != '' ] if len(self.legend_to_show) > 0 else [],
@@ -1438,6 +1442,11 @@ class TkPlotCanvas(ttk.Frame):
 
         if "cartouche" in parameters:
             cartouche_params = parameters["cartouche"]
+
+            self.Is_cartouche_display = cartouche_params.get("Is_cartouche_display", True)
+            if not self.Is_cartouche_display:
+                self.panedwindow.forget(self._cartouche_frame)
+            
             # Load the cartouche title grid and font parameters, and update the cartouche display accordingly
             self.cartouch_to_show = cartouche_params.get("cartouche_title_grid", [])
 
