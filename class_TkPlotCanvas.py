@@ -379,8 +379,18 @@ class Menu_graphique(tk.Toplevel):
     def fill__frame_cartouche_menu(self):
         """Create the cartouche configuration tab with metadata selection controls."""
         label = ttk.Label(self.tab_cartouche, text="Paramètres du cartouche:", style='TkPlotCanvas.Titre_parammetre.TLabel')
-        label.grid(row=0, column=0, sticky="w", padx=5, pady=10, columnspan=4 )
+        label.grid(row=0, column=0, sticky="w", padx=5, pady=10, columnspan=3 )
 
+        # Checkbutton pour l'affichage du cartouche : 
+        self.Is_cartouche_shown_var = tk.BooleanVar(value= True ) #TODO : value to apply
+        checkbutton_cartouche_shown = ttk.Checkbutton(self.tab_cartouche, 
+                                                            text = "Affichage du cartouche",
+                                                            variable=self.Is_cartouche_shown_var,
+                                                            style='TkPlotCanvas.TCheckbutton',
+                                                            command= self.show_hide_cartouche)
+        checkbutton_cartouche_shown.grid(row=0, column=3, sticky="w", padx=5, pady=10, columnspan=1 )
+        checkbutton_cartouche_shown.configure(state=["selected"])
+        
         # Bonton pour moodifier font du cartouche : 
         button_modify_font = ttk.Button(self.tab_cartouche, text="Paramètres du cartouche:", 
                                         command=self._cartouch_show_font_parameters, style='TkPlotCanvas.TButton' )
@@ -464,19 +474,29 @@ class Menu_graphique(tk.Toplevel):
         except Exception:                
             pass
             # Update the title of the cartouche column
+        
+        while len(self.master._cartouche_title_grid) < column_index+1 :
+            self.master._cartouche_title_grid.append(ttk.Label(self.master._cartouche_frame, text="", style='Cartouche_titre.TLabel'))
+        
         self.master._cartouche_title_grid[column_index] = ttk.Label(self.master._cartouche_frame, text=key_selected, style='Cartouche_titre.TLabel')
         self.master._cartouche_title_grid[column_index].grid(row=0, column=column_index+1, sticky="w", padx=5, pady=5)
+
             # Update the values in the cartouche for each line based on the selected key in the combobox
         for index, line in enumerate(self.master._lines):
             label_dict = self.master._line_labels[index]
             
-            self.master._cartouche_grid[index][column_index+1].destroy()  # Remove the old label if it exists
-
+            try :   
+                self.master._cartouche_grid[index][column_index+1].destroy()  # Remove the old label if it exists
+            except Exception:                
+                pass
             
             if key_selected in label_dict:
                 value = label_dict[key_selected]
             else :
                 value = "" 
+
+            while len(self.master._cartouche_grid[index]) < column_index+2 :
+                self.master._cartouche_grid[index].append(ttk.Label(self.master._cartouche_frame, text="", style='Cartouche_titre.TLabel'))
 
             self.master._cartouche_grid[index][column_index+1] = ttk.Label(self.master._cartouche_frame, text=str(value), style="Cartouche.TLabel")
             self.master._cartouche_grid[index][column_index+1].grid(row=index + 1, column=column_index+1, sticky="w", padx=5, pady=5)
@@ -501,7 +521,16 @@ class Menu_graphique(tk.Toplevel):
         font_cartouch = Window_font_parameter(self, frame_to_modifiy="cartouche")
         font_cartouch.set_widget_with_cartouch_font()
     
-
+    def show_hide_cartouche(self):
+        
+        
+        if not self.Is_cartouche_shown_var.get() == True : 
+            self.master.panedwindow.forget(self.master._cartouche_frame)
+            self.Is_cartouche_shown_var.set( False ) 
+        else :
+            self.master.panedwindow.add(self.master._cartouche_frame, weight=0)
+            self.Is_cartouche_shown_var.set(True)
+            
 
     def fill__frame_courbe(self):
         """Create the curve properties tab and populate it with widgets for each plotted line."""
@@ -1009,6 +1038,7 @@ class TkPlotCanvas(ttk.Frame):
         self._xlabel_var = tk.StringVar(value="")
         self._ylabel_var = tk.StringVar(value="")
         self.legend_to_show = []
+        self.cartouch_to_show = []
         self.Is_legend_display = False
         self.Is_title_display = False
         self.Is_Date_on_x_axis = False
@@ -1408,6 +1438,9 @@ class TkPlotCanvas(ttk.Frame):
 
         if "cartouche" in parameters:
             cartouche_params = parameters["cartouche"]
+            # Load the cartouche title grid and font parameters, and update the cartouche display accordingly
+            self.cartouch_to_show = cartouche_params.get("cartouche_title_grid", [])
+
             for index, label in enumerate(self._cartouche_title_grid):
                 if index < len(cartouche_params["cartouche_title_grid"]):
                     label.config(text=cartouche_params["cartouche_title_grid"][index])
@@ -1503,7 +1536,12 @@ class TkPlotCanvas(ttk.Frame):
         self._line_labels.append(label)
 
         # Cartouche: Update the cartouche with the metadata of the newly added line.
-        self.fill_cartouche_frame(label_to_display=label, line_index=len(self._lines)-1, line_display=True)
+        label_cartouche = dict()
+        for key in self.cartouch_to_show :
+            if label is not None and key in label:
+                label_cartouche[key] = label[key]
+
+        self.fill_cartouche_frame(label_to_display= label_cartouche, line_index=len(self._lines)-1, line_display=True)
 
         if title is not None and "title" in self.parametre_vue :
             self.axes.set_title(title, self.parametre_vue["title"])
@@ -1597,7 +1635,11 @@ class TkPlotCanvas(ttk.Frame):
 
         # Cartouche: Update the cartouche with the metadata of the newly added line.
         if not replot :
-            self.fill_cartouche_frame(label_to_display=label, line_index=len(self._lines)-1, line_display=True)
+            label_cartouche = dict()
+            for key in self.cartouch_to_show :
+                if label is not None and key in label:
+                    label_cartouche[key] = label[key]
+            self.fill_cartouche_frame(label_to_display=label_cartouche, line_index=len(self._lines)-1, line_display=True)
         else :
             self.update_cartouche_frame()
 

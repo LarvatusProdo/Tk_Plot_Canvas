@@ -92,19 +92,21 @@
     "cartouche": {
         "cartouche_title_grid": [
             "description",
-            "base",
-            "source",
-            "history",
-            "references",
-            "comment"
+            "",
+            "",
+            "",
+            "",
+            ""
         ],
         "cartouche_font_title": {
             "foreground": "black",
-            "font": "Arial 14 bold"
+            "font": "Arial 14 bold",
+            "background": "white"
         },
         "cartouche_font_line": {
             "foreground": "black",
-            "font": "Arial 12 normal"
+            "font": "Arial 12 normal",
+            "background": "white"
         }
     },
     "legend": {
