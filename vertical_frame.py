@@ -32,11 +32,11 @@ class VerticalScrolledFrame():
             self.style_window = ttk.Style()
             bg_canvas = self.style_window.lookup(style_frame, 'background', default = "white")
 
-        self.vsb = tk.Scrollbar(self.outer, orient=tk.VERTICAL)
+        self.vsb = ttk.Scrollbar(self.outer, orient=tk.VERTICAL)
         self.vsb.pack(fill=tk.Y, side= side_Y_bar)
 
         if x_bar:
-            self.hsb = tk.Scrollbar(self.outer, orient=tk.HORIZONTAL)
+            self.hsb = ttk.Scrollbar(self.outer, orient=tk.HORIZONTAL)
             self.hsb.pack(fill=tk.X, side = side_X_bar)
            
         self.canvas = tk.Canvas(self.outer, bd=0,  highlightthickness=0, width=width, height=height_canvas, bg=bg_canvas)
