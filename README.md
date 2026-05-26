@@ -62,7 +62,7 @@ Pour charger une vue sauvegardée :
 plot_canvas = TkPlotCanvas(root, load_view='vue.json')
 ```
 
-![Exemple avec le fichier "vue.json"](image.png)
+![Exemple avec le fichier "vue.json"](https://github.com/LarvatusProdo/Tk_Plot_Canvas/image/Exemple_la_vue_json.jpg)
 
 ## Structure du projet
 
@@ -79,7 +79,3 @@ Consultez les fichiers `vue.json` et `vue_xarray.json` pour des exemples de conf
 ## Contribution
 
 Les contributions sont les bienvenues ! Veuillez soumettre des issues ou des pull requests sur le dépôt GitHub.
-
-## Licence
-
-Ce projet est sous licence MIT. Consultez le fichier LICENSE pour plus de détails.
