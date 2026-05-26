@@ -636,14 +636,16 @@ class Menu_graphique(tk.Toplevel):
         self.master._canvas.draw()
 
         # Update the cartouch :
-        if value_linestyle != "None" and  value_linestyle != "None":
-            if linestyle == '-':
-                linestyle = "―"
+        if value_linestyle != "None" or  value_linestyle != "None":
+            if value_linestyle == '-':
+                value_linestyle = "―"
             color = self.master._lines[index].get_color()
-            self.master._cartouche_grid[index][0].configure(text=f"{value_linestyle}{value_marker}", background=self.master.bg_color, foreground=color, width=3, font=("Helvetica", 15, 'bold'))
-        
+            
+            line_string = f"{value_linestyle}" if value_linestyle != "None" else ""
+            line_string += f"{value_marker}" if value_marker != "None" else ""
 
-     
+            self.master._cartouche_grid[index][0].configure(text=line_string, background=self.master.bg_color, foreground=color, width=3, font=("Helvetica", 15, 'bold'))
+           
 
 
     def fill__frame_axes(self):

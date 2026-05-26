@@ -11,9 +11,10 @@
     "X_axis": {
         "lim": [
             0.0,
-            100.0
+            10.0
         ],
         "scale": "linear",
+        "autoscale": true,
         "ticks": {
             "name": "Arial",
             "size": 14.0,
@@ -24,44 +25,45 @@
     },
     "Y_axis": {
         "lim": [
-            0.0,
-            10.0
+            -2.0,
+            2.0
         ],
         "scale": "linear",
+        "autoscale": false,
         "ticks": {
             "name": "Arial",
             "size": 14.0,
             "style": "normal",
             "weight": "bold",
-            "color": "#00ff00"
+            "color": "#000000"
         }
     },
     "title": {
-        "fontname": "Arial",
+        "fontname": "DejaVu Sans",
         "fontsize": 12.0,
         "fontstyle": "normal",
         "fontweight": "normal",
-        "color": "#000000"
+        "color": "black"
     },
     "xlabel": {
-        "fontname": "Arial",
-        "fontsize": 14.0,
+        "fontname": "DejaVu Sans",
+        "fontsize": 10.0,
         "fontstyle": "normal",
-        "fontweight": "bold",
-        "color": "#ff80ff"
+        "fontweight": "normal",
+        "color": "black"
     },
     "ylabel": {
         "fontname": "Arial",
-        "fontsize": 14.0,
+        "fontsize": 10.0,
         "fontstyle": "normal",
-        "fontweight": "bold",
-        "color": "#000000"
+        "fontweight": "normal",
+        "color": "black"
     },
     "curves": {
         "0": {
             "color": "#ff0000",
             "linewidth": 1.5,
-            "linestyle": "--",
+            "linestyle": "-",
             "marker": "None",
             "markersize": 6.0
         },
@@ -75,22 +77,19 @@
     },
     "cartouche": {
         "cartouche_title_grid": [
-            "description",
-            "units",
-            "base",
-            "source",
-            "history",
-            "references",
             "comment"
         ],
         "cartouche_font_title": {
             "foreground": "#c3063c",
-            "font": "Arial 15 bold"
+            "font": "Arial 15 bold",
+            "background": "white"
         },
         "cartouche_font_line": {
             "foreground": "black",
-            "font": "Arial 10 normal"
-        }
+            "font": "Arial 10 normal",
+            "background": "white"
+        },
+        "Is_cartouche_display": true
     },
     "legend": {
         "displayed_keys": [
@@ -100,5 +99,9 @@
         ],
         "Is_legend_display": true,
         "Is_title_display": false
+    },
+    "xarray_data": {
+        "dimension": "",
+        "variable": ""
     }
 }

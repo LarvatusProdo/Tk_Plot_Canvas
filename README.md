@@ -62,6 +62,8 @@ Pour charger une vue sauvegardée :
 plot_canvas = TkPlotCanvas(root, load_view='vue.json')
 ```
 
+![Exemple avec le fichier "vue.json"](image.png)
+
 ## Structure du projet
 
 - `class_TkPlotCanvas.py` : Script principal contenant les classes `TkPlotCanvas`, `Menu_graphique` et `Window_font_parameter`.
