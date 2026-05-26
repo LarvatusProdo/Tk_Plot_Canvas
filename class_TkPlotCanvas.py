@@ -532,7 +532,6 @@ class Menu_graphique(tk.Toplevel):
             self.Is_cartouche_display_var.set(True)
             self.master.Is_cartouche_display = True
         
-        print(self.master.Is_cartouche_display)
 
     def fill__frame_courbe(self):
         """Create the curve properties tab and populate it with widgets for each plotted line."""
@@ -617,13 +616,16 @@ class Menu_graphique(tk.Toplevel):
          event: The event object from the widget (if applicable).
          index: The index of the line to update.
         """
-        widget = event.widget if event else None
+        value_linestyle = self.list_widget[index][2].get()
+        value_marker = self.list_widget[index][3].get()
+
         if property_name == 'linewidth':
             value_linewidth = self.list_widget[index][1].get()
             self.master._lines[index].set_linewidth(float(value_linewidth))
         elif property_name == 'linestyle':
-            value_linestyle = self.list_widget[index][2].get()
+            # Update the line style based on the selected value in the combobox
             self.master._lines[index].set_linestyle(value_linestyle)
+            
         elif property_name == 'marker':
             value_marker = self.list_widget[index][3].get()
             self.master._lines[index].set_marker(value_marker)
@@ -632,6 +634,17 @@ class Menu_graphique(tk.Toplevel):
             self.master._lines[index].set_markersize(float(value_markersize))
 
         self.master._canvas.draw()
+
+        # Update the cartouch :
+        if value_linestyle != "None" and  value_linestyle != "None":
+            if linestyle == '-':
+                linestyle = "―"
+            color = self.master._lines[index].get_color()
+            self.master._cartouche_grid[index][0].configure(text=f"{value_linestyle}{value_marker}", background=self.master.bg_color, foreground=color, width=3, font=("Helvetica", 15, 'bold'))
+        
+
+     
+
 
     def fill__frame_axes(self):
         """Create the axes and title configuration tab with controls for labels, limits, and scale."""
