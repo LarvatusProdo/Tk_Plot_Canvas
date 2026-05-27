@@ -32,7 +32,7 @@ class Window_font_parameter(tk.Toplevel):
     def __init__(self, master, frame_to_modifiy=""):
         super().__init__(master)
         self.title(f"Modification du {frame_to_modifiy}")
-        self.geometry("400x400+500+100")
+        self.geometry(f"400x400+{self.master.winfo_x() + 50}+{self.master.winfo_y() + 50}")
         self["bg"] = "#f0f0f0"
 
         self.frame_window = ttk.Frame(self, style='TkPlotCanvas.TFrame')
@@ -307,7 +307,7 @@ class Window_font_parameter(tk.Toplevel):
 
     def choisir_couleur_police(self, widget):
         """Open a color chooser and update the font color button background."""
-        color_code = colorchooser.askcolor(master = self ,title="Choisir une couleur de police")
+        color_code = colorchooser.askcolor(parent = self, title="Choisir une couleur de police")
         if color_code:
             # Update the color button background
            widget.configure(bg=color_code[1])  # Update button color
@@ -318,7 +318,7 @@ class Menu_graphique(tk.Toplevel):
     def __init__(self, master, notebook_shown=""):
         super().__init__(master)
         self.title("Menu de modification de la courbe")
-        self.geometry("1000x500+600+100")
+        self.geometry(f"1000x500+{self.master.master.winfo_x() + 600}+{self.master.master.winfo_y() + 50}")
         self["bg"] = "#f0f0f0"
 
         self.notebook_shown = notebook_shown
@@ -591,7 +591,7 @@ class Menu_graphique(tk.Toplevel):
 
     def choisir_couleur(self, index):
         """Open a color chooser to select a new curve color and update the plot."""
-        color_code = colorchooser.askcolor(parent= self, title="Choisir une couleur")
+        color_code = colorchooser.askcolor(parent = self, title="Choisir une couleur")
         
         if color_code and color_code[1]:  # Check if a color was selected (colorchooser returns (None, None) if cancelled)
             self.master._lines[index].set_color(color_code[1])
@@ -867,7 +867,7 @@ class Menu_graphique(tk.Toplevel):
 
 
     def choisir_couleur_police(self, canvas, axis_type):
-        color_code = colorchooser.askcolor(title="Choisir une couleur de police")
+        color_code = colorchooser.askcolor(parent = self, title="Choisir une couleur de police")
         if color_code:
             # Update the color button background
             self.dict_widget_font[axis_type]["color"].configure(bg=color_code[1])  # Update button color
