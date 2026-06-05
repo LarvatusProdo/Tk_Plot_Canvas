@@ -43,6 +43,23 @@ class Window_font_parameter(tk.Toplevel):
         self.padx_echelle = (5, 5)
         self.pady_echelle = (5, 5)
 
+        self.list_police = []
+        if frame_to_modifiy == "cartouche" : 
+            # Set list police for cartouche font parameters :
+            
+            for family in tk.font.families():
+                try:
+                    tk.font.Font(family=family)
+                    self.list_police.append(family)
+                except tk.TclError:
+                    pass
+        else : 
+            # Filter to only fonts available in both Tkinter and Matplotlib
+            self.list_police = list(set(fm.FontManager().get_font_names()))
+
+        self.list_police.sort()  # Sort the list of fonts alphabetically
+            
+
         self.dict_font_parameters = {}
         if frame_to_modifiy == "cartouche" : 
             label_frame_title = ttk.LabelFrame(self.frame_window, text="Paramètres pour le nom des colonnes :" , style='TkPlotCanvas.TLabelframe')
@@ -87,18 +104,7 @@ class Window_font_parameter(tk.Toplevel):
         column_start = 0
 
         ttk.Label(label_frame, text="Police :", style='TkPlotCanvas.TLabel').grid(row=row_start, column=column_start, sticky="e", padx=self.padx_echelle, pady=self.pady_echelle)
-        # Filter to only fonts available in both Tkinter and Matplotlib
-        matplotlib_fonts = set(fm.FontManager().get_font_names())
-        self.list_police = []
-
-        for family in tk.font.families():
-            if family in matplotlib_fonts:
-                try:
-                    tk.font.Font(family=family)
-                    self.list_police.append(family)
-                except tk.TclError:
-                    pass
-
+        
         combo_police = ttk.Combobox(label_frame, values= self.list_police, state="readonly", width=20)
         combo_police.grid(row=row_start, column=column_start + 1, sticky="w", columnspan=2, padx=5, pady=5)
         index_police = self.list_police.index("Arial") if "Arial" in self.list_police else 0
@@ -149,6 +155,23 @@ class Window_font_parameter(tk.Toplevel):
  
         style = self.master.master.style.configure(style)
         style_font = style["font"].split(" ")
+
+        
+        try :
+            int(style_font[1])
+        except ValueError :
+            # If the second element is not an integer, it means the font string is in a different format (e.g., ['{Arial', 'Greek}', '14', 'bold']), so we need to parse it differently.
+            style_font_buff = style["font"].split(" ")
+            style_font = ["","",""]
+            style_font[0] = style_font_buff[0][1:] + " " + style_font_buff[1][:-1]
+            style_font[1] = style_font_buff[2]
+            style_font[2] = style_font_buff[3]
+            
+        try:
+            int(style_font[1])
+        except ValueError:
+            style_font = ["Arial", "12", "normal"]  # Default values if parsing fails
+
 
         index_police = self.list_police.index(style_font[0]) if style_font[0] in self.list_police else 0    
         self.dict_font_parameters[nom_frame]["combo_police"].current(index_police)
@@ -220,17 +243,8 @@ class Window_font_parameter(tk.Toplevel):
 
         # pour le nom de l'axe : 
         nom_frame = nom_axe+', nom'
-            # Get the family name of the current font and set the combobox to that value
-        matplotlib_fonts = set(fm.FontManager().get_font_names())
-        list_police = []
-        for family in tk.font.families():
-            if family in matplotlib_fonts:
-                try:
-                    tk.font.Font(family=family)
-                    list_police.append(family)
-                except tk.TclError:
-                    pass
-        index_police = list_police.index(current_font.get_name()) if current_font.get_name() in list_police else 0
+
+        index_police = self.list_police.index(current_font.get_name()) if current_font.get_name() in self.list_police else 0
         self.dict_font_parameters[nom_frame]["combo_police"].current(index_police)
         self.dict_font_parameters[nom_frame]["combobox style police"].set(current_font.get_style())
         self.dict_font_parameters[nom_frame]["spinbox size police"].insert(0, int(current_font.get_size()))
@@ -247,7 +261,7 @@ class Window_font_parameter(tk.Toplevel):
 
             # pour l'axe tick : 
             nom_frame = nom_axe+', tick'
-            index_police = list_police.index(axe.get_ticklabels()[0].get_fontname()) if axe.get_ticklabels()[0].get_fontname() in list_police else 0
+            index_police = self.list_police.index(axe.get_ticklabels()[0].get_fontname()) if axe.get_ticklabels()[0].get_fontname() in self.list_police else 0
             self.dict_font_parameters[nom_frame]["combo_police"].current(index_police)
             index_style = self.list_style_police.index(axe.get_ticklabels()[0].get_fontstyle()) if axe.get_ticklabels() else 0 
             self.dict_font_parameters[nom_frame]["combobox style police"].current(index_style)  # Set to current style of ticks or "normal" by default
@@ -1667,36 +1681,37 @@ class TkPlotCanvas(ttk.Frame):
         else :
             self.update_cartouche_frame()
 
-        if title is not None and "title" in self.parametre_vue :
-            self.axes.set_title(title, self.parametre_vue["title"])
-            self._title_var.set(title)
-
-        if dimension is not None and "xlabel" in self.parametre_vue :
-            # Get unit label from xarray variable attributes if it exists
-            if "units" in ds[dimension].attrs:
-                dimension_label = f"{dimension.capitalize()} ({ds[dimension].attrs['units']})"
-            else:
-                dimension_label = dimension.capitalize()
-
-            self.axes.set_xlabel(dimension_label, self.parametre_vue["xlabel"])
-            self._xlabel_var.set(dimension_label)
-
-        if variable is not None and "ylabel" in self.parametre_vue : 
-            # Get unit label from xarray variable attributes if it exists
-            if "units" in ds[variable].attrs:
-                variable_label = f"{variable.capitalize()} ({ds[variable].attrs['units']})"
-            else:
-                variable_label = variable.capitalize()
-
-            self.axes.set_ylabel(variable_label, self.parametre_vue["ylabel"])
-            self._ylabel_var.set(variable_label)
-
         self.axes.grid(grid)
 
-        if self.parametre_vue != {}: # Si un fichier json a été chargé : 
+        # Apply loaded view parameters to the new plot if a view has been loaded, to ensure consistency with the loaded view settings for axes, title, and labels.
+        if self.parametre_vue != {}: # if a json file has been loaded :
             # Update X et Y axis from self.parameter_vue
             self._update_axis(self.axes.xaxis, self.parametre_vue.get("X_axis"), axe= "X" )
             self._update_axis(self.axes.yaxis, self.parametre_vue.get("Y_axis"), axe= "Y" )
+
+            if title is not None and "title" in self.parametre_vue :
+                self.axes.set_title(title, self.parametre_vue["title"])
+                self._title_var.set(title)
+
+            if dimension is not None and "xlabel" in self.parametre_vue :
+                # Get unit label from xarray variable attributes if it exists
+                if "units" in ds[dimension].attrs:
+                    dimension_label = f"{dimension.capitalize()} ({ds[dimension].attrs['units']})"
+                else:
+                    dimension_label = dimension.capitalize()
+
+                self.axes.set_xlabel(dimension_label, self.parametre_vue["xlabel"])
+                self._xlabel_var.set(dimension_label)
+
+            if variable is not None and "ylabel" in self.parametre_vue : 
+                # Get unit label from xarray variable attributes if it exists
+                if "units" in ds[variable].attrs:
+                    variable_label = f"{variable.capitalize()} ({ds[variable].attrs['units']})"
+                else:
+                    variable_label = variable.capitalize()
+
+                self.axes.set_ylabel(variable_label, self.parametre_vue["ylabel"])
+                self._ylabel_var.set(variable_label)
 
         if legend and label_str is not None:
             if self.Is_legend_display:
