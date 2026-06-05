@@ -49,7 +49,9 @@ class VerticalScrolledFrame():
         self.canvas.bind("<Enter>", self._bind_mouse)
         self.canvas.bind("<Leave>", self._unbind_mouse)
         self.vsb['command'] = self.canvas.yview
-        self.hsb['command'] = self.canvas.xview if x_bar else None
+
+        if x_bar:
+            self.hsb['command'] = self.canvas.xview
 
         self.inner = ttk.Frame(self.canvas, style=style_frame)
         # pack the inner Frame into the Canvas with the topleft corner 4 pixels offset
