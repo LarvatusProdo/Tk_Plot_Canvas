@@ -641,24 +641,25 @@ class Menu_graphique(tk.Toplevel):
             self.master._lines[index].set_linestyle(value_linestyle)
             
         elif property_name == 'marker':
-            value_marker = self.list_widget[index][3].get()
-            self.master._lines[index].set_marker(value_marker)
+           self.master._lines[index].set_marker(value_marker)
         elif property_name == 'markersize':
             value_markersize = self.list_widget[index][4].get()
             self.master._lines[index].set_markersize(float(value_markersize))
 
         self.master._canvas.draw()
 
-        # Update the cartouch :
-        if value_linestyle != "None" or  value_linestyle != "None":
-            if value_linestyle == '-':
-                value_linestyle = "―"
-            color = self.master._lines[index].get_color()
-            
-            line_string = f"{value_linestyle}" if value_linestyle != "None" else ""
-            line_string += f"{value_marker}" if value_marker != "None" else ""
+        line_string  = ""
+        color = self.master._lines[index].get_color()
 
-            self.master._cartouche_grid[index][0].configure(text=line_string, background=self.master.bg_color, foreground=color, width=3, font=("Helvetica", 15, 'bold'))
+        # Update the cartouch :
+        if value_linestyle == '-':
+            value_linestyle = "―"
+            
+            
+        line_string = f"{value_linestyle}" if value_linestyle != "None" else ""
+        line_string += f"{value_marker}" if value_marker != "None" else ""
+
+        self.master._cartouche_grid[index][0].configure(text=line_string, background=self.master.bg_color, foreground=color, width=3, font=("Helvetica", 15, 'bold'))
            
 
 
