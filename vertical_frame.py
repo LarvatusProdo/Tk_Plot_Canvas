@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-try:
-    import tkinter as tk
-    from tkinter import ttk
-except ImportError:
-    import Tkinter as tk
+
+import tkinter as tk
+from tkinter import ttk
+
 
 class VerticalScrolledFrame():
     """
