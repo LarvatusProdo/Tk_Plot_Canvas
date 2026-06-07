@@ -116,7 +116,7 @@
         "Is_title_display": true
     },
     "xarray_data": {
-        "dimension": "time",
-        "variable": "temperature"
+        "x": "time",
+        "y": "temperature"
     }
 }

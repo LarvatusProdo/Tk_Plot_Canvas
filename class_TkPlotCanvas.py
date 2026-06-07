@@ -1400,8 +1400,8 @@ class TkPlotCanvas(ttk.Frame):
 
             },
             "xarray_data" : {
-                "dimension" : self.xarray_data["x"],
-                "variable" : self.xarray_data["y"]
+                "x" : self.xarray_data["x"],
+                "y" : self.xarray_data["y"]
             }
         }
 
