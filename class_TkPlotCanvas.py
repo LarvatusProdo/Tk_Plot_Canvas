@@ -17,6 +17,7 @@ import xarray as xr
 import os
 from numpy import datetime64
 from numpy import timedelta64
+import platform
 
 from vertical_frame import VerticalScrolledFrame
 """Tkinter plotting widgets with Matplotlib integration.
@@ -45,8 +46,7 @@ class Window_font_parameter(tk.Toplevel):
 
         self.list_police = []
         if frame_to_modifiy == "cartouche" : 
-            # Set list police for cartouche font parameters :
-            
+            # Filter to only fonts available in both Tkinter
             for family in tk.font.families():
                 try:
                     tk.font.Font(family=family)
@@ -54,8 +54,8 @@ class Window_font_parameter(tk.Toplevel):
                 except tk.TclError:
                     pass
         else : 
-            # Filter to only fonts available in both Tkinter and Matplotlib
-            self.list_police = list(set(fm.FontManager().get_font_names()))
+            # Filter to only fonts available in both Matplotlib
+            self.list_police = self.master.master.list_font_matplotlib
 
         self.list_police.sort()  # Sort the list of fonts alphabetically
             
@@ -107,8 +107,6 @@ class Window_font_parameter(tk.Toplevel):
         
         combo_police = ttk.Combobox(label_frame, values= self.list_police, state="readonly", width=20)
         combo_police.grid(row=row_start, column=column_start + 1, sticky="w", columnspan=2, padx=5, pady=5)
-        index_police = self.list_police.index("Arial") if "Arial" in self.list_police else 0
-        combo_police.current(index_police)  # Set to current style of ticks or "normal" by default
         row_start +=1
 
         ttk.Label(label_frame, text="Taille de la police :", style='TkPlotCanvas.TLabel').grid(row=row_start, column=column_start, sticky="e", padx=self.padx_echelle, pady=self.pady_echelle)
@@ -170,8 +168,7 @@ class Window_font_parameter(tk.Toplevel):
         try:
             int(style_font[1])
         except ValueError:
-            style_font = ["Arial", "12", "normal"]  # Default values if parsing fails
-
+            style_font = [self.master.master.font_default, "12", "normal"]  # Default values if parsing fails
 
         index_police = self.list_police.index(style_font[0]) if style_font[0] in self.list_police else 0    
         self.dict_font_parameters[nom_frame]["combo_police"].current(index_police)
@@ -1116,33 +1113,44 @@ class TkPlotCanvas(ttk.Frame):
         """Configure default ttk styles for the plot canvas and surrounding widgets."""
         self.style = ttk.Style()
 
+        # Set background colors for the graph and frame styles
         self.bg_color_graph = bg
         self.bg_color_frame = self.style.lookup("TFrame", "background")
+
+        # Set a default font based on the operating system for better cross-platform appearance
+        if platform.system() == "Linux" : 
+            self.font_default = "DejaVu Sans"
+        else :
+            self.font_default = "Arial"
+
+        # Get the list of available font names from both Matplotlib and Tkinter for use in font selection dialogs
+        self.list_font_matplotlib = list(set(fm.FontManager().get_font_names()))
+        self.list_font_tkinter = list(tk.font.families())
 
         # Configure ttk styles for background color
         self.style.configure('TkPlotCanvas.TFrame')
 
         self.style.configure('TkPlotCanvas.TNotebook')
-        self.style.configure('TkPlotCanvas.TNotebook.Tab', font=('Arial', 10, 'bold'), padding=(10, 5))
+        self.style.configure('TkPlotCanvas.TNotebook.Tab', font=(self.font_default, 10, 'bold'), padding=(10, 5))
         self.style.map('TkPlotCanvas.TNotebook.Tab', foreground=[('selected', 'black'), ('!selected', 'gray')], background=[('selected', self.bg_color_frame), ('!selected', self.bg_color_frame)])
 
         self.style.configure('TkPlotCanvas.TLabel')
         self.style.configure('TkPlotCanvas.TCheckbutton')
         self.style.configure('TkPlotCanvas.TLabelframe')
-        self.style.configure('TkPlotCanvas.TLabelframe.Label', font=('Arial', 10, 'bold'))       
+        self.style.configure('TkPlotCanvas.TLabelframe.Label', font=(self.font_default, 10, 'bold'))       
 
 
-        self.style.configure('Cartouche_titre.TLabel', font=('Arial', 10, 'bold'), foreground="black", background=self.bg_color_graph)
-        self.style.configure('Cartouche.TLabel', font=('Arial', 10, 'normal'), foreground="black", background=self.bg_color_graph)
-        self.style.configure('Cartouche.TFrame', background=self.bg_color_graph)
+        self.style.configure('Cartouche_titre.TLabel', font=(self.font_default, 10, 'bold'), foreground="black", background=self.bg_color_graph)
+        self.style.configure('Cartouche.TLabel', font=(self.font_default, 10, 'normal'), foreground="black", background=self.bg_color_graph)
+        self.style.configure('Cartouche.TFrame', background= self.bg_color_graph)
 
-        self.style.configure('Titre_parammetre.TLabel', font=('Arial', 10, 'bold'), foreground="black")
+        self.style.configure('Titre_parammetre.TLabel', font=(self.font_default, 10, 'bold'), foreground="black")
 
         self.style.configure('TkPlotCanvas.TEntry')
         self.style.configure('TkPlotCanvas.TButton')
 
         
-        self.style.configure('TkPlotCanvas_Courbe.TLabel', font=('Arial', 10, 'bold'), foreground="black")
+        self.style.configure('TkPlotCanvas_Courbe.TLabel', font=(self.font_default, 10, 'bold'), foreground="black")
 
     def do_popup(self, event):
         """Show the context menu at the mouse cursor position."""
@@ -1263,8 +1271,11 @@ class TkPlotCanvas(ttk.Frame):
         
         if "ticks" in parameters:
             tick_params = parameters["ticks"]
+
+            font_name = tick_params.get("name") if tick_params.get("name") in self.list_font_matplotlib else self.font_default
+
             for tick in axis_to_update.get_ticklabels():
-                tick.set_fontname(tick_params.get("name"))
+                tick.set_fontname(font_name)
                 tick.set_fontsize(tick_params.get("size"))
                 tick.set_fontstyle(tick_params.get("style"))
                 tick.set_fontweight(tick_params.get("weight"))
@@ -1457,18 +1468,18 @@ class TkPlotCanvas(ttk.Frame):
         
         if "title" in parameters:
             title_params = parameters["title"].copy()
-            if title_params.get("fontname") not in fm.FontManager().get_font_names():
-                title_params["fontname"] = 'DejaVu Sans'
+            if title_params.get("fontname") not in self.list_font_matplotlib :
+                title_params["fontname"] = self.font_default
             self.axes.set_title(self._title_var.get(), **title_params)
         if "xlabel" in parameters:
             xlabel_params = parameters["xlabel"].copy()
-            if xlabel_params.get("fontname") not in fm.FontManager().get_font_names():
-                xlabel_params["fontname"] = 'DejaVu Sans'
+            if xlabel_params.get("fontname") not in self.list_font_matplotlib :
+                xlabel_params["fontname"] = self.font_default
             self.axes.set_xlabel(self._xlabel_var.get(), **xlabel_params)
         if "ylabel" in parameters:
             ylabel_params = parameters["ylabel"].copy()
-            if ylabel_params.get("fontname") not in fm.FontManager().get_font_names():
-                ylabel_params["fontname"] = 'DejaVu Sans'
+            if ylabel_params.get("fontname") not in self.list_font_matplotlib :
+                ylabel_params["fontname"] = self.font_default
             self.axes.set_ylabel(self._ylabel_var.get(), **ylabel_params)
 
         for index, line in enumerate(self._lines):
@@ -1482,6 +1493,11 @@ class TkPlotCanvas(ttk.Frame):
 
         if "cartouche" in parameters:
             cartouche_params = parameters["cartouche"]
+
+            # Set a safe font name that exists in the system : 
+            cartouche_params["cartouche_font_title"]["font"] = self._safe_font_name(cartouche_params["cartouche_font_title"]["font"])
+            cartouche_params["cartouche_font_line"]["font"] = self._safe_font_name(cartouche_params["cartouche_font_line"]["font"])
+
 
             self.Is_cartouche_display = cartouche_params.get("Is_cartouche_display", True)
             if not self.Is_cartouche_display:
@@ -1527,6 +1543,32 @@ class TkPlotCanvas(ttk.Frame):
             self.open_menu_graphique = Menu_graphique(self, notebook_shown=notebook_shown)  # Reopen the menu with the same notebook shown
 
         return parameters  # Return loaded parameters for potential further use
+
+    def _safe_font_name(self, font_name:str):
+        """Parse a font name string and return a safe font name that exists in the system, falling back to default if necessary."""
+        list_font_name = font_name.split(" ")
+
+        try :
+            int(list_font_name[1])
+        except ValueError :
+            # If the second element is not an integer, it means the font string is in a different format (e.g., ['{Arial', 'Greek}', '14', 'bold']), so we need to parse it differently.
+            style_font_buff = font_name["font"].split(" ")
+            list_font_name = ["","",""]
+            list_font_name[0] = style_font_buff[0][1:] + " " + style_font_buff[1][:-1]
+            list_font_name[1] = style_font_buff[2]
+            list_font_name[2] = style_font_buff[3]
+            
+        try:
+            int(list_font_name[1])
+        except ValueError:
+            list_font_name = [self.master.master.font_default, "12", "normal"]  # Default values if parsing fails
+
+        if not list_font_name[0] in list(tk.font.families()) :
+            list_font_name[0] = self.master.master.font_default
+
+        safe_font = " ".join(list_font_name)
+
+        return safe_font
 
     def plot(
         self,
