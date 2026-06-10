@@ -33,8 +33,7 @@ class Window_font_parameter(tk.Toplevel):
     def __init__(self, master, frame_to_modifiy=""):
         super().__init__(master)
         self.title(f"Modification du {frame_to_modifiy}")
-        self.geometry(f"400x400+{self.master.winfo_x() + 50}+{self.master.winfo_y() + 50}")
-        self["bg"] = "#f0f0f0"
+        self.geometry(f"400x450+{self.master.winfo_x() + 50}+{self.master.winfo_y() + 50}")
 
         self.frame_window = ttk.Frame(self, style='TkPlotCanvas.TFrame')
         self.frame_window.pack(fill="both", expand=True, anchor="nw")
