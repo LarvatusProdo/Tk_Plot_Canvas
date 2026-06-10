@@ -333,8 +333,7 @@ class Menu_graphique(tk.Toplevel):
         super().__init__(master)
         self.title("Menu de modification de la courbe")
         self.geometry(f"1000x500+{self.master.master.winfo_x() + 600}+{self.master.master.winfo_y() + 50}")
-        self["bg"] = "#f0f0f0"
-
+        
         self.notebook_shown = notebook_shown
     
         # Initialize a dictionary to store font controls for axes and title
@@ -359,22 +358,22 @@ class Menu_graphique(tk.Toplevel):
         self._notebook.pack(side="bottom", fill="both", expand=True)
 
         # Tab Axes et titre:
-        self.tab_axes = VerticalScrolledFrame(self._notebook, x_bar = True, bg_canvas ="", style_frame = 'TkPlotCanvas.TFrame')
+        self.tab_axes = VerticalScrolledFrame(self._notebook, x_bar = True, style_frame = 'TkPlotCanvas.TFrame')
         self._notebook.add(self.tab_axes, text="Axes et titre", padding=self.padding_notebook)
         self.fill__frame_axes()
         
         # Tab 3: Cartouche
-        self.tab_cartouche = VerticalScrolledFrame(self._notebook, x_bar = True, bg_canvas ="", style_frame = 'TkPlotCanvas.TFrame')
+        self.tab_cartouche = VerticalScrolledFrame(self._notebook, x_bar = True, style_frame = 'TkPlotCanvas.TFrame')
         self._notebook.add(self.tab_cartouche, text="Cartouche", padding=self.padding_notebook)
         self.fill__frame_cartouche_menu()
 
         # Tab 4: Courbe
-        self.tab_courbe = VerticalScrolledFrame(self._notebook, x_bar = True, bg_canvas ="", style_frame = 'TkPlotCanvas.TFrame')
+        self.tab_courbe = VerticalScrolledFrame(self._notebook, x_bar = True, style_frame = 'TkPlotCanvas.TFrame')
         self._notebook.add(self.tab_courbe, text="Courbes", padding=self.padding_notebook)
         self.fill__frame_courbe()
 
         # Tab 5: Legende
-        self.tab_legende = VerticalScrolledFrame(self._notebook, x_bar = True, bg_canvas ="", style_frame = 'TkPlotCanvas.TFrame')
+        self.tab_legende = VerticalScrolledFrame(self._notebook, x_bar = True, style_frame = 'TkPlotCanvas.TFrame')
         
         self._notebook.add(self.tab_legende, text="Légende", padding=self.padding_notebook)
         self.fill__frame_legende()
@@ -550,16 +549,16 @@ class Menu_graphique(tk.Toplevel):
     def fill__frame_courbe(self):
         """Create the curve properties tab and populate it with widgets for each plotted line."""
         
-        self.style.configure('Courbe.TLabel', font=('Arial', 10, 'bold'), background = self.master.bg_color)
+        
 
-        label = ttk.Label(self.tab_courbe, text="Paramètres des courbes:", style='Courbe.TLabel')
+        label = ttk.Label(self.tab_courbe, text="Paramètres des courbes:", style='TkPlotCanvas_Courbe.TLabel')
         label.grid(row=0, column=0, sticky="w", padx=5, pady=10, columnspan=6 )
 
-        label = ttk.Label(self.tab_courbe, text="Couleur:", style='Courbe.TLabel').grid(row=1, column=0, sticky="w", padx=5, pady=5)
-        label = ttk.Label(self.tab_courbe, text="Épaisseur de ligne:", style='Courbe.TLabel').grid(row=1, column=1, sticky="w", padx=5, pady=5)
-        label = ttk.Label(self.tab_courbe, text="Style de ligne:", style='Courbe.TLabel').grid(row=1, column=2, sticky="w", padx=5, pady=5)
-        label = ttk.Label(self.tab_courbe, text="Marqueur:", style='Courbe.TLabel').grid(row=1, column=3, sticky="w", padx=5, pady=5)
-        label = ttk.Label(self.tab_courbe, text="Taille du marqueur:", style='Courbe.TLabel').grid(row=1, column=4, sticky="w", padx=5, pady=5)
+        label = ttk.Label(self.tab_courbe, text="Couleur:", style='TkPlotCanvas_Courbe.TLabel').grid(row=1, column=0, sticky="w", padx=5, pady=5)
+        label = ttk.Label(self.tab_courbe, text="Épaisseur de ligne:", style='TkPlotCanvas_Courbe.TLabel').grid(row=1, column=1, sticky="w", padx=5, pady=5)
+        label = ttk.Label(self.tab_courbe, text="Style de ligne:", style='TkPlotCanvas_Courbe.TLabel').grid(row=1, column=2, sticky="w", padx=5, pady=5)
+        label = ttk.Label(self.tab_courbe, text="Marqueur:", style='TkPlotCanvas_Courbe.TLabel').grid(row=1, column=3, sticky="w", padx=5, pady=5)
+        label = ttk.Label(self.tab_courbe, text="Taille du marqueur:", style='TkPlotCanvas_Courbe.TLabel').grid(row=1, column=4, sticky="w", padx=5, pady=5)
 
         self.list_widget = []
         for index, line in enumerate(self.master._lines):
@@ -659,7 +658,7 @@ class Menu_graphique(tk.Toplevel):
         line_string = f"{value_linestyle}" if value_linestyle != "None" else ""
         line_string += f"{value_marker}" if value_marker != "None" else ""
 
-        self.master._cartouche_grid[index][0].configure(text=line_string, background=self.master.bg_color, foreground=color, width=3, font=("Helvetica", 15, 'bold'))
+        self.master._cartouche_grid[index][0].configure(text=line_string, background=self.master.bg_color_graph, foreground=color, width=3, font=("Helvetica", 15, 'bold'))
            
 
 
@@ -1035,7 +1034,7 @@ class TkPlotCanvas(ttk.Frame):
             master: Parent widget.
             dpi: Dots-per-inch for the Matplotlib figure.
             figsize: Figure size in inches (width, height).
-            bg_color: Background color for the widgets and plot.
+            bg_color: Background color for the plot.
             load_view : json file associated to a previous view saved 
             **kwargs: Additional kwargs passed to tk.Frame.
         """
@@ -1065,7 +1064,7 @@ class TkPlotCanvas(ttk.Frame):
         self.panedwindow.add(self._plot_frame, weight=1)    
 
         # Frame Cartouche
-        self._cartouche_frame = VerticalScrolledFrame(self.panedwindow, x_bar = True, bg_canvas ="", height_canvas = 100 , style_frame = 'TkPlotCanvas.TFrame')
+        self._cartouche_frame = VerticalScrolledFrame(self.panedwindow, x_bar = True, bg_canvas ="", height_canvas = 100 , style_frame = 'Cartouche.TFrame')
         self.panedwindow.add(self._cartouche_frame, weight=0)
         self.cartouche_initialized = False
         self._cartouche_grid = []
@@ -1098,7 +1097,7 @@ class TkPlotCanvas(ttk.Frame):
         
 
         # Create context menu.
-        self.menu_click = tk.Menu(self, tearoff=0, bg=bg_color)
+        self.menu_click = tk.Menu(self, tearoff=0)
         self.menu_click.add_command(label="Modiification des axes et titres", command=partial(self.open_menu_graphique, "Axes et titre"))
         self.menu_click.add_separator()
         self.menu_click.add_command(label="Modiification des courbes", command=partial(self.open_menu_graphique, "Courbes"))
@@ -1117,28 +1116,33 @@ class TkPlotCanvas(ttk.Frame):
         """Configure default ttk styles for the plot canvas and surrounding widgets."""
         self.style = ttk.Style()
 
-        self.bg_color = bg
+        self.bg_color_graph = bg
+        self.bg_color_frame = self.style.lookup("TFrame", "background")
 
         # Configure ttk styles for background color
-        self.style.configure('TkPlotCanvas.TFrame', background=self.bg_color)
+        self.style.configure('TkPlotCanvas.TFrame')
 
-        self.style.configure('TkPlotCanvas.TNotebook', background=self.bg_color)
-        self.style.configure('TkPlotCanvas.TNotebook.Tab', background=self.bg_color, font=('Arial', 10, 'bold'), padding=(10, 5))
-        self.style.map('TkPlotCanvas.TNotebook.Tab', foreground=[('selected', 'black'), ('!selected', 'gray')], background=[('selected', self.bg_color), ('!selected', self.bg_color)])
+        self.style.configure('TkPlotCanvas.TNotebook')
+        self.style.configure('TkPlotCanvas.TNotebook.Tab', font=('Arial', 10, 'bold'), padding=(10, 5))
+        self.style.map('TkPlotCanvas.TNotebook.Tab', foreground=[('selected', 'black'), ('!selected', 'gray')], background=[('selected', self.bg_color_frame), ('!selected', self.bg_color_frame)])
 
-        self.style.configure('TkPlotCanvas.TLabel', background=self.bg_color)
-        self.style.configure('Cartouche_titre.TLabel', font=('Arial', 10, 'bold'), foreground="black", background=self.bg_color)
-        self.style.configure('Cartouche.TLabel', font=('Arial', 10, 'normal'), foreground="black", background=self.bg_color)
+        self.style.configure('TkPlotCanvas.TLabel')
+        self.style.configure('TkPlotCanvas.TCheckbutton')
+        self.style.configure('TkPlotCanvas.TLabelframe')
+        self.style.configure('TkPlotCanvas.TLabelframe.Label', font=('Arial', 10, 'bold'))       
 
-        self.style.configure('Titre_parammetre.TLabel', font=('Arial', 10, 'bold'), foreground="black", background=self.bg_color)
 
-        self.style.configure('TkPlotCanvas.TEntry', background=self.bg_color)
-        self.style.configure('TkPlotCanvas.TButton', background=self.bg_color)
+        self.style.configure('Cartouche_titre.TLabel', font=('Arial', 10, 'bold'), foreground="black", background=self.bg_color_graph)
+        self.style.configure('Cartouche.TLabel', font=('Arial', 10, 'normal'), foreground="black", background=self.bg_color_graph)
+        self.style.configure('Cartouche.TFrame', background=self.bg_color_graph)
 
-        self.style.configure('TkPlotCanvas.TCheckbutton', background=self.bg_color)
-        self.style.configure('TkPlotCanvas.TLabelframe', background=self.bg_color)
-        self.style.configure('TkPlotCanvas.TLabelframe.Label', background=self.bg_color, font=('Arial', 10, 'bold'))       
+        self.style.configure('Titre_parammetre.TLabel', font=('Arial', 10, 'bold'), foreground="black")
 
+        self.style.configure('TkPlotCanvas.TEntry')
+        self.style.configure('TkPlotCanvas.TButton')
+
+        
+        self.style.configure('TkPlotCanvas_Courbe.TLabel', font=('Arial', 10, 'bold'), foreground="black")
 
     def do_popup(self, event):
         """Show the context menu at the mouse cursor position."""
@@ -1195,7 +1199,7 @@ class TkPlotCanvas(ttk.Frame):
                 linestyle = "―"
             marker = line.get_marker() if line.get_marker() != "None" else ""
 
-            self._cartouche_grid[line_index].append(tk.Label(self._cartouche_frame, text=f"{linestyle}{marker}", background=self.bg_color, foreground=color, width=3, font=("Helvetica", 15, 'bold')))
+            self._cartouche_grid[line_index].append(tk.Label(self._cartouche_frame, text=f"{linestyle}{marker}", background=self.bg_color_graph, foreground=color, width=3, font=("Helvetica", 15, 'bold')))
             self._cartouche_grid[line_index][-1].grid(row= line_index + 1, column=0, sticky="w", padx=(5,0), pady=0)
             
         else : 
@@ -1327,7 +1331,7 @@ class TkPlotCanvas(ttk.Frame):
         
         parameters = {
 
-            "background_color": self.bg_color,
+            "background_color": self.bg_color_graph,
             "window_size": (self.master.winfo_width(), self.master.winfo_height()),
             "window_position": (self.master.winfo_x(), self.master.winfo_y()),
 
@@ -1433,12 +1437,12 @@ class TkPlotCanvas(ttk.Frame):
             
         # Apply loaded parameters to the plot (axes limits, scale types, font properties, curve properties, cartouche parameters, legend parameters)
         if "background_color" in parameters:
-            self.bg_color = parameters["background_color"]
-            self.figure.set_facecolor(self.bg_color)
-            self.axes.set_facecolor(self.bg_color)
+            self.bg_color_graph = parameters["background_color"]
+            self.figure.set_facecolor(self.bg_color_graph)
+            self.axes.set_facecolor(self.bg_color_graph)
             for line in self._lines:
-                line.set_color(self.bg_color)
-            self._canvas.get_tk_widget().configure(background=self.bg_color)
+                line.set_color(self.bg_color_graph)
+            self._canvas.get_tk_widget().configure(background=self.bg_color_graph)
             self._canvas.draw()
         if "window_size" in parameters:
             self.master.geometry(f"{parameters['window_size'][0]}x{parameters['window_size'][1]}")
