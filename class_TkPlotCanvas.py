@@ -1563,7 +1563,7 @@ class TkPlotCanvas(ttk.Frame):
         except ValueError:
             list_font_name = [self.master.master.font_default, "12", "normal"]  # Default values if parsing fails
 
-        if not list_font_name[0] in list(tk.font.families()) :
+        if not list_font_name[0] in self.list_font_tkinter :
             list_font_name[0] = self.master.master.font_default
 
         safe_font = " ".join(list_font_name)
