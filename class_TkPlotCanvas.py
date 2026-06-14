@@ -1242,10 +1242,10 @@ class TkPlotCanvas(ttk.Frame):
             if key in label_dict :
                 value = label_dict[key]
 
-            if shown_keys:
-                string_legende.append(f"{key}: {value}")
-            else:
-                string_legende.append(f"{value}")
+                if shown_keys:
+                    string_legende.append(f"{key}: {value}")
+                else:
+                    string_legende.append(f"{value}")
 
         return ", ".join(string_legende)
 
