@@ -15,6 +15,7 @@
         ],
         "scale": "linear",
         "autoscale": true,
+        "inversion_axis": false,
         "ticks": {
             "name": "Times New Roman",
             "size": 17.0,
@@ -25,11 +26,12 @@
     },
     "Y_axis": {
         "lim": [
-            0.0,
-            121.0
+            121.0,
+            0.0
         ],
         "scale": "linear",
         "autoscale": true,
+        "inversion_axis": true,
         "ticks": {
             "name": "Times New Roman",
             "size": 17.0,

@@ -328,7 +328,7 @@ class Menu_graphique(tk.Toplevel):
     def __init__(self, master, notebook_shown=""):
         super().__init__(master)
         self.title("Menu de modification de la courbe")
-        self.geometry(f"1000x500+{self.master.master.winfo_x() + 600}+{self.master.master.winfo_y() + 50}")
+        self.geometry(f"1000x550+{self.master.master.winfo_x() + 600}+{self.master.master.winfo_y() + 50}")
         
         self.notebook_shown = notebook_shown
     
@@ -391,7 +391,7 @@ class Menu_graphique(tk.Toplevel):
         label.grid(row=0, column=0, sticky="w", padx=5, pady=10, columnspan=3 )
 
         # Checkbutton pour l'affichage du cartouche : 
-        self.Is_cartouche_display_var = tk.BooleanVar(value= self.master.Is_cartouche_display ) #TODO : value to apply
+        self.Is_cartouche_display_var = tk.BooleanVar(value= self.master.Is_cartouche_display ) 
         checkbutton_cartouche_shown = ttk.Checkbutton(self.tab_cartouche, 
                                                             text = "Affichage du cartouche",
                                                             variable=self.Is_cartouche_display_var,
@@ -698,6 +698,7 @@ class Menu_graphique(tk.Toplevel):
             "scale_var": tk.StringVar(value= self.master.axes.get_xscale() ),
             "auto_scale_var": tk.BooleanVar(value= self.master.axes.get_autoscalex_on() ),
             "combobox_variable" : None,
+            "innversion_axe_var" : tk.BooleanVar(value= bool(self.master.axes.xaxis_inverted()) ),
         }
 
         self.dict_axis_widget["y"] = {
@@ -707,6 +708,7 @@ class Menu_graphique(tk.Toplevel):
             "scale_var": tk.StringVar(value= self.master.axes.get_yscale() ),
             "auto_scale_var": tk.BooleanVar(value= self.master.axes.get_autoscaley_on() ),
             "combobox_variable" : None,
+            "innversion_axe_var" : tk.BooleanVar(value= bool(self.master.axes.yaxis_inverted() )),
         }
                 
         self._create_LabelFrame_axes("x", "Abscisse", self.dict_axis_widget["x"], list_variables = list_variables_xarray)
@@ -765,13 +767,17 @@ class Menu_graphique(tk.Toplevel):
         
         checkbutton_autoscale = ttk.Checkbutton(fame_axis, text="Auto", variable = dict_variable["auto_scale_var"], command= partial(self._on_zoom_auto, axis = name_frame), width=5, style='TkPlotCanvas.TCheckbutton')
         checkbutton_autoscale.grid(row=6,column=2, rowspan=2, padx=padx_axes, pady=pady_axes, sticky="we")
-                
-        ttk.Separator(fame_axis, orient='horizontal').grid(row=9, column=0, columnspan=3, sticky="we", pady=(10, 10))
+        
+        ttk.Label(fame_axis, text="Inversion axe:", style='TkPlotCanvas.TLabel').grid(row=9, column=0, sticky="e", padx=padx_axes, pady=pady_axes)
+        checkbutton_inversion_axe = ttk.Checkbutton(fame_axis, variable = dict_variable["innversion_axe_var"], command = partial(self._on_inversion_axe, axis = name_frame), width=5, style='TkPlotCanvas.TCheckbutton')
+        checkbutton_inversion_axe.grid(row=9,column=1,  padx=padx_axes, pady=pady_axes, sticky="we")
+
+        ttk.Separator(fame_axis, orient='horizontal').grid(row=20, column=0, columnspan=3, sticky="we", pady=(10, 10))
 
             # Bouton police : 
         button_font_label = ttk.Button(fame_axis, text="Modifier la police", 
                             command= partial(Window_font_parameter, self, frame_to_modifiy= f"{name_frame}label"), style='TkPlotCanvas.TButton' )
-        button_font_label.grid(row=10, column=0, columnspan=3, padx=(5, 5), sticky="ew")
+        button_font_label.grid(row=21, column=0, columnspan=3, padx=(5, 5), sticky="ew")
 
             # If the xarray data is loaded, add the combobox to select the variable to show on the axis :
         if len(list_variables) > 0 :
@@ -789,7 +795,14 @@ class Menu_graphique(tk.Toplevel):
         """Set the autoscale checkboxes to False when the user manually changes axis limits."""
         
         self.dict_axis_widget[axis]["auto_scale_var"].set(False)
-        
+    
+    def _on_inversion_axe(self, event=None, axis=""):
+        """Invert the specified axis when the inversion checkbox is toggled."""
+        if axis == "x":
+            self.master.axes.invert_xaxis()
+        elif axis == "y":
+            self.master.axes.invert_yaxis()
+        self.master._canvas.draw()
 
     def _apply_axes_changes(self):
         """Apply the axes, title, and xarray selection changes from the axes tab."""
@@ -1290,7 +1303,11 @@ class TkPlotCanvas(ttk.Frame):
                 self.axes.set_xlim(parameters["lim"])
             
             if "scale" in parameters and not self.Is_Date_on_x_axis:
-                self.axes.set_xscale(parameters["scale"])           
+                self.axes.set_xscale(parameters["scale"])   
+                   
+            if "inversion_axis" in parameters :
+                if parameters["inversion_axis"] :
+                    self.axes.invert_xaxis()
 
 
         if axe == "Y":
@@ -1305,6 +1322,10 @@ class TkPlotCanvas(ttk.Frame):
             
             if "scale" in parameters :
                 self.axes.set_yscale(parameters["scale"])
+            
+            if "inversion_axis" in parameters :
+                if parameters["inversion_axis"] :
+                    self.axes.invert_yaxis()
       
 
         return True
@@ -1350,6 +1371,7 @@ class TkPlotCanvas(ttk.Frame):
                 "lim": self.axes.get_xlim(),
                 "scale": self.axes.get_xscale(),
                 "autoscale": self.axes.get_autoscalex_on(),  # Assuming you want to save the autoscale state for x-axis
+                "inversion_axis" : bool(self.axes.xaxis_inverted()),
                 "ticks": {
                     "name" : self.axes.xaxis.get_ticklabels()[0].get_fontname() if len(self.axes.xaxis.get_ticklabels()) > 0 else None,
                     "size": self.axes.xaxis.get_ticklabels()[0].get_fontsize() if len(self.axes.xaxis.get_ticklabels()) > 0 else None,
@@ -1362,6 +1384,7 @@ class TkPlotCanvas(ttk.Frame):
                 "lim": self.axes.get_ylim(),
                 "scale": self.axes.get_yscale(),
                 "autoscale": self.axes.get_autoscaley_on(),  # Assuming you want to save the autoscale state for x-axis
+                "inversion_axis" : bool(self.axes.yaxis_inverted()),
                 "ticks": {
                     "name" : self.axes.yaxis.get_ticklabels()[0].get_fontname() if len(self.axes.yaxis.get_ticklabels()) > 0 else None,
                     "size": self.axes.yaxis.get_ticklabels()[0].get_fontsize() if len(self.axes.yaxis.get_ticklabels()) > 0 else None,
@@ -1471,7 +1494,7 @@ class TkPlotCanvas(ttk.Frame):
                 title_params["fontname"] = self.font_default
                 parameters["title"]["fontname"] = self.font_default
             self.axes.set_title(self._title_var.get(), **title_params)
-            
+
         if "xlabel" in parameters:
             xlabel_params = parameters["xlabel"].copy()
             if xlabel_params.get("fontname") not in self.list_font_matplotlib :
