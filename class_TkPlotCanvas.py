@@ -1469,16 +1469,21 @@ class TkPlotCanvas(ttk.Frame):
             title_params = parameters["title"].copy()
             if title_params.get("fontname") not in self.list_font_matplotlib :
                 title_params["fontname"] = self.font_default
+                parameters["title"]["fontname"] = self.font_default
             self.axes.set_title(self._title_var.get(), **title_params)
+            
         if "xlabel" in parameters:
             xlabel_params = parameters["xlabel"].copy()
             if xlabel_params.get("fontname") not in self.list_font_matplotlib :
                 xlabel_params["fontname"] = self.font_default
+                parameters["xlabel"]["fontname"] = self.font_default
             self.axes.set_xlabel(self._xlabel_var.get(), **xlabel_params)
+
         if "ylabel" in parameters:
             ylabel_params = parameters["ylabel"].copy()
             if ylabel_params.get("fontname") not in self.list_font_matplotlib :
                 ylabel_params["fontname"] = self.font_default
+                parameters["ylabel"]["fontname"] = self.font_default
             self.axes.set_ylabel(self._ylabel_var.get(), **ylabel_params)
 
         for index, line in enumerate(self._lines):
@@ -1560,10 +1565,10 @@ class TkPlotCanvas(ttk.Frame):
         try:
             int(list_font_name[1])
         except ValueError:
-            list_font_name = [self.master.master.font_default, "12", "normal"]  # Default values if parsing fails
+            list_font_name = [self.font_default, "12", "normal"]  # Default values if parsing fails
 
         if not list_font_name[0] in self.list_font_tkinter :
-            list_font_name[0] = self.master.master.font_default
+            list_font_name[0] = self.font_default
 
         safe_font = " ".join(list_font_name)
 
