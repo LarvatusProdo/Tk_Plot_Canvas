@@ -1062,7 +1062,7 @@ class TkPlotCanvas(ttk.Frame):
         self.Is_legend_display = False
         self.Is_title_display = False
         self.Is_Date_on_x_axis = False
-        self.Is_cartouche_display = False
+        self.Is_cartouche_display = True
 
         # Panedwindow for resizable layout
         self.panedwindow = ttk.Panedwindow(self, orient=tk.VERTICAL)

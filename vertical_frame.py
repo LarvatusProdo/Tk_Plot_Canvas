@@ -84,11 +84,14 @@ class VerticalScrolledFrame():
 
     def _on_mousewheel(self, event):
         """Linux uses event.num; Windows / Mac uses event.delta"""
-        if event.num == 4 or event.delta > 0:
-            self.canvas.yview_scroll(-1, "units" )
-        elif event.num == 5 or event.delta < 0:
-            self.canvas.yview_scroll(1, "units" )
-
+        try:
+            if event.num == 4 or event.delta > 0:
+                self.canvas.yview_scroll(-1, "units" )
+            elif event.num == 5 or event.delta < 0:
+                self.canvas.yview_scroll(1, "units" )
+        except:
+            pass 
+        
     def __str__(self):
         return str(self.outer)
 
