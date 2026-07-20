@@ -2,6 +2,7 @@
 from cProfile import label
 from operator import index
 import tkinter as tk
+from tkinter import filedialog
 from tkinter import ttk
 from typing import Callable, Iterable, Optional
 from functools import partial
@@ -1107,12 +1108,15 @@ class TkPlotCanvas(ttk.Frame):
 
         # Create context menu.
         self.menu_click = tk.Menu(self, tearoff=0)
-        self.menu_click.add_command(label="Modiification des axes et titres", command=partial(self.open_menu_graphique, "Axes et titre"))
+        self.menu_click.add_command(label="Sauvegarder la vue", command=self.save_parameters, accelerator="Ctrl+S")
+        self.menu_click.add_command(label="Chargement de la vue", command=self.load_parameters, accelerator="Ctrl+G")
         self.menu_click.add_separator()
-        self.menu_click.add_command(label="Modiification des courbes", command=partial(self.open_menu_graphique, "Courbes"))
+        self.menu_click.add_command(label="Modification des axes et titres", command=partial(self.open_menu_graphique, "Axes et titre"))
+        self.menu_click.add_separator()
+        self.menu_click.add_command(label="Modification des courbes", command=partial(self.open_menu_graphique, "Courbes"))
         self.menu_click.add_separator()
         self.menu_click.add_command(label="Modification du cartouche", command=partial(self.open_menu_graphique, "Cartouche"))    
-        self.menu_click.add_command(label="Modiification de la légende", command=partial(self.open_menu_graphique, "Légende"))
+        self.menu_click.add_command(label="Modification de la légende", command=partial(self.open_menu_graphique, "Légende"))
         self._canvas.get_tk_widget().bind("<Button-3>", self.do_popup)
 
         # load the view if specified
@@ -1332,14 +1336,21 @@ class TkPlotCanvas(ttk.Frame):
 
     def save_parameters(self):
 
-        if hasattr(self, "open_menu_graphique"):
+        if hasattr(self.open_menu_graphique, "master"): # Check if the Menu_graphique Window is open 
             window_parent = self.open_menu_graphique
-        else :
+        else:
             window_parent = self
 
-
-        path_to_save = tk.filedialog.asksaveasfilename(parent = window_parent, initialdir=".", title="Enregistrer les paramètres",
-                                                    defaultextension=".json", filetypes=[("JSON files", "*.json")])
+        try :
+            path_to_save = filedialog.asksaveasfilename(parent = window_parent, initialdir=".", title="Enregistrer les paramètres",
+                                                defaultextension=".json", filetypes=[("JSON files", "*.json")])
+            if not path_to_save:
+                return  # User cancelled the save dialog
+            
+        except Exception as e:
+            tk.messagebox.showerror("Error", f"An error occurred while opening the save dialog:\n{e}")
+            return 
+        
         # Implement saving parameters to a JSON file here
         # Store :
         #  - axes limits and scale types
@@ -1453,14 +1464,15 @@ class TkPlotCanvas(ttk.Frame):
         else:
             # Implement loading parameters from a JSON file here
             if path_to_load is None:
-                if hasattr(self, "open_menu_graphique"):
+                if hasattr(self.open_menu_graphique, "master"): # Check if the Menu_graphique Window is open
                     window_parent = self.open_menu_graphique
                 else :
                     window_parent = self
 
-                path_to_load = tk.filedialog.askopenfilename(parent = window_parent, initialdir=".", title="Charger les paramètres",
+                path_to_load = filedialog.askopenfilename(parent = window_parent, initialdir=".", title="Charger les paramètres",
                                                             defaultextension=".json", filetypes=[("JSON files", "*.json")])
-                
+                if not path_to_load:
+                    return  # User cancelled the save dialog
             try:
                 with open(path_to_load, 'r') as f:
                     parameters = json.load(f)
