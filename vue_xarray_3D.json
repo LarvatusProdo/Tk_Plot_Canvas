@@ -1,0 +1,108 @@
+{
+    "background_color": "white",
+    "window_size": [
+        1104,
+        715
+    ],
+    "window_position": [
+        26,
+        26
+    ],
+    "X_axis": {
+        "lim": [
+            0.0,
+            359.75
+        ],
+        "scale": "linear",
+        "autoscale": true,
+        "inversion_axis": false,
+        "ticks": {
+            "name": "DejaVu Sans",
+            "size": 10.0,
+            "style": "normal",
+            "weight": "bold",
+            "color": "black"
+        }
+    },
+    "Y_axis": {
+        "lim": [
+            -90.0,
+            90.0
+        ],
+        "scale": "linear",
+        "autoscale": true,
+        "inversion_axis": false,
+        "ticks": {
+            "name": "DejaVu Sans",
+            "size": 12.0,
+            "style": "normal",
+            "weight": "bold",
+            "color": "#800040"
+        }
+    },
+    "title": {
+        "fontname": "DejaVu Sans",
+        "fontsize": 12.0,
+        "fontstyle": "normal",
+        "fontweight": "normal",
+        "color": "black"
+    },
+    "xlabel": {
+        "fontname": "DejaVu Sans",
+        "fontsize": 12.0,
+        "fontstyle": "normal",
+        "fontweight": "bold",
+        "color": "black"
+    },
+    "ylabel": {
+        "fontname": "DejaVu Sans",
+        "fontsize": 12.0,
+        "fontstyle": "normal",
+        "fontweight": "bold",
+        "color": "#0000a0"
+    },
+    "plot_type": "3D",
+    "curves": {
+        "0": {
+            "type": "contour",
+            "cmap": "viridis",
+            "clim": [
+                -60.0,
+                45.0
+            ]
+        }
+    },
+    "cartouche": {
+        "cartouche_title_grid": [],
+        "cartouche_font_title": {
+            "foreground": "black",
+            "font": "Arial 10 bold",
+            "background": "white"
+        },
+        "cartouche_font_line": {
+            "foreground": "black",
+            "font": "Arial 10 normal",
+            "background": "white"
+        },
+        "Is_cartouche_display": false
+    },
+    "legend": {
+        "displayed_keys": [],
+        "Is_legend_display": false,
+        "Is_title_display": false
+    },
+    "xarray_data": {
+        "x": "latitude",
+        "y": "longitude",
+        "z": "temperature"
+    },
+    "xarray_3D": {
+        "has_colorbar": true,
+        "colorbar_label": "Temperature (\u00b0C)",
+        "cmap": "viridis",
+        "clim": [
+            -60.0,
+            45.0
+        ]
+    }
+}

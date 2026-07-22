@@ -74,6 +74,7 @@ class TkPlotCanvas(ttk.Frame):
         self.Is_title_display = False
         self.Is_Date_on_x_axis = False
         self.Is_cartouche_display = True
+        self._colorbar = None
 
         # Panedwindow for resizable layout
         self.panedwindow = ttk.Panedwindow(self, orient=tk.VERTICAL)
@@ -364,6 +365,7 @@ class TkPlotCanvas(ttk.Frame):
         #  - curve properties (color, linewidth, linestyle, marker, markersize, label)
         #  - cartouche parameters (metadata keys)
         #  - legend parameters (location, font properties, key to display in the legend)
+        #  - xarray 3D settings (x, y, z variables, colorbar state, colormap, and color limits)
 
         parameters = self.get_current_parameters()
         try : 
@@ -431,15 +433,25 @@ class TkPlotCanvas(ttk.Frame):
                 "fontweight": self.axes.yaxis.label.get_fontproperties().get_weight(),
                 "color": self.axes.yaxis.label.get_color()
             },
-            "curves": { str(index):
-                {
-                    "color": line.get_color(),
-                    "linewidth": line.get_linewidth(),
-                    "linestyle": line.get_linestyle(),
-                    "marker": line.get_marker(),
-                    "markersize": line.get_markersize(),
-                }
-                for index, line in enumerate(self._lines) 
+            "plot_type": getattr(self, "type_plot", "2D"),
+            "curves": {
+                str(index): (
+                    {
+                        "type": "contour",
+                        "cmap": line.get_cmap().name if hasattr(line, "get_cmap") else None,
+                        "clim": tuple(line.get_clim()) if hasattr(line, "get_clim") else None,
+                    }
+                    if hasattr(line, "get_cmap")
+                    else {
+                        "type": "line",
+                        "color": line.get_color(),
+                        "linewidth": line.get_linewidth(),
+                        "linestyle": line.get_linestyle(),
+                        "marker": line.get_marker(),
+                        "markersize": line.get_markersize(),
+                    }
+                )
+                for index, line in enumerate(self._lines)
             },
             "cartouche": {
                 "cartouche_title_grid": [label.cget("text") for label in self._cartouche_title_grid],
@@ -457,6 +469,16 @@ class TkPlotCanvas(ttk.Frame):
                 "x" : self.xarray_data["x"],
                 "y" : self.xarray_data["y"],
                 "z" : self.xarray_data["z"] if "z" in self.xarray_data else None,
+            },
+            "xarray_3D": {
+                "has_colorbar": self._colorbar is not None,
+                "colorbar_label": (
+                    self._colorbar.get_label()
+                    if self._colorbar is not None and hasattr(self._colorbar, "get_label")
+                    else (self._colorbar.ax.get_ylabel() if self._colorbar is not None and hasattr(self._colorbar, "ax") else None)
+                ),
+                "cmap": self._lines[0].get_cmap().name if getattr(self, "type_plot", "") == "3D" and len(self._lines) > 0 and hasattr(self._lines[0], "get_cmap") else None,
+                "clim": tuple(self._lines[0].get_clim()) if getattr(self, "type_plot", "") == "3D" and len(self._lines) > 0 and hasattr(self._lines[0], "get_clim") else None,
             }
         }
 
@@ -493,9 +515,12 @@ class TkPlotCanvas(ttk.Frame):
             self.figure.set_facecolor(self.bg_color_graph)
             self.axes.set_facecolor(self.bg_color_graph)
             for line in self._lines:
-                line.set_color(self.bg_color_graph)
+                if hasattr(line, "set_color"):
+                    line.set_color(self.bg_color_graph)
             self._canvas.get_tk_widget().configure(background=self.bg_color_graph)
             self._canvas.draw()
+        if "plot_type" in parameters:
+            self.type_plot = parameters["plot_type"]
         if "window_size" in parameters:
             self.master.geometry(f"{parameters['window_size'][0]}x{parameters['window_size'][1]}")
         if "window_position" in parameters:
@@ -505,7 +530,7 @@ class TkPlotCanvas(ttk.Frame):
             self._update_axis(self.axes.xaxis, parameters["X_axis"], axe= "X" )
 
         if "Y_axis" in parameters:
-            self._update_axis(self.axes.xaxis, parameters["Y_axis"], axe= "Y" )
+            self._update_axis(self.axes.yaxis, parameters["Y_axis"], axe= "Y" )
         
         if "title" in parameters:
             title_params = parameters["title"].copy()
@@ -531,11 +556,23 @@ class TkPlotCanvas(ttk.Frame):
         for index, line in enumerate(self._lines):
             if "curves" in parameters and str(index) in parameters["curves"]:
                 curve_params = parameters["curves"][str(index)]
-                line.set_color(curve_params.get("color"))
-                line.set_linewidth(curve_params.get("linewidth"))
-                line.set_linestyle(curve_params.get("linestyle"))
-                line.set_marker(curve_params.get("marker"))
-                line.set_markersize(curve_params.get("markersize"))
+                if curve_params.get("type") == "line" and hasattr(line, "set_color"):
+                    line.set_color(curve_params.get("color"))
+                    line.set_linewidth(curve_params.get("linewidth"))
+                    line.set_linestyle(curve_params.get("linestyle"))
+                    line.set_marker(curve_params.get("marker"))
+                    line.set_markersize(curve_params.get("markersize"))
+                elif curve_params.get("type") == "contour":
+                    if hasattr(line, "set_cmap") and curve_params.get("cmap"):
+                        try:
+                            line.set_cmap(matplotlib.cm.get_cmap(curve_params["cmap"]))
+                        except Exception:
+                            pass
+                    if hasattr(line, "set_clim") and curve_params.get("clim"):
+                        try:
+                            line.set_clim(curve_params["clim"])
+                        except Exception:
+                            pass
 
         if "cartouche" in parameters:
             cartouche_params = parameters["cartouche"]
@@ -565,11 +602,48 @@ class TkPlotCanvas(ttk.Frame):
             for index, line in enumerate(self._lines):
                 label_dict = self._line_labels[index]
                 line.set_label(self.get_string_legende(label_dict, shown_keys=True))
-                
+                 
             self.Is_legend_display = legend_params.get("Is_legend_display", False)
             self.Is_title_display = legend_params.get("Is_title_display", False)
-    
+     
             self._update_legende()
+
+        if "xarray_3D" in parameters:
+            xarray_3D_params = parameters["xarray_3D"]
+            if len(self._lines) > 0:
+                if xarray_3D_params.get("has_colorbar", False):
+                    if self._colorbar is None:
+                        try:
+                            self._colorbar = self.figure.colorbar(self._lines[0], ax=self.axes)
+                        except Exception:
+                            self._colorbar = None
+                    if self._colorbar is not None:
+                        colorbar_label = xarray_3D_params.get("colorbar_label")
+                        if colorbar_label:
+                            try:
+                                self._colorbar.set_label(colorbar_label)
+                            except Exception:
+                                pass
+                else:
+                    if self._colorbar is not None:
+                        try:
+                            self._colorbar.remove()
+                        except Exception:
+                            pass
+                        self._colorbar = None
+
+                cmap_name = xarray_3D_params.get("cmap")
+                if cmap_name and hasattr(self._lines[0], "set_cmap"):
+                    try:
+                        self._lines[0].set_cmap(matplotlib.cm.get_cmap(cmap_name))
+                    except Exception:
+                        pass
+                clim = xarray_3D_params.get("clim")
+                if clim and hasattr(self._lines[0], "set_clim"):
+                    try:
+                        self._lines[0].set_clim(clim)
+                    except Exception:
+                        pass
 
         try :
             self.xarray_data["x"] = parameters["xarray_data"].get("x", "")
@@ -869,6 +943,12 @@ class TkPlotCanvas(ttk.Frame):
                 self.axes.cla()
                 self._lines.clear()
                 self._line_labels.clear()
+                if self._colorbar is not None:
+                    try:
+                        self._colorbar.remove()
+                    except Exception:
+                        pass
+                    self._colorbar = None
 
         # Construct label string from dict
         label_str = None
@@ -905,7 +985,15 @@ class TkPlotCanvas(ttk.Frame):
        
 
         mapping = self.axes.contourf(y, x, z)
-        
+        if self._colorbar is not None:
+            try:
+                self._colorbar.remove()
+            except Exception:
+                pass
+            self._colorbar = None
+        self._colorbar = self.figure.colorbar(mapping, ax=self.axes)
+        self._colorbar.set_label(variable.capitalize() + (f" ({ds[variable].attrs['units']})" if "units" in ds[variable].attrs else ""))
+
         self._lines.append(mapping)
         self._line_labels.append(label)      
 
