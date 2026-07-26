@@ -1,5 +1,6 @@
 from tkinter import colorchooser
 import tkinter as tk
+import tkinter.font as tkfont
 from tkinter import ttk
 from functools import partial
 
@@ -22,9 +23,9 @@ class Window_font_parameter(tk.Toplevel):
         self.list_police = []
         if frame_to_modifiy == "cartouche" : 
             # Filter to only fonts available in both Tkinter
-            for family in tk.font.families():
+            for family in tkfont.families():
                 try:
-                    tk.font.Font(family=family)
+                    tkfont.Font(family=family)
                     self.list_police.append(family)
                 except tk.TclError:
                     pass
@@ -65,7 +66,15 @@ class Window_font_parameter(tk.Toplevel):
             self._fill_label_frame(label_frame_title, nom_frame= frame_to_modifiy +", nom")
 
             self._set_widget_with_axis_font(frame_to_modifiy, self.master.master.axes )
-        
+
+        elif frame_to_modifiy == "colorbar label":
+            label_frame_title = ttk.LabelFrame(self.frame_window, text="Paramètres du label de la colorbar :" , style='TkPlotCanvas.TLabelframe')
+            label_frame_title.pack(fill="both", side="top", padx=10, pady=10)
+            self._fill_label_frame(label_frame_title, nom_frame= frame_to_modifiy +", nom")
+
+            self._set_widget_with_colorbar_font(frame_to_modifiy + ", nom", getattr(self.master.master, '_colorbar', None))
+            self.button_apply.configure(command=partial(self._update_colorbar, frame_to_modifiy, getattr(self.master.master, '_colorbar', None)))
+
         self.button_apply.pack(fill="x", side="top", padx=10, pady=10)
 
     def _fill_label_frame(self, label_frame, nom_frame = ""):
@@ -242,6 +251,60 @@ class Window_font_parameter(tk.Toplevel):
             self.dict_font_parameters[nom_frame]["checkbutton bold"][1].set( axe.get_ticklabels()[0].get_fontweight() == "bold" )
 
             self.dict_font_parameters[nom_frame]["button_couleur"].configure(bg=axe.get_ticklabels()[0].get_color() if axe.get_ticklabels() else "#000000")
+
+    def _set_widget_with_colorbar_font(self, nom_frame, objet_colorbar):
+       """Load the current colorbar label font settings into the editor controls."""
+       if objet_colorbar is None or not hasattr(objet_colorbar, "ax"):
+           # Keep default widget values if no colorbar exists yet.
+           self.dict_font_parameters[nom_frame]["combo_police"].current(0)
+           self.dict_font_parameters[nom_frame]["combobox style police"].current(0)
+           self.dict_font_parameters[nom_frame]["spinbox size police"].insert(0, 10)
+           self.dict_font_parameters[nom_frame]["checkbutton bold"][0].state(["!selected"])
+           self.dict_font_parameters[nom_frame]["checkbutton bold"][1].set(False)
+           self.dict_font_parameters[nom_frame]["button_couleur"].configure(bg="#000000")
+           return
+
+       current_font = objet_colorbar.ax.yaxis.label.get_fontproperties()
+       current_color = objet_colorbar.ax.yaxis.label.get_color()
+
+       index_police = self.list_police.index(current_font.get_name()) if current_font.get_name() in self.list_police else 0
+       self.dict_font_parameters[nom_frame]["combo_police"].current(index_police)
+       self.dict_font_parameters[nom_frame]["combobox style police"].set(current_font.get_style())
+       self.dict_font_parameters[nom_frame]["spinbox size police"].insert(0, int(current_font.get_size()))
+       self.dict_font_parameters[nom_frame]["checkbutton bold"][0].state(["selected"] if current_font.get_weight() == "bold" else ["!selected"])
+       self.dict_font_parameters[nom_frame]["checkbutton bold"][1].set(current_font.get_weight() == "bold")
+       self.dict_font_parameters[nom_frame]["button_couleur"].configure(bg=current_color)
+
+    def _update_colorbar(self, nom_axe, objet_colorbar):
+       """Apply selected font settings to the colorbar label."""
+       nom_frame = nom_axe + ', nom'
+       police = self.dict_font_parameters[nom_frame]["combo_police"].get()
+       size = self.dict_font_parameters[nom_frame]["spinbox size police"].get()
+       weight = "bold" if self.dict_font_parameters[nom_frame]["checkbutton bold"][1].get() == True else "normal"
+       style = self.dict_font_parameters[nom_frame]["combobox style police"].get()
+       color = self.dict_font_parameters[nom_frame]["button_couleur"].cget("bg")
+
+       if objet_colorbar is None or not hasattr(objet_colorbar, "ax"):
+           contour_set = None
+           if hasattr(self.master.master, "_lines") and len(self.master.master._lines) > 0:
+               contour_set = self.master.master._lines[0]
+
+           if contour_set is not None and hasattr(self.master.master, "figure") and hasattr(self.master.master, "axes"):
+               try:
+                   self.master.master._colorbar = self.master.master.figure.colorbar(contour_set, ax=self.master.master.axes)
+                   objet_colorbar = self.master.master._colorbar
+               except Exception:
+                   objet_colorbar = None
+
+       if objet_colorbar is not None and hasattr(objet_colorbar, "ax"):
+           label = objet_colorbar.ax.yaxis.label
+           label.set_fontfamily(police)
+           label.set_fontsize(int(size))
+           label.set_fontstyle(style)
+           label.set_fontweight(weight)
+           label.set_color(color)
+           self.master.master._canvas.draw()
+       self.destroy()
 
     def _update_axis(self, nom_axe, objet_axis):
         """Apply axis or title font settings selected in the dialog to the Matplotlib axis."""

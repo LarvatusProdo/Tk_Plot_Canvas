@@ -202,7 +202,10 @@ class TkPlotCanvas(ttk.Frame):
         # Clear previous cartouche content for this line index
         if len(self._cartouche_grid) > line_index+1 : 
             for widget in self._cartouche_grid[line_index]:
-                widget.destroy()
+                try :
+                    widget.destroy()
+                except Exception:
+                    pass
             self._cartouche_grid[line_index] = []
         else :
             self._cartouche_grid.append([])
@@ -234,7 +237,7 @@ class TkPlotCanvas(ttk.Frame):
             self._cartouche_grid[line_index][-1].grid(row= line_index + 1, column=0, sticky="w", padx=(5,0), pady=0)
             
         else : 
-            self._cartouche_grid[line_index].append([])
+            self._cartouche_grid[line_index].append(None)
 
         if not(label_to_display is None):
             # Add the values of the metadata in the cartouche
@@ -859,6 +862,10 @@ class TkPlotCanvas(ttk.Frame):
                     if not key in plot_kwargs:
                         modif_plot_kwargs[key] = self.parametre_vue["curves"][str(n_lines)][key]
 
+        # remove type option from modif_plot_kwargs if it exists, since it's not needed for 2D plotting
+        if "type" in modif_plot_kwargs:
+            del modif_plot_kwargs["type"]
+
         list_dim_var = list(ds.dims) + list(ds.data_vars)
         dimension = self.xarray_data["x"] if self.xarray_data["x"] in list_dim_var else list(ds.dims)[0]
         variable = self.xarray_data["y"] if self.xarray_data["y"] in list_dim_var else list(ds.data_vars)[0]
@@ -873,7 +880,7 @@ class TkPlotCanvas(ttk.Frame):
         # On sauvegarde pour le prochain xarray : 
         self.xarray_data["x"] = dimension
         self.xarray_data["y"] = variable
-
+    
         line, = self.axes.plot(x, y, label=label_str, **modif_plot_kwargs)
         self._lines.append(line)
         self._line_labels.append(label)
@@ -979,12 +986,28 @@ class TkPlotCanvas(ttk.Frame):
         y = ds[dimension_ordonnee].values
         z = ds[variable].values
 
+        # Check if the dimensions of x, y, and z are consistent for contourf plotting
+        if (len(x) , len(y)) == z.shape:
+            pass  # Dimensions are consistent, no action needed
+        elif (len(y) , len(x)) == z.shape:
+            z = z.T  # Transpose z to match the dimensions of x and y
+        else:
+            tk.messagebox.showerror("Error", f"Dimensions of x, y, and z are inconsistent for contourf plotting. x: {len(x)}, y: {len(y)}, z: {z.shape}", parent=self)
+            return # Exit the function if dimensions are inconsistent
+        
+        # Set x-axis to date format if x data is datetime
         if type(x[0]) == datetime64:
             self.Is_Date_on_x_axis = True
-            self.axes.xaxis_date()  # Set x-axis to date format if x data is datetime
-       
-
+            self.axes.xaxis_date()  
+        # Set y-axis to date format if y data is datetime
+        if type(y[0]) == datetime64:
+            self.Is_Date_on_y_axis = True
+            self.axes.yaxis_date()
+            
+        # Create a filled contour plot using the xarray data
         mapping = self.axes.contourf(y, x, z)
+
+        # Add a colorbar to the plot, removing any existing colorbar first to avoid overlap
         if self._colorbar is not None:
             try:
                 self._colorbar.remove()
