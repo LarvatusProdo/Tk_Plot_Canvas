@@ -177,10 +177,9 @@ class TkPlotCanvas(ttk.Frame):
 
     def do_popup(self, event):
         """Show the context menu at the mouse cursor position."""
-        try:
-            self.menu_click.tk_popup(event.x_root, event.y_root)
-        finally:
-            self.menu_click.grab_release()
+
+        self.menu_click.tk_popup(event.x_root, event.y_root)
+        
 
     def open_menu_graphique(self, menu_type):
         """Open the graphical settings dialog and close any previous instance."""
@@ -689,6 +688,10 @@ class TkPlotCanvas(ttk.Frame):
 
         if not list_font_name[0] in self.list_font_tkinter :
             list_font_name[0] = self.font_default
+
+        # On Linux, if the font name does not start with '{', we need to add it to ensure proper rendering in Tkinter.
+        if list_font_name[0][0] != "{" and platform.system() == "Linux" :
+            list_font_name[0] = "{" + list_font_name[0] + "}"
 
         safe_font = " ".join(list_font_name)
 
