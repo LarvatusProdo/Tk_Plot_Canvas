@@ -8,6 +8,11 @@ from typing import Iterable, Optional
 from functools import partial
 
 import matplotlib
+import logging
+
+# Ensure TkAgg is selected before importing backend-specific classes.
+matplotlib.use("TkAgg")
+
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 import matplotlib.font_manager as fm
@@ -23,6 +28,8 @@ import platform
 
 from vertical_frame import VerticalScrolledFrame
 from class_menu_graphique import Menu_graphique
+
+logger = logging.getLogger(__name__)
 
 """Tkinter plotting widgets with Matplotlib integration.
 
@@ -349,7 +356,10 @@ class TkPlotCanvas(ttk.Frame):
     def save_parameters(self, *args):
 
         if hasattr(self.open_menu_graphique, "master"): # Check if the Menu_graphique Window is open 
-            window_parent = self.open_menu_graphique
+            if self.open_menu_graphique.winfo_exists():
+                window_parent = self.open_menu_graphique
+            else : 
+                window_parent = self
         else:
             window_parent = self
 
@@ -503,11 +513,14 @@ class TkPlotCanvas(ttk.Frame):
         else:
             # Implement loading parameters from a JSON file here
             if path_to_load is None:
-                if hasattr(self.open_menu_graphique, "master"): # Check if the Menu_graphique Window is open
-                    window_parent = self.open_menu_graphique
+                if hasattr(self.open_menu_graphique, "master"): # Check if the Menu_graphique Window exist
+                    if self.open_menu_graphique.winfo_exists(): # Check if the Menu_graphique Window is shown
+                        window_parent = self.open_menu_graphique
+                    else : 
+                        window_parent = self
                 else :
                     window_parent = self
-
+                
                 path_to_load = filedialog.askopenfilename(parent = window_parent, initialdir=".", title="Charger les paramètres",
                                                             defaultextension=".json", filetypes=[("JSON files", "*.json")])
                 if not path_to_load:
