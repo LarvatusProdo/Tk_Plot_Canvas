@@ -760,7 +760,7 @@ class Menu_graphique(tk.Toplevel):
         button_value_range.grid(row=index+2, column=10, sticky="w", padx=padx_axes, pady=pady_axes)
 
         # Combobox to select the colormap for the 3D plot
-        list_colormap =  sorted([m for m in plt.colormaps() if not m.endswith("_r")])  # Exclude reversed colormaps
+        list_colormap =  sorted([m for m in plt.colormaps() if not m.endswith("_r")], key=str.lower)  # Exclude reversed colormaps
         self.list_widget[str(index)]["combobox_colormap"] = ttk.Combobox(self.tab_courbe, values=list_colormap, state="readonly", width=20, style='Combobox_variable.TCombobox')
         self.list_widget[str(index)]["combobox_colormap"].grid(row=index+2, column=20, columnspan=2, sticky="w", padx=padx_axes, pady=pady_axes)
         self.list_widget[str(index)]["combobox_colormap"].current(list_colormap.index(map_object.get_cmap().name) if map_object.get_cmap().name in list_colormap else 0)  # Set to the current colormap by default
