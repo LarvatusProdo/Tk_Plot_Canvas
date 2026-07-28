@@ -1018,9 +1018,9 @@ class TkPlotCanvas(ttk.Frame):
         z = ds[variable].values
 
         # Check if the dimensions of x, y, and z are consistent for contourf plotting
-        if (len(x) , len(y)) == z.shape:
+        if (len(y) , len(x)) == z.shape:
             pass  # Dimensions are consistent, no action needed
-        elif (len(y) , len(x)) == z.shape:
+        elif (len(x) , len(y)) == z.shape:
             z = z.T  # Transpose z to match the dimensions of x and y
         else:
             tk.messagebox.showerror("Error", f"Dimensions of x, y, and z are inconsistent for contourf plotting. x: {len(x)}, y: {len(y)}, z: {z.shape}", parent=self)
@@ -1036,7 +1036,7 @@ class TkPlotCanvas(ttk.Frame):
             self.axes.yaxis_date()
             
         # Create a filled contour plot using the xarray data
-        mapping = self.axes.contourf(y, x, z, antialiased=False)
+        mapping = self.axes.contourf(x, y, z, antialiased=False)
 
         # Add a colorbar to the plot, removing any existing colorbar first to avoid overlap
         if self._colorbar is not None:
@@ -1118,6 +1118,13 @@ class TkPlotCanvas(ttk.Frame):
 
     def clear_plot(self):
         """Clear the plot and reset the canvas."""
+        if self._colorbar is not None:
+            try :
+                self._colorbar.remove()
+            except:
+                pass
+            self._colorbar = None
+
         self.axes.cla()
         self._lines.clear()
         self._canvas.draw()
