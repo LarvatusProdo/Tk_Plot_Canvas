@@ -29,7 +29,6 @@ import platform
 from vertical_frame import VerticalScrolledFrame
 from class_menu_graphique import Menu_graphique
 
-logger = logging.getLogger(__name__)
 
 """Tkinter plotting widgets with Matplotlib integration.
 
@@ -485,22 +484,53 @@ class TkPlotCanvas(ttk.Frame):
                 "y" : self.xarray_data["y"],
                 "z" : self.xarray_data["z"] if "z" in self.xarray_data else None,
             },
-            "xarray_3D": {
+        }
+
+        # Add 3D plot parameters if applicable
+        parameters = self.get_3D_parameters(parameters)
+
+        return parameters
+
+    def get_3D_parameters(self, parameters):
+        """
+        Get the parameters specific to 3D plots, such as colorbar properties, colormap, and color limits, and add them to the provided parameters dictionary.
+        Args:
+            parameters: A dictionary to which the 3D plot parameters will be added.
+        Returns:
+            The updated parameters dictionary with 3D plot parameters included.
+        """
+        # Add 3D plot parameters if applicable
+        if getattr(self, "type_plot", "") == "3D" and len(self._lines) > 0:
+            parameters["xarray_3D"] = {
                 "has_colorbar": self._colorbar is not None,
                 "colorbar_orientation": self._colorbar.orientation if self._colorbar is not None and hasattr(self._colorbar, "orientation") else None,
-                "colorbar_font":  {
-                    "fontname" :  self._colorbar.ax.yaxis.label.get_fontproperties().get_name() if self._colorbar.orientation ==  "vertical" and self._colorbar is not None and hasattr(self._colorbar, "ax") else (self._colorbar.ax.xaxis.label.get_fontproperties().get_name() if self._colorbar.orientation == "horizontal" and self._colorbar is not None and hasattr(self._colorbar, "ax") else None),
-                    "fontsize": self._colorbar.ax.yaxis.label.get_fontsize() if self._colorbar.orientation ==  "vertical" and self._colorbar is not None and hasattr(self._colorbar, "ax") else (self._colorbar.ax.xaxis.label.get_fontsize() if self._colorbar.orientation == "horizontal" and self._colorbar is not None and hasattr(self._colorbar, "ax") else None),
-                    "fontstyle": self._colorbar.ax.yaxis.label.get_fontproperties().get_style() if self._colorbar.orientation ==  "vertical" and self._colorbar is not None and hasattr(self._colorbar, "ax") else (self._colorbar.ax.xaxis.label.get_fontproperties().get_style() if self._colorbar.orientation == "horizontal" and self._colorbar is not None and hasattr(self._colorbar, "ax") else None),
-                    "fontweight": self._colorbar.ax.yaxis.label.get_fontproperties().get_weight() if self._colorbar.orientation ==  "vertical" and self._colorbar is not None and hasattr(self._colorbar, "ax") else (self._colorbar.ax.xaxis.label.get_fontproperties().get_weight() if self._colorbar.orientation == "horizontal" and self._colorbar is not None and hasattr(self._colorbar, "ax") else None),
-                },  
-                "colorlabel_colorbar" : self._colorbar.ax.yaxis.label.get_color() if self._colorbar.orientation ==  "vertical" and self._colorbar is not None and hasattr(self._colorbar, "ax") else (self._colorbar.ax.xaxis.label.get_color() if self._colorbar.orientation == "horizontal" and self._colorbar is not None and hasattr(self._colorbar, "ax") else None),
-               
-                "cmap": self._lines[0].get_cmap().name if getattr(self, "type_plot", "") == "3D" and len(self._lines) > 0 and hasattr(self._lines[0], "get_cmap") else None,
-                "clim": tuple(self._lines[0].get_clim()) if getattr(self, "type_plot", "") == "3D" and len(self._lines) > 0 and hasattr(self._lines[0], "get_clim") else None,
-                "alpha": self._lines[0].get_alpha() if getattr(self, "type_plot", "") == "3D" and len(self._lines) > 0 and hasattr(self._lines[0], "get_alpha") else None,
+                "cmap": self._lines[0].get_cmap().name if hasattr(self._lines[0], "get_cmap") else None,
+                "clim": tuple(self._lines[0].get_clim()) if hasattr(self._lines[0], "get_clim") else None,
+                "alpha": self._lines[0].get_alpha() if hasattr(self._lines[0], "get_alpha") else None,
             }
-        }
+
+            if self._colorbar is not None and hasattr(self._colorbar, "ax"):
+                if self._colorbar.orientation == "vertical" :
+                    parameters["xarray_3D"]["colorbar_font"] = {
+                        "fontname": self._colorbar.ax.yaxis.label.get_fontproperties().get_name() ,
+                        "fontsize": self._colorbar.ax.yaxis.label.get_fontsize(),
+                        "fontstyle": self._colorbar.ax.yaxis.label.get_fontproperties().get_style(),
+                        "fontweight": self._colorbar.ax.yaxis.label.get_fontproperties().get_weight(),
+                    }
+                    parameters["xarray_3D"]["colorlabel_colorbar"] = self._colorbar.ax.yaxis.label.get_color() if self._colorbar.ax.yaxis.label.get_color() is not None else "black"
+
+                elif self._colorbar.orientation == "horizontal" :
+                    parameters["xarray_3D"]["colorbar_font"] = {
+                        "fontname": self._colorbar.ax.xaxis.label.get_fontproperties().get_name() ,
+                        "fontsize": self._colorbar.ax.xaxis.label.get_fontsize(),
+                        "fontstyle": self._colorbar.ax.xaxis.label.get_fontproperties().get_style(),
+                        "fontweight": self._colorbar.ax.xaxis.label.get_fontproperties().get_weight(),
+                    }
+                    parameters["xarray_3D"]["colorlabel_colorbar"] = self._colorbar.ax.xaxis.label.get_color() if self._colorbar.ax.xaxis.label.get_color() is not None else "black"
+
+        # Ensure that the "xarray_3D" key exists in the parameters dictionary, even if it's empty, to maintain consistency when saving/loading views.
+        if not "xarray_3D" in parameters:
+            parameters["xarray_3D"] = {}
 
         return parameters
 
