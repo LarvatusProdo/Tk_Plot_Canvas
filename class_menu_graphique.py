@@ -34,7 +34,7 @@ class Menu_graphique(tk.Toplevel):
         self._save_button.pack(side="right", pady=5, padx=10)
 
         # Button : Load parameters of the plot from a json file
-        self._load_button = ttk.Button(frame_button, text="Charger les paramètres", command=self.master.load_parameters, style='TkPlotCanvas.TButton')
+        self._load_button = ttk.Button(frame_button, text="Charger les paramètres", command= partial(self.master.load_parameters, reload_plot = True), style='TkPlotCanvas.TButton')
         self._load_button.pack(side="right", pady=5, padx=10)
 
         # Create notebook for organizing controls
@@ -82,6 +82,8 @@ class Menu_graphique(tk.Toplevel):
             self._notebook.select(self.tab_courbe)
         elif notebook_shown == "Légende":
             self._notebook.select(self.tab_legende)
+        elif notebook_shown == "Graphique 3D":
+            self._notebook.select(self.tab_courbe)
 
 
     def fill__frame_cartouche_menu(self):
@@ -753,8 +755,8 @@ class Menu_graphique(tk.Toplevel):
         self.list_widget[str(index)]["combobox_variable"] = ttk.Combobox(self.tab_courbe, values=list_variables, state="readonly", width=20, style='Combobox_variable.TCombobox')
         self.list_widget[str(index)]["combobox_variable"].grid(row=index+2, column=5, columnspan=2, sticky="w", padx=padx_axes, pady=pady_axes)
         self.list_widget[str(index)]["combobox_variable"].current(list_variables.index(self.master.xarray_data["z"]) if self.master.xarray_data["z"] in list_variables else 0)  # Set to the first variable by default
+        self.list_widget[str(index)]["combobox_variable"].bind("<<ComboboxSelected>>", lambda event, idx=index: self._update_z_variable(idx))  # Update Z variable when selection changes
 
-        
         # Button to modify the value range of the colorbar (vmin, vmax) or levels for contourf plots
         button_value_range = ttk.Button(self.tab_courbe, text="Valeurs", command=partial(self._window_parametre_value_range, index=index), style='TkPlotCanvas.TButton')
         button_value_range.grid(row=index+2, column=10, sticky="w", padx=padx_axes, pady=pady_axes)
@@ -841,7 +843,21 @@ class Menu_graphique(tk.Toplevel):
         except ValueError:
             tk.messagebox.showerror("Invalid input", "Please enter a valid numeric value for alpha between 0.0 and 1.0.")
 
-        
+
+    def _update_z_variable(self, index):
+        """Update the Z variable for the specified 3D plot based on the combobox selection."""
+        selected_variable = self.list_widget[str(index)]["combobox_variable"].get()
+        if selected_variable in self.master.list_data_xarray[index].data_vars:
+
+            # Update the master xarray_data dictionary with the selected Z variable
+            self.master.xarray_data["z"] = selected_variable
+
+            # Save the current parameter_vue : 
+            self.master.parametre_vue = self.master.get_current_parameters()
+
+            # Update the plot to reflect the variable change   
+            self.master.update_plot()
+    
 class Window_colorbar_parameter(tk.Toplevel):
     def __init__(self, parent, colorbar, index  = 0):
         super().__init__(parent)

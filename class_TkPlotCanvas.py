@@ -535,7 +535,7 @@ class TkPlotCanvas(ttk.Frame):
         return parameters
 
 
-    def load_parameters(self, *args, path_to_load=None, parameters_to_load = None):
+    def load_parameters(self, *args, path_to_load=None, parameters_to_load = None, reload_plot = False):
         """Load parameters from a JSON file and apply them to the plot to restore a previous view. If parameters_to_load is provided, it will be used directly instead of loading from a file."""
 
         if  parameters_to_load is not None:
@@ -561,7 +561,17 @@ class TkPlotCanvas(ttk.Frame):
 
             except Exception as e:
                 parameters = {}
-            
+
+        # If the parameters are loaded from a file, update the xarray_data attributes accordingly. This ensures that the xarray data settings are restored when loading a saved view.
+        if parameters_to_load is None  :
+            if "xarray_data" in parameters: 
+                self.xarray_data["x"] = parameters["xarray_data"].get("x", "")
+                self.xarray_data["y"] = parameters["xarray_data"].get("y", "")
+                self.xarray_data["z"] = parameters["xarray_data"].get("z", "")
+
+        if reload_plot :
+            self.update_plot()  # Update the plot to reflect any changes in the xarray data settings         
+
         # Apply loaded parameters to the plot (axes limits, scale types, font properties, curve properties, cartouche parameters, legend parameters)
         if "background_color" in parameters and parameters.get("plot_type", "2D") == "2D" :
             # Only for 2D plot (by defatult). For 3D plot, it will create a unwanted graph. 
@@ -731,23 +741,23 @@ class TkPlotCanvas(ttk.Frame):
                     
                     self._lines[0].set_alpha(alpha)
                     
-        try :
-            self.xarray_data["x"] = parameters["xarray_data"].get("x", "")
-            self.xarray_data["y"] = parameters["xarray_data"].get("y", "")
-            self.xarray_data["z"] = parameters["xarray_data"].get("z", "")
-        except Exception:
-            pass
 
         self._canvas.draw()
 
-        # Reload the legend menu to update the comboboxes and entries based on the loaded parameters
+        # If the open_menu_graphique exists, retrieve the title and current notebook to maintain consistency in the plot display.
+        if hasattr(self, "open_menu_graphique") and self.open_menu_graphique is not None:
             # Get the current notebook shown
-        current_notebook = self.open_menu_graphique._notebook if hasattr(self.open_menu_graphique, "_notebook") else None
+            current_notebook = self.open_menu_graphique._notebook if hasattr(self.open_menu_graphique, "_notebook") else None
+            notebook_selected = current_notebook.tab(current_notebook.select(), "text") if current_notebook is not None else ''
+        else:
+            notebook_selected = ""
+
+        # Reload the legend menu to update the comboboxes and entries based on the loaded parameters
             # If a notebook is currently shown, get its name and reopen the menu with the same notebook shown to update the legend menu display based on the loaded parameters
-        if current_notebook is not None:
-            notebook_shown = current_notebook.tab(current_notebook.select(), "text")
+        if notebook_selected != "":
             self.open_menu_graphique.destroy()  # Close the current menu
-            self.open_menu_graphique = Menu_graphique(self, notebook_shown=notebook_shown)  # Reopen the menu with the same notebook shown
+            self.open_menu_graphique = Menu_graphique(self, notebook_shown = notebook_selected)  # Reopen the menu with the same notebook shown
+
     
         return parameters  # Return loaded parameters for potential further use
     
@@ -1132,7 +1142,7 @@ class TkPlotCanvas(ttk.Frame):
         # Apply loaded view parameters to the new plot if a view has been loaded, to ensure consistency with the loaded view settings for axes, title, and labels.
         if self.parametre_vue != {} and self.parametre_vue is not None : # if a json file has been loaded :
             self.load_parameters(parameters_to_load=self.parametre_vue)
-  
+
         self._canvas.draw()
 
 
@@ -1144,20 +1154,25 @@ class TkPlotCanvas(ttk.Frame):
         
         self.clear_plot()  # Clear the plot before re-plotting with updated data or parameters.
 
-        title = self.open_menu_graphique._title_var.get()
+        # If the open_menu_graphique exists, retrieve the title and current notebook to maintain consistency in the plot display.
+        if hasattr(self, "open_menu_graphique") and self.open_menu_graphique is not None:
+            # Get the title from the open_menu_graphique if it exists
+            title = self.open_menu_graphique._title_var.get() if hasattr(self.open_menu_graphique, "_title_var") else None
+            # Get the current notebook shown
+            current_notebook = self.open_menu_graphique._notebook if hasattr(self.open_menu_graphique, "_notebook") else None
+            notebook_selected = current_notebook.tab(current_notebook.select(), "text") if current_notebook is not None else ''
+        else:
+            title = None
+            notebook_selected = ""
 
         for index, ds in enumerate(self.list_data_xarray):
             self.plot_xarray(ds, clear=False, replot=True, label= self._line_labels[index], title= title if index == 0 else None, legend=True)
 
-
         # Reload the legend menu to update the comboboxes and entries based on the loaded parameters
-            # Get the current notebook shown
-        current_notebook = self.open_menu_graphique._notebook if hasattr(self.open_menu_graphique, "_notebook") else None
             # If a notebook is currently shown, get its name and reopen the menu with the same notebook shown to update the legend menu display based on the loaded parameters
-        if current_notebook is not None:
-            notebook_shown = current_notebook.tab(current_notebook.select(), "text")
+        if notebook_selected != "":
             self.open_menu_graphique.destroy()  # Close the current menu
-            self.open_menu_graphique = Menu_graphique(self, notebook_shown=notebook_shown)  # Reopen the menu with the same notebook shown
+            self.open_menu_graphique = Menu_graphique(self, notebook_shown = notebook_selected)  # Reopen the menu with the same notebook shown
 
     def clear_plot(self):
         """Clear the plot and reset the canvas."""
