@@ -2,10 +2,15 @@ import tkinter as tk
 from tkinter import ttk
 
 class choix_classe(ttk.Frame):
+    _initialized_style: bool = False
 
-    def __init__(self, master, *args, classes = [], **kwargs):
+    def __init__(self, master, *args, classes = [], with_buttons=False, v_max = 1.0, v_min = 0.0, **kwargs):
 
         super().__init__(master, *args, **kwargs)
+
+        if not self._initialized_style :
+            self._initialized_style = True
+            self._setup_styles()
 
         # Frame : choix du type de classe : Auto / Manuel / Aucune
         self._frame_choix_class = ttk.LabelFrame(self, text="Choix du type de classe", style='TkPlotCanvas.TLabelframe')
@@ -26,16 +31,49 @@ class choix_classe(ttk.Frame):
 
         # Frame pour la classe : Auto
         self.frame_auto = ttk.Frame(self)
-        self.fill_frame_auto(n_classes=10)  # Fill the frame for the 'Auto' class with default number of classes
+        self.fill_frame_auto(n_classes=10, v_min = v_min, v_max = v_max)  # Fill the frame for the 'Auto' class with default number of classes
         
 
         # Frame pour la classe : Manuel
         self.frame_manuel = ttk.Frame(self)
+        # state for manuel entries: list of (left_entry, right_entry, left_var, right_var)
+        self.list_entries_manuel = []
+        # flag to avoid recursion when programmatically updating linked entries
+        self._updating_link = False
+
         self.fill_frame_manuel(classes = classes)  # Fill the frame for the 'Manuel' class
 
         self.show_frame_choix_class()  # Show the appropriate frame based on the default selection in the combobox
 
-    def fill_frame_auto(self, n_classes=10):
+        if with_buttons:
+            # Frame for buttons
+            self.frame_buttons = ttk.Frame(self)
+            self.frame_buttons.pack(side="bottom", fill="x", padx=5, pady=5)
+
+            # Button: OK
+            self.button_ok = ttk.Button(self.frame_buttons, text="Get classes", command=self.get_classes, style='TkPlotCanvas.TButton')
+            self.button_ok.pack(side="right", padx=5, pady=5)
+
+            # Button: Cancel
+            self.button_cancel = ttk.Button(self.frame_buttons, text="Quitter", command=self.destroy, style='TkPlotCanvas.TButton')
+            self.button_cancel.pack(side="right", padx=5, pady=5)
+
+    def _setup_styles(self):
+        """Setup custom styles for the widgets in this frame."""
+
+        # Frame for "Manuel" classes : 
+        self.style = ttk.Style()
+
+        self.bg_frame_default = self.style.lookup("TFrame", "background")
+        self.bg_frame_hover = "#e6f2ff"
+
+        self.style.configure("choix_classe.TFrame", background=self.bg_frame_default)
+        self.style.map(
+            'choix_classe.TFrame',
+            background=[('active', self.bg_frame_hover), ('!active', self.bg_frame_default)]
+        )
+
+    def fill_frame_auto(self, n_classes=10, v_max = 1.0, v_min = 0.0):
         """Fill the frame for the 'Auto' class with the specified number of classes."""
         
         self.label_auto = ttk.Label(self.frame_auto, text="Paramètres pour la classe Auto", style='Titre_parammetre.TLabel')
@@ -47,42 +85,103 @@ class choix_classe(ttk.Frame):
         self.spinner_n_classes.set(n_classes)  # Set default value to 10
 
     def fill_frame_manuel(self, classes=[]):
-        """Fill the frame for the 'Manuel' class with the appropriate widgets.
-        if classes = [0, 1, 2, 3] : 
-        
-        - n°1 : [0 , 1]
-        - n°2 : [1* , 2]  # * indicates that the class is selected by default
-        - n°3 : [2* , 3]  # * indicates that the class is selected by default
-        
-        
+        """Fill the frame for the 'Manuel' class with two Entry widgets per line.
+
+        Behavior:
+        - Each line shows two entries: left and right.
+        - For middle lines (0 < i < n-1) the left entry is linked to the previous
+          line's right entry and is disabled for user editing.
+        - The first and last line left entries are editable.
         """
-        
+
+        if classes == []:
+            classes = [0, 1, 2]  # Default values if no classes provided
+
+        # Rebuild the manuel frame widgets from scratch
+        self._rebuild_manuel_frame(classes)
+
+
+    def _rebuild_manuel_frame(self, classes):
+        # clear existing widgets
+        for child in self.frame_manuel.winfo_children():
+            child.destroy()
+
+        self.list_entries_manuel = []
+
+        # header label spans 3 columns now (label + left + right)
         self.label_manuel = ttk.Label(self.frame_manuel, text="Paramètres pour la classe Manuel", style='Titre_parammetre.TLabel')
-        self.label_manuel.grid(row=0, column=0, columnspan=2, pady=5)
+        self.label_manuel.grid(row=0, column=0, columnspan=3, pady=5)
 
-        if classes == [] : 
-            # if no classes are provided, default class is created
-            classes = [0, 1, 2]
+        n = len(classes)
+        for i in range(n-1):
 
-        for i, class_value in enumerate(classes):
+            # Frame for each row of entries
+            frame_row = ttk.Frame(self.frame_manuel, style='choix_classe.TFrame')
+            frame_row.grid(row=i+1, column=0, columnspan=6, sticky="w", padx=5, pady=2)
+            frame_row.bind("<Enter>", lambda event, widget=frame_row: widget.state(['active']))
+            frame_row.bind("<Leave>", lambda event, widget=frame_row: widget.state(['!active']))
+            
+            # values: left is classes[i], right is classes[i+1] if exists else empty
+            left_val = classes[i]
+            right_val = classes[i+1] if i + 1 < n else ""
 
-            if i == 0:
-                ttk.Label(self.frame_manuel, text=f"n°{i+1} :", style='TkPlotCanvas.TLabel').grid(row=i+1, column=0, sticky="e", padx=self.padx_label, pady=self.pady_label)
-                entry_class = ttk.Entry(self.frame_manuel, width=10, style='TkPlotCanvas.TEntry')
-                entry_class.grid(row=i+1, column=1, sticky="w", padx=5, pady=5)
-                entry_class.insert(0, str(class_value))  # Insert the class value into the entry
+            ttk.Label(frame_row, text=f"n°{i+1} :", style='TkPlotCanvas.TLabel').grid(row=0, column=0, sticky="e", padx=self.padx_label, pady=self.pady_label)
 
-            elif i > 0 and i < len(classes) - 1:
-                ttk.Label(self.frame_manuel, text=f"n°{i+1} :", style='TkPlotCanvas.TLabel').grid(row=i+1, column=0, sticky="e", padx=self.padx_label, pady=self.pady_label)
-                entry_class = ttk.Entry(self.frame_manuel, width=10, style='TkPlotCanvas.TEntry')
-                entry_class.grid(row=i+1, column=1, sticky="w", padx=5, pady=5)
-                entry_class.insert(0, str(class_value))  # Insert the class value into the entry
+            left_var = tk.StringVar(value=str(left_val))
+            right_var = tk.StringVar(value=str(right_val))
 
-            else : 
-                ttk.Label(self.frame_manuel, text=f"n°{i+1} :", style='TkPlotCanvas.TLabel').grid(row=i+1, column=0, sticky="e", padx=self.padx_label, pady=self.pady_label)
-                entry_class = ttk.Entry(self.frame_manuel, width=10, style='TkPlotCanvas.TEntry')
-                entry_class.grid(row=i+1, column=1, sticky="w", padx=5, pady=5)
-                entry_class.insert(0, str(class_value))  # Insert the class value into the entry
+            ttk.Label(frame_row, text="[", style='TkPlotCanvas.TLabel').grid(row=0, column=1, sticky="e", padx=0, pady=0)
+
+            left_entry = ttk.Entry(frame_row, width=10, style='TkPlotCanvas.TEntry', textvariable=left_var, justify= "center")
+            left_entry.grid(row=0, column=2, sticky="w", padx=(2,0), pady=5)
+
+            ttk.Label(frame_row, text="; ", style='TkPlotCanvas.TLabel').grid(row=0, column=3, sticky="w", padx=0, pady=0)
+
+            right_entry = ttk.Entry(frame_row, width=10, style='TkPlotCanvas.TEntry', textvariable=right_var, justify= "center")
+            right_entry.grid(row=0, column=4, sticky="w", padx=2, pady=5)
+
+            ttk.Label(frame_row, text="]", style='TkPlotCanvas.TLabel').grid(row=0, column=5, sticky="w", padx=0, pady=0)
+
+            # store tuple: (left_entry, right_entry, left_var, right_var)
+            self.list_entries_manuel.append((left_entry, right_entry, left_var, right_var))
+
+        # configure states and traces after creating all rows
+        for i, (left_entry, right_entry, left_var, right_var) in enumerate(self.list_entries_manuel):
+            # middle rows: left is disabled and linked to previous right
+            if i > 0 and i < len(self.list_entries_manuel):
+                left_entry.configure(state="disabled")
+            else:
+                left_entry.configure(state="normal")
+
+            # attach trace to right_var to update next row's left_var when changed
+            # use default lambda capturing index via default arg
+            def make_trace(idx):
+                return lambda *a: self._on_right_changed(idx)
+
+            right_var.trace_add("write", make_trace(i))
+
+    def _on_right_changed(self, i):
+        # when right entry at row i changes, copy its value to left of row i+1 (if exists)
+        if self._updating_link:
+            return
+
+        next_idx = i + 1
+        if next_idx >= len(self.list_entries_manuel):
+            return
+
+        self._updating_link = True
+        try:
+            val = self.list_entries_manuel[i][3].get()
+            next_left_var = self.list_entries_manuel[next_idx][2]
+            next_left_var.set(val)
+        finally:
+            self._updating_link = False
+
+    def _set_row_state(self, row_index, left_state="normal", right_state="normal"):
+        if 0 <= row_index < len(self.list_entries_manuel):
+            left_entry, right_entry, _, _ = self.list_entries_manuel[row_index]
+            left_entry.configure(state=left_state)
+            right_entry.configure(state=right_state)
 
 
     def show_frame_choix_class(self, event=None):
@@ -100,10 +199,26 @@ class choix_classe(ttk.Frame):
             self.frame_auto.pack_forget()
             self.frame_manuel.pack_forget()
 
+    def get_classes(self):
+        """Return the list of classes based on the selected class type."""
+        if self._combobox_choix_class.get() == "Auto":
+            n_classes = int(self.spinner_n_classes.get())
+            return list(range(n_classes))
+        elif self._combobox_choix_class.get() == "Manuel":
+            classes = []
+            for left_entry, right_entry, left_var, right_var in self.list_entries_manuel:
+                left_val = left_var.get()
+                right_val = right_var.get()
+                if left_val:
+                    classes.append(float(left_val))
+                if right_val:
+                    classes.append(float(right_val))
+
+        print(classes)
         
 if __name__ == "__main__":
     root = tk.Tk()
     root.title("Test choix_class")
-    choix_class_frame = choix_classe(root)
+    choix_class_frame = choix_classe(root, with_buttons=True, classes=[0, 10, 20, 30])
     choix_class_frame.pack(fill="both", expand=True)
     root.mainloop()
