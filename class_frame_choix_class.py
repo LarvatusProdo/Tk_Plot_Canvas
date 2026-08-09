@@ -73,6 +73,18 @@ class choix_classe(ttk.Frame):
             background=[('active', self.bg_frame_hover), ('!active', self.bg_frame_default)]
         )
 
+        self.style.configure("choix_classe.TLabel", background=self.bg_frame_default)
+        self.style.map(
+            'choix_classe.TLabel',
+            background=[('active', self.bg_frame_hover), ('!active', self.bg_frame_default)]
+        )
+
+        self.style.configure("choix_classe.TEntry", fieldbackground=self.bg_frame_default, background=self.bg_frame_default)
+        self.style.map(
+            'choix_classe.TEntry',
+            fieldbackground=[('active', self.bg_frame_hover), ('!active', self.bg_frame_default)]
+        )
+
     def fill_frame_auto(self, n_classes=10, v_max = 1.0, v_min = 0.0):
         """Fill the frame for the 'Auto' class with the specified number of classes."""
         
@@ -110,37 +122,48 @@ class choix_classe(ttk.Frame):
 
         # header label spans 3 columns now (label + left + right)
         self.label_manuel = ttk.Label(self.frame_manuel, text="Paramètres pour la classe Manuel", style='Titre_parammetre.TLabel')
-        self.label_manuel.grid(row=0, column=0, columnspan=3, pady=5)
+        self.label_manuel.pack(side="top", fill="x", padx=5, pady=5)
 
         n = len(classes)
         for i in range(n-1):
 
             # Frame for each row of entries
             frame_row = ttk.Frame(self.frame_manuel, style='choix_classe.TFrame')
-            frame_row.grid(row=i+1, column=0, columnspan=6, sticky="w", padx=5, pady=2)
-            frame_row.bind("<Enter>", lambda event, widget=frame_row: widget.state(['active']))
-            frame_row.bind("<Leave>", lambda event, widget=frame_row: widget.state(['!active']))
-            
+            frame_row.pack(side="top", fill="x", padx=5, pady=5)
+            frame_row._hover_count = 0
+
+            def bind_hover(widget, row=frame_row):
+                widget.bind("<Enter>", lambda event, row=row: self._on_row_hover(row, True))
+                widget.bind("<Leave>", lambda event, row=row: self._on_row_hover(row, False))
+
+            bind_hover(frame_row)
+
             # values: left is classes[i], right is classes[i+1] if exists else empty
             left_val = classes[i]
             right_val = classes[i+1] if i + 1 < n else ""
 
-            ttk.Label(frame_row, text=f"n°{i+1} :", style='TkPlotCanvas.TLabel').grid(row=0, column=0, sticky="e", padx=self.padx_label, pady=self.pady_label)
+            ttk.Label(frame_row, text=f"n°{i+1} :", style='choix_classe.TLabel').grid(row=0, column=0, sticky="e", padx=self.padx_label, pady=self.pady_label)
+            bind_hover(frame_row.winfo_children()[-1])
 
             left_var = tk.StringVar(value=str(left_val))
             right_var = tk.StringVar(value=str(right_val))
 
-            ttk.Label(frame_row, text="[", style='TkPlotCanvas.TLabel').grid(row=0, column=1, sticky="e", padx=0, pady=0)
+            ttk.Label(frame_row, text="[", style='choix_classe.TLabel').grid(row=0, column=1, sticky="e", padx=0, pady=0)
+            bind_hover(frame_row.winfo_children()[-1])
 
-            left_entry = ttk.Entry(frame_row, width=10, style='TkPlotCanvas.TEntry', textvariable=left_var, justify= "center")
+            left_entry = ttk.Entry(frame_row, width=10, style='choix_classe.TEntry', textvariable=left_var, justify= "center")
             left_entry.grid(row=0, column=2, sticky="w", padx=(2,0), pady=5)
+            bind_hover(left_entry)
 
-            ttk.Label(frame_row, text="; ", style='TkPlotCanvas.TLabel').grid(row=0, column=3, sticky="w", padx=0, pady=0)
+            ttk.Label(frame_row, text="; ", style='choix_classe.TLabel').grid(row=0, column=3, sticky="w", padx=0, pady=0)
+            bind_hover(frame_row.winfo_children()[-1])
 
-            right_entry = ttk.Entry(frame_row, width=10, style='TkPlotCanvas.TEntry', textvariable=right_var, justify= "center")
+            right_entry = ttk.Entry(frame_row, width=10, style='choix_classe.TEntry', textvariable=right_var, justify= "center")
             right_entry.grid(row=0, column=4, sticky="w", padx=2, pady=5)
+            bind_hover(right_entry)
 
-            ttk.Label(frame_row, text="]", style='TkPlotCanvas.TLabel').grid(row=0, column=5, sticky="w", padx=0, pady=0)
+            ttk.Label(frame_row, text="]", style='choix_classe.TLabel').grid(row=0, column=5, sticky="w", padx=0, pady=0)
+            bind_hover(frame_row.winfo_children()[-1])
 
             # store tuple: (left_entry, right_entry, left_var, right_var)
             self.list_entries_manuel.append((left_entry, right_entry, left_var, right_var))
@@ -183,6 +206,23 @@ class choix_classe(ttk.Frame):
             left_entry.configure(state=left_state)
             right_entry.configure(state=right_state)
 
+    def _on_row_hover(self, row, enter: bool):
+        if enter:
+            row._hover_count += 1
+        else:
+            row._hover_count = max(0, row._hover_count - 1)
+
+        state = ['active'] if row._hover_count > 0 else ['!active']
+        try:
+            row.state(state)
+        except tk.TclError:
+            pass
+
+        for child in row.winfo_children():
+            try:
+                child.state(state)
+            except tk.TclError:
+                pass
 
     def show_frame_choix_class(self, event=None):
         """Show the frame with the appropriate widgets based on the selected class type."""
