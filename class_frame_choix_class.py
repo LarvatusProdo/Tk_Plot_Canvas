@@ -1,5 +1,6 @@
 import tkinter as tk
 from tkinter import ttk
+import tkinter.messagebox as messagebox
 
 class choix_classe(ttk.Frame):
     _initialized_style: bool = False
@@ -27,7 +28,7 @@ class choix_classe(ttk.Frame):
         self._combobox_choix_class.bind("<<ComboboxSelected>>", self.show_frame_choix_class)
         
         self.padx_label = (10, 5)
-        self.pady_label = (5, 5)
+        self.pady_label = (10, 10)
 
         # Frame pour la classe : Auto
         self.frame_auto = ttk.Frame(self)
@@ -88,13 +89,26 @@ class choix_classe(ttk.Frame):
     def fill_frame_auto(self, n_classes=10, v_max = 1.0, v_min = 0.0):
         """Fill the frame for the 'Auto' class with the specified number of classes."""
         
-        self.label_auto = ttk.Label(self.frame_auto, text="Paramètres pour la classe Auto", style='Titre_parammetre.TLabel')
-        self.label_auto.grid(row=0, column=0, columnspan=2, pady=5)
+        self.label_auto = ttk.Label(self.frame_auto, text="Paramètres pour la classe : Auto", style='Titre_parammetre.TLabel')
+        self.label_auto.grid(row=0, column=0, columnspan=2, sticky="w", padx=self.padx_label, pady=self.pady_label)
 
-        ttk.Label(self.frame_auto, text="Nombre de classes :", style='TkPlotCanvas.TLabel').grid(row=1, column=0, sticky="e", padx=self.padx_label, pady=self.pady_label)
-        self.spinner_n_classes = ttk.Spinbox(self.frame_auto, from_=1, to=10000, width=5, style='TkPlotCanvas.TSpinbox')
+        # Nombre de classes :
+        ttk.Label(self.frame_auto, text="Nombre de classes :", style='TkPlotCanvas.TLabel').grid(row=1, column=0, sticky="w", padx=self.padx_label, pady=self.pady_label)
+        self.spinner_n_classes = ttk.Spinbox(self.frame_auto, from_=1, to=10000, width=5, style='TkPlotCanvas.TSpinbox', justify="center")
         self.spinner_n_classes.grid(row=1, column=1, sticky="w", padx=5, pady=5)
         self.spinner_n_classes.set(n_classes)  # Set default value to 10
+
+        # Valeur minimale :
+        ttk.Label(self.frame_auto, text="Valeur minimale :", style='TkPlotCanvas.TLabel').grid(row=2, column=0, sticky="w", padx=self.padx_label, pady=self.pady_label)
+        self.entry_v_min = ttk.Entry(self.frame_auto, width=10, style='TkPlotCanvas.TEntry', justify="center")
+        self.entry_v_min.grid(row=2, column=1, sticky="w", padx=5, pady=5)
+        self.entry_v_min.insert(0, str(v_min))  # Set default value
+
+        # Valeur maximale :
+        ttk.Label(self.frame_auto, text="Valeur maximale :", style='TkPlotCanvas.TLabel').grid(row=3, column=0, sticky="w", padx=self.padx_label, pady=self.pady_label)
+        self.entry_v_max = ttk.Entry(self.frame_auto, width=10, style='TkPlotCanvas.TEntry', justify="center")
+        self.entry_v_max.grid(row=3, column=1, sticky="w", padx=5, pady=5)
+        self.entry_v_max.insert(0, str(v_max))  # Set default value
 
     def fill_frame_manuel(self, classes=[]):
         """Fill the frame for the 'Manuel' class with two Entry widgets per line.
@@ -110,10 +124,11 @@ class choix_classe(ttk.Frame):
             classes = [0, 1, 2]  # Default values if no classes provided
 
         # Rebuild the manuel frame widgets from scratch
-        self._rebuild_manuel_frame(classes)
+        self._build_manuel_frame(classes)
 
 
-    def _rebuild_manuel_frame(self, classes):
+    def _build_manuel_frame(self, classes):
+        """Build the frame for the 'Manuel' class with two Entry widgets per line."""
         # clear existing widgets
         for child in self.frame_manuel.winfo_children():
             child.destroy()
@@ -121,7 +136,7 @@ class choix_classe(ttk.Frame):
         self.list_entries_manuel = []
 
         # header label spans 3 columns now (label + left + right)
-        self.label_manuel = ttk.Label(self.frame_manuel, text="Paramètres pour la classe Manuel", style='Titre_parammetre.TLabel')
+        self.label_manuel = ttk.Label(self.frame_manuel, text="Paramètres pour la classe : Manuel", style='Titre_parammetre.TLabel')
         self.label_manuel.pack(side="top", fill="x", padx=5, pady=5)
 
         n = len(classes)
@@ -241,21 +256,45 @@ class choix_classe(ttk.Frame):
 
     def get_classes(self):
         """Return the list of classes based on the selected class type."""
+        classes = []
         if self._combobox_choix_class.get() == "Auto":
             n_classes = int(self.spinner_n_classes.get())
-            return list(range(n_classes))
+
+            v_min = self.safe_float_value (self.entry_v_min.get())
+            v_max = self.safe_float_value (self.entry_v_max.get())
+
+            classes = [v_min + i * (v_max - v_min) / (n_classes - 1) for i in range(n_classes)] if n_classes > 1 else [v_min]
+
+
         elif self._combobox_choix_class.get() == "Manuel":
-            classes = []
+            # Add the first left value to the classes list
+            left_val = self.list_entries_manuel[0][2].get()
+            float_left_val = self.safe_float_value (left_val)
+            if float_left_val is not None:
+                classes.append(float_left_val) 
+
+            # Add the right values from each row to the classes list, validating them as floats
             for left_entry, right_entry, left_var, right_var in self.list_entries_manuel:
-                left_val = left_var.get()
+
                 right_val = right_var.get()
-                if left_val:
-                    classes.append(float(left_val))
-                if right_val:
-                    classes.append(float(right_val))
+
+                float_right_val = self.safe_float_value (right_val)
+
+                if float_right_val is not None :
+                    classes.append(float_right_val) 
 
         print(classes)
-        
+
+        return classes
+
+    def safe_float_value(self, value_str):
+        """Convert a string to a float, returning None if conversion fails."""
+        try:
+            return float(value_str)
+        except ValueError:
+            messagebox.showerror("Erreur", f"Valeur invalide pour la classe : {value_str}")
+            return None
+    
 if __name__ == "__main__":
     root = tk.Tk()
     root.title("Test choix_class")
