@@ -39,6 +39,7 @@ class choix_classe(ttk.Frame):
         self.frame_manuel = ttk.Frame(self)
         # state for manuel entries: list of (left_entry, right_entry, left_var, right_var)
         self.list_entries_manuel = []
+
         # flag to avoid recursion when programmatically updating linked entries
         self._updating_link = False
 
@@ -94,7 +95,7 @@ class choix_classe(ttk.Frame):
 
         # Nombre de classes :
         ttk.Label(self.frame_auto, text="Nombre de classes :", style='TkPlotCanvas.TLabel').grid(row=1, column=0, sticky="w", padx=self.padx_label, pady=self.pady_label)
-        self.spinner_n_classes = ttk.Spinbox(self.frame_auto, from_=1, to=10000, width=5, style='TkPlotCanvas.TSpinbox', justify="center")
+        self.spinner_n_classes = ttk.Spinbox(self.frame_auto, from_=1, to=10000, width=10, style='TkPlotCanvas.TSpinbox', justify="center")
         self.spinner_n_classes.grid(row=1, column=1, sticky="w", padx=5, pady=5)
         self.spinner_n_classes.set(n_classes)  # Set default value to 10
 
@@ -139,50 +140,87 @@ class choix_classe(ttk.Frame):
         self.label_manuel = ttk.Label(self.frame_manuel, text="Paramètres pour la classe : Manuel", style='Titre_parammetre.TLabel')
         self.label_manuel.pack(side="top", fill="x", padx=5, pady=5)
 
+        frame_buttons = ttk.Frame(self.frame_manuel)
+        frame_buttons.pack(side="top", fill="x", padx=5, pady=5)
+        # Add a row at the end : 
+        button_add_row_end = ttk.Button(frame_buttons, text="Ajouter une ligne à la fin", style='TkPlotCanvas.TButton', command=lambda: self._add_row_manuel(where="end", reconfigure_states=True))
+        button_add_row_end.pack(side="left", padx=5, pady=5)
+
+        """# Add a row at the beginning : 
+        button_add_row_end = ttk.Button(frame_buttons, text="Ajouter une ligne au début", style='TkPlotCanvas.TButton', command=lambda: self._add_row_manuel(where="beginning", reconfigure_states=True))
+        button_add_row_end.pack(side="left", padx=5, pady=5)"""
+
         n = len(classes)
         for i in range(n-1):
-
-            # Frame for each row of entries
-            frame_row = ttk.Frame(self.frame_manuel, style='choix_classe.TFrame')
-            frame_row.pack(side="top", fill="x", padx=5, pady=5)
-            frame_row._hover_count = 0
-
-            def bind_hover(widget, row=frame_row):
-                widget.bind("<Enter>", lambda event, row=row: self._on_row_hover(row, True))
-                widget.bind("<Leave>", lambda event, row=row: self._on_row_hover(row, False))
-
-            bind_hover(frame_row)
-
+        
             # values: left is classes[i], right is classes[i+1] if exists else empty
             left_val = classes[i]
             right_val = classes[i+1] if i + 1 < n else ""
 
-            ttk.Label(frame_row, text=f"n°{i+1} :", style='choix_classe.TLabel').grid(row=0, column=0, sticky="e", padx=self.padx_label, pady=self.pady_label)
-            bind_hover(frame_row.winfo_children()[-1])
+            self._add_row_manuel( n_row=i, left_val=left_val, right_val=right_val)
 
-            left_var = tk.StringVar(value=str(left_val))
-            right_var = tk.StringVar(value=str(right_val))
+        # Configure the states of the entries after all rows are added
+        self._configure_row_states()  # Configure the states of the entries after all rows are added
 
-            ttk.Label(frame_row, text="[", style='choix_classe.TLabel').grid(row=0, column=1, sticky="e", padx=0, pady=0)
-            bind_hover(frame_row.winfo_children()[-1])
+    def _add_row_manuel(self, n_row=None, left_val = None , right_val = None, where="end", reconfigure_states=False):
+        """Add a new row of entries in the 'Manuel' frame, either above or below the current frame."""
 
-            left_entry = ttk.Entry(frame_row, width=10, style='choix_classe.TEntry', textvariable=left_var, justify= "center")
-            left_entry.grid(row=0, column=2, sticky="w", padx=(2,0), pady=5)
-            bind_hover(left_entry)
+        if n_row is None:
+            n_row = len(self.list_entries_manuel)  # Default to adding at the end if no row index is provided
 
-            ttk.Label(frame_row, text="; ", style='choix_classe.TLabel').grid(row=0, column=3, sticky="w", padx=0, pady=0)
-            bind_hover(frame_row.winfo_children()[-1])
+        if left_val is None:
+            left_val = self.list_entries_manuel[n_row-1][3].get() if n_row > 0 else ""  # Default to previous row's right value if exists
+        if right_val is None:
+            right_val = ""  # Default to empty if no right value is provided
 
-            right_entry = ttk.Entry(frame_row, width=10, style='choix_classe.TEntry', textvariable=right_var, justify= "center")
-            right_entry.grid(row=0, column=4, sticky="w", padx=2, pady=5)
-            bind_hover(right_entry)
+        # Frame for each row of entries
+        frame_row = ttk.Frame(self.frame_manuel, style='choix_classe.TFrame')
+        frame_row._hover_count = 0
 
-            ttk.Label(frame_row, text="]", style='choix_classe.TLabel').grid(row=0, column=5, sticky="w", padx=0, pady=0)
-            bind_hover(frame_row.winfo_children()[-1])
+        self.bind_hover(frame_row, row=frame_row)      
 
-            # store tuple: (left_entry, right_entry, left_var, right_var)
+        ttk.Label(frame_row, text=f"n°{n_row+1} :", style='choix_classe.TLabel').grid(row=0, column=0, sticky="e", padx=self.padx_label, pady=self.pady_label)
+        self.bind_hover(frame_row.winfo_children()[-1], row=frame_row)
+
+        left_var = tk.StringVar(value=str(left_val))
+        right_var = tk.StringVar(value=str(right_val))
+
+        ttk.Label(frame_row, text="[", style='choix_classe.TLabel').grid(row=0, column=1, sticky="e", padx=0, pady=0)
+        self.bind_hover(frame_row.winfo_children()[-1], row=frame_row)
+
+        left_entry = ttk.Entry(frame_row, width=10, style='choix_classe.TEntry', textvariable=left_var, justify= "center")
+        left_entry.grid(row=0, column=2, sticky="w", padx=(2,0), pady=5)
+        self.bind_hover(left_entry)
+
+        ttk.Label(frame_row, text="; ", style='choix_classe.TLabel').grid(row=0, column=3, sticky="w", padx=0, pady=0)
+        self.bind_hover(frame_row.winfo_children()[-1], row=frame_row)
+
+        right_entry = ttk.Entry(frame_row, width=10, style='choix_classe.TEntry', textvariable=right_var, justify= "center")
+        right_entry.grid(row=0, column=4, sticky="w", padx=2, pady=5)
+        self.bind_hover(right_entry)
+
+        ttk.Label(frame_row, text="]", style='choix_classe.TLabel').grid(row=0, column=5, sticky="w", padx=0, pady=0)
+        self.bind_hover(frame_row.winfo_children()[-1], row=frame_row)
+
+        # Add buttons for adding/removing rows
+        self._add_button_row_frame_manuel(frame_row, n_row)
+
+        
+        # store tuple: (left_entry, right_entry, left_var, right_var)
+        if where == "end" :
             self.list_entries_manuel.append((left_entry, right_entry, left_var, right_var))
+            frame_row.pack(side="top", fill="x", padx=5, pady=5)
 
+        if where == "beginning" and n_row is not None:
+            self.list_entries_manuel.insert(n_row, (left_entry, right_entry, left_var, right_var))
+            frame_row.pack(side="bottom", fill="x", padx=5, pady=5)
+
+
+        if reconfigure_states:
+            self._configure_row_states()  # Reconfigure the states of the entries after adding a new row
+
+    def _configure_row_states(self):
+        """Configure the states of the left and right entries in the 'Manuel' frame based on their position."""
         # configure states and traces after creating all rows
         for i, (left_entry, right_entry, left_var, right_var) in enumerate(self.list_entries_manuel):
             # middle rows: left is disabled and linked to previous right
@@ -197,6 +235,12 @@ class choix_classe(ttk.Frame):
                 return lambda *a: self._on_right_changed(idx)
 
             right_var.trace_add("write", make_trace(i))
+
+    def bind_hover(self, widget, row=None):
+        """Bind hover events to a widget, changing its style when hovered."""
+        if row is not None:
+            widget.bind("<Enter>", lambda event, row=row: self._on_row_hover(row, True))
+            widget.bind("<Leave>", lambda event, row=row: self._on_row_hover(row, False))
 
     def _on_right_changed(self, i):
         # when right entry at row i changes, copy its value to left of row i+1 (if exists)
@@ -222,6 +266,7 @@ class choix_classe(ttk.Frame):
             right_entry.configure(state=right_state)
 
     def _on_row_hover(self, row, enter: bool):
+        """Handle hover events for a row of entries in the 'Manuel' frame."""
         if enter:
             row._hover_count += 1
         else:
@@ -238,6 +283,14 @@ class choix_classe(ttk.Frame):
                 child.state(state)
             except tk.TclError:
                 pass
+
+        if hasattr(row, '_buttons'):
+            if row._hover_count > 0:
+                for button, info in zip(row._buttons, row._button_grid_info):
+                    button.grid(**info)
+            else:
+                for button in row._buttons:
+                    button.grid_forget()
 
     def show_frame_choix_class(self, event=None):
         """Show the frame with the appropriate widgets based on the selected class type."""
@@ -262,6 +315,9 @@ class choix_classe(ttk.Frame):
 
             v_min = self.safe_float_value (self.entry_v_min.get())
             v_max = self.safe_float_value (self.entry_v_max.get())
+
+            if v_min is None or v_max is None:
+                return []  # Return empty list if min or max values are invalid
 
             classes = [v_min + i * (v_max - v_min) / (n_classes - 1) for i in range(n_classes)] if n_classes > 1 else [v_min]
 
@@ -294,6 +350,32 @@ class choix_classe(ttk.Frame):
         except ValueError:
             messagebox.showerror("Erreur", f"Valeur invalide pour la classe : {value_str}")
             return None
+
+    def _add_button_row_frame_manuel(self, frame, i_row):
+
+        list_buttons = []
+
+        # Button to remove the current row from the frame
+        button_remove_row = ttk.Button(frame, text="x", width=3, style='TkPlotCanvas.TButton', command=lambda: self._remove_row_manuel(frame))
+        button_remove_row.grid(row=0, column=8, sticky="w", padx=5, pady=5)
+        self.bind_hover(button_remove_row, row=frame)
+        list_buttons.append(button_remove_row)
+
+        frame._buttons = list_buttons
+        frame._button_grid_info = [button.grid_info() for button in frame._buttons]
+        for button in frame._buttons:
+            button.grid_forget()
+
+
+    def _remove_row_manuel(self, frame_row):
+        """Remove a row of entries from the 'Manuel' frame."""
+        for i, (left_entry, right_entry, left_var, right_var) in enumerate(self.list_entries_manuel):
+            if left_entry.master == frame_row:
+                # Remove the row from the list and destroy the widgets
+                self.list_entries_manuel.pop(i)
+                frame_row.destroy()
+                break
+
     
 if __name__ == "__main__":
     root = tk.Tk()
