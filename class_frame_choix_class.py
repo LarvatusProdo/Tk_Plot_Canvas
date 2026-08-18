@@ -1,11 +1,12 @@
 import tkinter as tk
 from tkinter import ttk
 import tkinter.messagebox as messagebox
+from vertical_frame import VerticalScrolledFrame
 
 class choix_classe(ttk.Frame):
     _initialized_style: bool = False
 
-    def __init__(self, master, *args, classes = [], with_buttons=False, v_max = 1.0, v_min = 0.0, **kwargs):
+    def __init__(self, master, *args, classes = [], with_buttons=False, v_max = 1.0, v_min = 0.0, nb_classes = 10, **kwargs):
 
         super().__init__(master, *args, **kwargs)
 
@@ -32,7 +33,7 @@ class choix_classe(ttk.Frame):
 
         # Frame pour la classe : Auto
         self.frame_auto = ttk.Frame(self)
-        self.fill_frame_auto(n_classes=10, v_min = v_min, v_max = v_max)  # Fill the frame for the 'Auto' class with default number of classes
+        self.fill_frame_auto(nb_classes=nb_classes, v_min = v_min, v_max = v_max)  # Fill the frame for the 'Auto' class with default number of classes
         
 
         # Frame pour la classe : Manuel
@@ -87,7 +88,7 @@ class choix_classe(ttk.Frame):
             fieldbackground=[('active', self.bg_frame_hover), ('!active', self.bg_frame_default)]
         )
 
-    def fill_frame_auto(self, n_classes=10, v_max = 1.0, v_min = 0.0):
+    def fill_frame_auto(self, nb_classes=10, v_max = 1.0, v_min = 0.0):
         """Fill the frame for the 'Auto' class with the specified number of classes."""
         
         self.label_auto = ttk.Label(self.frame_auto, text="Paramètres pour la classe : Auto", style='Titre_parammetre.TLabel')
@@ -97,7 +98,7 @@ class choix_classe(ttk.Frame):
         ttk.Label(self.frame_auto, text="Nombre de classes :", style='TkPlotCanvas.TLabel').grid(row=1, column=0, sticky="w", padx=self.padx_label, pady=self.pady_label)
         self.spinner_n_classes = ttk.Spinbox(self.frame_auto, from_=1, to=10000, width=10, style='TkPlotCanvas.TSpinbox', justify="center")
         self.spinner_n_classes.grid(row=1, column=1, sticky="w", padx=5, pady=5)
-        self.spinner_n_classes.set(n_classes)  # Set default value to 10
+        self.spinner_n_classes.set(nb_classes)  # Set default value to 10
 
         # Valeur minimale :
         ttk.Label(self.frame_auto, text="Valeur minimale :", style='TkPlotCanvas.TLabel').grid(row=2, column=0, sticky="w", padx=self.padx_label, pady=self.pady_label)
@@ -136,6 +137,11 @@ class choix_classe(ttk.Frame):
 
         self.list_entries_manuel = []
 
+        # Frame where the classes will be modified
+        self.frame_class_manuel = VerticalScrolledFrame(self.frame_manuel, width=45)
+        
+
+
         # header label spans 3 columns now (label + left + right)
         self.label_manuel = ttk.Label(self.frame_manuel, text="Paramètres pour la classe : Manuel", style='Titre_parammetre.TLabel')
         self.label_manuel.pack(side="top", fill="x", padx=5, pady=5)
@@ -143,13 +149,13 @@ class choix_classe(ttk.Frame):
         frame_buttons = ttk.Frame(self.frame_manuel)
         frame_buttons.pack(side="top", fill="x", padx=5, pady=5)
         # Add a row at the end : 
-        button_add_row_end = ttk.Button(frame_buttons, text="Ajouter une ligne à la fin", style='TkPlotCanvas.TButton', command=lambda: self._add_row_manuel(where="end", reconfigure_states=True))
+        button_add_row_end = ttk.Button(frame_buttons, text="Ajouter une ligne à la fin", style='TkPlotCanvas.TButton', command=lambda: self._add_row_manuel(where="end", reconfigure_states=True, frame=self.frame_class_manuel))
         button_add_row_end.pack(side="left", padx=5, pady=5)
 
         """# Add a row at the beginning : 
         button_add_row_end = ttk.Button(frame_buttons, text="Ajouter une ligne au début", style='TkPlotCanvas.TButton', command=lambda: self._add_row_manuel(where="beginning", reconfigure_states=True))
         button_add_row_end.pack(side="left", padx=5, pady=5)"""
-
+        self.frame_class_manuel.pack(side="bottom", fill="both", padx=5, pady=5, expand=True)
         n = len(classes)
         for i in range(n-1):
         
@@ -157,12 +163,12 @@ class choix_classe(ttk.Frame):
             left_val = classes[i]
             right_val = classes[i+1] if i + 1 < n else ""
 
-            self._add_row_manuel( n_row=i, left_val=left_val, right_val=right_val)
+            self._add_row_manuel( n_row=i, left_val=left_val, right_val=right_val, frame = self.frame_class_manuel)
 
         # Configure the states of the entries after all rows are added
         self._configure_row_states()  # Configure the states of the entries after all rows are added
 
-    def _add_row_manuel(self, n_row=None, left_val = None , right_val = None, where="end", reconfigure_states=False):
+    def _add_row_manuel(self, n_row=None, left_val = None , right_val = None, where="end", reconfigure_states=False, frame = None ):
         """Add a new row of entries in the 'Manuel' frame, either above or below the current frame."""
 
         if n_row is None:
@@ -174,7 +180,7 @@ class choix_classe(ttk.Frame):
             right_val = ""  # Default to empty if no right value is provided
 
         # Frame for each row of entries
-        frame_row = ttk.Frame(self.frame_manuel, style='choix_classe.TFrame')
+        frame_row = ttk.Frame(frame, style='choix_classe.TFrame')
         frame_row._hover_count = 0
 
         self.bind_hover(frame_row, row=frame_row)      
@@ -301,7 +307,7 @@ class choix_classe(ttk.Frame):
 
         elif self._combobox_choix_class.get() == "Manuel":
             self.frame_auto.pack_forget()
-            self.frame_manuel.pack(fill="x", padx=5, pady=5)
+            self.frame_manuel.pack(fill="both", padx=5, pady=5, expand=True)
 
         elif self._combobox_choix_class.get() == "Aucune":
             self.frame_auto.pack_forget()
@@ -338,8 +344,6 @@ class choix_classe(ttk.Frame):
 
                 if float_right_val is not None :
                     classes.append(float_right_val) 
-
-        print(classes)
 
         return classes
 

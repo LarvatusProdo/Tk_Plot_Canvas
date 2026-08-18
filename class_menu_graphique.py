@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 
 from vertical_frame import VerticalScrolledFrame
 from class_window_font_parameter import Window_font_parameter
-
+from class_frame_choix_class import choix_classe
 
 
 
@@ -934,14 +934,14 @@ class Window_value_range_parameter(tk.Toplevel):
     def __init__(self, parent, line, index):
         super().__init__(parent)
         self.title("Paramètres de la plage de valeurs")
-        self.geometry(f"400x450+{self.master.winfo_x() + 50}+{self.master.winfo_y() + 50}")
+        self.geometry(f"400x500+{self.master.winfo_x() + 50}+{self.master.winfo_y() + 50}")
         
         self.line = line
         self.index = index
 
         # Create a frame for the value range parameters
         frame_value_range_params = ttk.LabelFrame(self, text="Plage de valeurs", padding=(10, 10), style='TkPlotCanvas.TLabelframe')
-        frame_value_range_params.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        frame_value_range_params.pack(fill=tk.BOTH, padx=10, pady=10)
 
         # Add controls for value range parameters here (e.g., vmin, vmax)
         ttk.Label(frame_value_range_params, text="Valeur min:", style='TkPlotCanvas.TLabel').grid(row=0, column=0, sticky="e", padx=5, pady=5)
@@ -952,23 +952,45 @@ class Window_value_range_parameter(tk.Toplevel):
         self.vmax_var = tk.StringVar(value=str(self.line.get_clim()[1]))
         ttk.Entry(frame_value_range_params, textvariable=self.vmax_var, width=15, style='TkPlotCanvas.TEntry').grid(row=1, column=1, sticky="w", padx=5, pady=5)
 
+        # Create a frame for the value range parameters
+        labelframe_choix_class = ttk.LabelFrame(self, text="Choix des classes :", padding=(10, 10), style='TkPlotCanvas.TLabelframe')
+        labelframe_choix_class.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+
+        levels_graph = list(map(float, self.line.levels))        
+        self.frame_choix_classe = choix_classe(labelframe_choix_class, v_max = self.vmax_var.get(), v_min = self.vmin_var.get(), nb_classes= len(levels_graph)-1, classes = levels_graph)
+        self.frame_choix_classe.pack(fill=tk.BOTH, expand=True)
+
         # Button to apply changes
-        ttk.Button(frame_value_range_params, text="Appliquer", command=self.apply_changes).grid(row=2, column=0, columnspan=2, pady=(10, 0))
+        frame_button_apply = ttk.Frame(self)
+        frame_button_apply.pack(fill=tk.BOTH,padx=10, pady=10)
+        ttk.Button(frame_button_apply, text="Appliquer", command=self.apply_changes).pack()
     
     def apply_changes(self):
         """Apply the changes to the value range based on user input."""
         try:
-            new_vmin = float(self.vmin_var.get())
-            new_vmax = float(self.vmax_var.get())
+            classes =  self.frame_choix_classe.get_classes()
 
-            # Update the line's value range
-            self.line.set_clim(vmin=new_vmin, vmax=new_vmax)
+            if classes != [] :
+                # Update the line's levels with the new classes
+                self.line.set_levels(classes)
 
-            # Redraw the canvas to reflect changes
-            self.master.master._canvas.draw()
+                # Redraw the canvas to reflect changes
+                self.master.master._canvas.draw()
 
-            # Close the parameter window
-            self.destroy()
+                # Close the parameter window
+                self.destroy()
+            else : 
+                new_vmin = float(self.vmin_var.get())
+                new_vmax = float(self.vmax_var.get())
+
+                # Update the line's value range
+                self.line.set_clim(vmin=new_vmin, vmax=new_vmax)
+
+                # Redraw the canvas to reflect changes
+                self.master.master._canvas.draw()
+
+                # Close the parameter window
+                self.destroy()
         except ValueError:
             tk.messagebox.showerror("Invalid input", "Please enter valid numeric values for vmin and vmax.")
             
