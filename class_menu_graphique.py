@@ -967,19 +967,19 @@ class Window_value_range_parameter(tk.Toplevel):
     
     def apply_changes(self):
         """Apply the changes to the value range based on user input."""
-        try:
-            classes =  self.frame_choix_classe.get_classes()
+        
+        classes =  self.frame_choix_classe.get_classes()
 
-            if classes != [] :
-                # Update the line's levels with the new classes
-                self.line.set_levels(classes)
+        if classes != [] :
+            self._replace_contour_levels(classes)
 
-                # Redraw the canvas to reflect changes
-                self.master.master._canvas.draw()
+            # Redraw the canvas to reflect changes
+            self.master.master._canvas.draw()
 
-                # Close the parameter window
-                self.destroy()
-            else : 
+            # Close the parameter window
+            self.destroy()
+        else : 
+            try:
                 new_vmin = float(self.vmin_var.get())
                 new_vmax = float(self.vmax_var.get())
 
@@ -991,6 +991,64 @@ class Window_value_range_parameter(tk.Toplevel):
 
                 # Close the parameter window
                 self.destroy()
-        except ValueError:
-            tk.messagebox.showerror("Invalid input", "Please enter valid numeric values for vmin and vmax.")
+            except ValueError:
+                tk.messagebox.showerror("Invalid input", "Please enter valid numeric values for vmin and vmax.")
+
+    def _replace_contour_levels(self, classes):
+        """
+        TODO : Fonction à modifier / à  déplacer dans le main, pour replot un graphique spécifique ? 
+        """
+
+        """Recreate the contour set because Matplotlib levels are not mutable."""
+        plot = self.master.master
+        dataset = plot.list_data_xarray[self.index]
+        x_name = plot.xarray_data["x"]
+        y_name = plot.xarray_data["y"]
+        z_name = plot.xarray_data["z"]
+
+        x = dataset[x_name].values
+        y = dataset[y_name].values
+        z = dataset[z_name].values
+        if (len(x), len(y)) == z.shape:
+            z = z.T
+
+        old_colorbar = getattr(plot, "_colorbar", None)
+        colorbar_label = ""
+        colorbar_orientation = "vertical"
+        if old_colorbar is not None:
+            colorbar_orientation = old_colorbar.orientation
+            colorbar_label = (old_colorbar.ax.get_ylabel()
+                              if colorbar_orientation == "vertical"
+                              else old_colorbar.ax.get_xlabel())
+
+        new_line = plot.axes.contourf(
+            x,
+            y,
+            z,
+            levels=classes,
+            cmap=self.line.get_cmap(),
+            alpha=self.line.get_alpha(),
+            antialiased=False,
+        )
+        new_line.set_label(self.line.get_label())
+        is_colorbar_shown = False
+        if old_colorbar is not None:
+            
+            try :
+                old_colorbar.remove()
+                is_colorbar_shown = True
+            except :
+                pass
+        self.line.remove()
+        plot._lines[self.index] = new_line
+
+        if is_colorbar_shown :
+            plot._colorbar = plot.figure.colorbar(
+                new_line,
+                ax=plot.axes,
+                orientation=colorbar_orientation,
+            )
+            plot._colorbar.set_label(colorbar_label)
+
+        self.line = new_line
             

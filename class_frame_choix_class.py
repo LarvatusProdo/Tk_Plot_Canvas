@@ -147,15 +147,15 @@ class choix_classe(ttk.Frame):
         self.label_manuel.pack(side="top", fill="x", padx=5, pady=5)
 
         frame_buttons = ttk.Frame(self.frame_manuel)
-        frame_buttons.pack(side="top", fill="x", padx=5, pady=5)
+        frame_buttons.pack(side="top", fill="x", padx=5, pady=(5,0))
         # Add a row at the end : 
-        button_add_row_end = ttk.Button(frame_buttons, text="Ajouter une ligne à la fin", style='TkPlotCanvas.TButton', command=lambda: self._add_row_manuel(where="end", reconfigure_states=True, frame=self.frame_class_manuel))
-        button_add_row_end.pack(side="left", padx=5, pady=5)
+        button_add_row_end = ttk.Button(frame_buttons, text="Ajout d'une ligne", style='TkPlotCanvas.TButton', command=lambda: self._add_row_manuel(where="end", reconfigure_states=True, frame=self.frame_class_manuel))
+        button_add_row_end.pack(side="left", padx=10)
 
         """# Add a row at the beginning : 
         button_add_row_end = ttk.Button(frame_buttons, text="Ajouter une ligne au début", style='TkPlotCanvas.TButton', command=lambda: self._add_row_manuel(where="beginning", reconfigure_states=True))
         button_add_row_end.pack(side="left", padx=5, pady=5)"""
-        self.frame_class_manuel.pack(side="bottom", fill="both", padx=5, pady=5, expand=True)
+        self.frame_class_manuel.pack(side="bottom", fill="both", expand=True)
         n = len(classes)
         for i in range(n-1):
         
@@ -215,11 +215,11 @@ class choix_classe(ttk.Frame):
         # store tuple: (left_entry, right_entry, left_var, right_var)
         if where == "end" :
             self.list_entries_manuel.append((left_entry, right_entry, left_var, right_var))
-            frame_row.pack(side="top", fill="x", padx=5, pady=5)
+            frame_row.pack(side="top", fill="x", padx=5, pady=5, expand=True)
 
         if where == "beginning" and n_row is not None:
             self.list_entries_manuel.insert(n_row, (left_entry, right_entry, left_var, right_var))
-            frame_row.pack(side="bottom", fill="x", padx=5, pady=5)
+            frame_row.pack(side="bottom", fill="x", padx=5, pady=5, expand=True)
 
 
         if reconfigure_states:
@@ -325,7 +325,7 @@ class choix_classe(ttk.Frame):
             if v_min is None or v_max is None:
                 return []  # Return empty list if min or max values are invalid
 
-            classes = [v_min + i * (v_max - v_min) / (n_classes - 1) for i in range(n_classes)] if n_classes > 1 else [v_min]
+            classes = [v_min + i * (v_max - v_min) / n_classes for i in range(n_classes+1)] if n_classes > 1 else [v_min]
 
 
         elif self._combobox_choix_class.get() == "Manuel":
