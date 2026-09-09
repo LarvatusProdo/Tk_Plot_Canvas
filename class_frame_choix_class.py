@@ -212,7 +212,9 @@ class choix_classe(ttk.Frame):
         # Add buttons for adding/removing rows
         self._add_button_row_frame_manuel(frame_row, n_row)
 
-        
+        ttk.Label(frame_row, text= " ".join([" "]*10), style='choix_classe.TLabel').grid(row=0, column=10, sticky="we", padx=0, pady=pady)
+        self.bind_hover(frame_row.winfo_children()[-1], row=frame_row)
+
         # store tuple: (left_entry, right_entry, left_var, right_var)
         if where == "end" :
             self.list_entries_manuel.append((left_entry, right_entry, left_var, right_var))
@@ -295,7 +297,10 @@ class choix_classe(ttk.Frame):
         except tk.TclError:
             pass
 
+        buttons = getattr(row, '_buttons', ())
         for child in row.winfo_children():
+            if child in buttons:
+                continue
             try:
                 child.state(state)
             except tk.TclError:
@@ -372,7 +377,7 @@ class choix_classe(ttk.Frame):
 
         # Button to remove the current row from the frame
         button_remove_row = ttk.Button(frame, text="x", width=3, style='TkPlotCanvas.TButton', command=lambda: self._remove_row_manuel(frame))
-        button_remove_row.grid(row=0, column=8, sticky="w", padx=5, pady=pady)
+        button_remove_row.grid(row=0, column=8, sticky="w", padx=(20,100) , pady=pady)
         self.bind_hover(button_remove_row, row=frame)
         list_buttons.append(button_remove_row)
 
