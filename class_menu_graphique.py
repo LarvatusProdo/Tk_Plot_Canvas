@@ -777,6 +777,7 @@ class Menu_graphique(tk.Toplevel):
         self.list_widget[str(index)]["Spinbox_alpha"].bind("<FocusOut>", lambda event, idx=index: self._update_alpha(idx))  # Update alpha when focus is lost
         self.list_widget[str(index)]["Spinbox_alpha"].bind("<KeyRelease>", lambda event, idx=index: self._update_alpha(idx))  # Update alpha when typing in the spinbox
         self.list_widget[str(index)]["Spinbox_alpha"].bind("<MouseWheel>", lambda event, idx=index: self._update_alpha(idx))  # Update alpha when scrolling the mouse wheel
+        self.list_widget[str(index)]["Spinbox_alpha"].bind("<ButtonRelease-1>", lambda event, idx=index: self._update_alpha(idx))  # Update alpha when mouse button is released
 
         # Checkbutton to show/hide the colorbar for the 3D plot
         self.list_widget[str(index)]["checkbutton_colorbar_var"] = tk.BooleanVar(value = getattr(self.master, "_colorbar", None) is not None)
