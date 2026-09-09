@@ -941,7 +941,7 @@ class Window_value_range_parameter(tk.Toplevel):
 
         # Create a frame for the value range parameters
         frame_value_range_params = ttk.LabelFrame(self, text="Plage de valeurs", padding=(10, 10), style='TkPlotCanvas.TLabelframe')
-        frame_value_range_params.pack(fill=tk.BOTH, padx=10, pady=10)
+        frame_value_range_params.pack(fill=tk.BOTH, padx=10, pady=10, side=tk.TOP)
 
         # Add controls for value range parameters here (e.g., vmin, vmax)
         ttk.Label(frame_value_range_params, text="Valeur min:", style='TkPlotCanvas.TLabel').grid(row=0, column=0, sticky="e", padx=5, pady=5)
@@ -952,18 +952,20 @@ class Window_value_range_parameter(tk.Toplevel):
         self.vmax_var = tk.StringVar(value=str(self.line.get_clim()[1]))
         ttk.Entry(frame_value_range_params, textvariable=self.vmax_var, width=15, style='TkPlotCanvas.TEntry').grid(row=1, column=1, sticky="w", padx=5, pady=5)
 
+        # Button to apply changes
+        frame_button_apply = ttk.Frame(self)
+        frame_button_apply.pack(fill=tk.BOTH,padx=10, pady=10, side=tk.BOTTOM)
+        ttk.Button(frame_button_apply, text="Appliquer", command=self.apply_changes).pack(expand=True, fill=tk.X)
+
         # Create a frame for the value range parameters
         labelframe_choix_class = ttk.LabelFrame(self, text="Choix des classes :", padding=(10, 10), style='TkPlotCanvas.TLabelframe')
-        labelframe_choix_class.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        labelframe_choix_class.pack(fill=tk.BOTH, expand=True, padx=10, pady=10, side=tk.TOP)
 
         levels_graph = list(map(float, self.line.levels))        
         self.frame_choix_classe = choix_classe(labelframe_choix_class, v_max = self.vmax_var.get(), v_min = self.vmin_var.get(), nb_classes= len(levels_graph)-1, classes = levels_graph)
-        self.frame_choix_classe.pack(fill=tk.BOTH, expand=True)
+        self.frame_choix_classe.pack(fill=tk.BOTH)
 
-        # Button to apply changes
-        frame_button_apply = ttk.Frame(self)
-        frame_button_apply.pack(fill=tk.BOTH,padx=10, pady=10)
-        ttk.Button(frame_button_apply, text="Appliquer", command=self.apply_changes).pack()
+
     
     def apply_changes(self):
         """Apply the changes to the value range based on user input."""
