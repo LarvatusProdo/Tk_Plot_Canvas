@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 
 from vertical_frame import VerticalScrolledFrame
 from class_window_font_parameter import Window_font_parameter
-
+from class_frame_choix_class import choix_classe
 
 
 
@@ -34,7 +34,7 @@ class Menu_graphique(tk.Toplevel):
         self._save_button.pack(side="right", pady=5, padx=10)
 
         # Button : Load parameters of the plot from a json file
-        self._load_button = ttk.Button(frame_button, text="Charger les paramètres", command=self.master.load_parameters, style='TkPlotCanvas.TButton')
+        self._load_button = ttk.Button(frame_button, text="Charger les paramètres", command= partial(self.master.load_parameters, reload_plot = True), style='TkPlotCanvas.TButton')
         self._load_button.pack(side="right", pady=5, padx=10)
 
         # Create notebook for organizing controls
@@ -82,6 +82,8 @@ class Menu_graphique(tk.Toplevel):
             self._notebook.select(self.tab_courbe)
         elif notebook_shown == "Légende":
             self._notebook.select(self.tab_legende)
+        elif notebook_shown == "Graphique 3D":
+            self._notebook.select(self.tab_courbe)
 
 
     def fill__frame_cartouche_menu(self):
@@ -753,14 +755,14 @@ class Menu_graphique(tk.Toplevel):
         self.list_widget[str(index)]["combobox_variable"] = ttk.Combobox(self.tab_courbe, values=list_variables, state="readonly", width=20, style='Combobox_variable.TCombobox')
         self.list_widget[str(index)]["combobox_variable"].grid(row=index+2, column=5, columnspan=2, sticky="w", padx=padx_axes, pady=pady_axes)
         self.list_widget[str(index)]["combobox_variable"].current(list_variables.index(self.master.xarray_data["z"]) if self.master.xarray_data["z"] in list_variables else 0)  # Set to the first variable by default
+        self.list_widget[str(index)]["combobox_variable"].bind("<<ComboboxSelected>>", lambda event, idx=index: self._update_z_variable(idx))  # Update Z variable when selection changes
 
-        
         # Button to modify the value range of the colorbar (vmin, vmax) or levels for contourf plots
         button_value_range = ttk.Button(self.tab_courbe, text="Valeurs", command=partial(self._window_parametre_value_range, index=index), style='TkPlotCanvas.TButton')
         button_value_range.grid(row=index+2, column=10, sticky="w", padx=padx_axes, pady=pady_axes)
 
         # Combobox to select the colormap for the 3D plot
-        list_colormap =  sorted([m for m in plt.colormaps() if not m.endswith("_r")])  # Exclude reversed colormaps
+        list_colormap =  sorted([m for m in plt.colormaps() if not m.endswith("_r")], key=str.lower)  # Exclude reversed colormaps
         self.list_widget[str(index)]["combobox_colormap"] = ttk.Combobox(self.tab_courbe, values=list_colormap, state="readonly", width=20, style='Combobox_variable.TCombobox')
         self.list_widget[str(index)]["combobox_colormap"].grid(row=index+2, column=20, columnspan=2, sticky="w", padx=padx_axes, pady=pady_axes)
         self.list_widget[str(index)]["combobox_colormap"].current(list_colormap.index(map_object.get_cmap().name) if map_object.get_cmap().name in list_colormap else 0)  # Set to the current colormap by default
@@ -775,6 +777,7 @@ class Menu_graphique(tk.Toplevel):
         self.list_widget[str(index)]["Spinbox_alpha"].bind("<FocusOut>", lambda event, idx=index: self._update_alpha(idx))  # Update alpha when focus is lost
         self.list_widget[str(index)]["Spinbox_alpha"].bind("<KeyRelease>", lambda event, idx=index: self._update_alpha(idx))  # Update alpha when typing in the spinbox
         self.list_widget[str(index)]["Spinbox_alpha"].bind("<MouseWheel>", lambda event, idx=index: self._update_alpha(idx))  # Update alpha when scrolling the mouse wheel
+        self.list_widget[str(index)]["Spinbox_alpha"].bind("<ButtonRelease-1>", lambda event, idx=index: self._update_alpha(idx))  # Update alpha when mouse button is released
 
         # Checkbutton to show/hide the colorbar for the 3D plot
         self.list_widget[str(index)]["checkbutton_colorbar_var"] = tk.BooleanVar(value = getattr(self.master, "_colorbar", None) is not None)
@@ -841,7 +844,21 @@ class Menu_graphique(tk.Toplevel):
         except ValueError:
             tk.messagebox.showerror("Invalid input", "Please enter a valid numeric value for alpha between 0.0 and 1.0.")
 
-        
+
+    def _update_z_variable(self, index):
+        """Update the Z variable for the specified 3D plot based on the combobox selection."""
+        selected_variable = self.list_widget[str(index)]["combobox_variable"].get()
+        if selected_variable in self.master.list_data_xarray[index].data_vars:
+
+            # Update the master xarray_data dictionary with the selected Z variable
+            self.master.xarray_data["z"] = selected_variable
+
+            # Save the current parameter_vue : 
+            self.master.parametre_vue = self.master.get_current_parameters()
+
+            # Update the plot to reflect the variable change   
+            self.master.update_plot()
+    
 class Window_colorbar_parameter(tk.Toplevel):
     def __init__(self, parent, colorbar, index  = 0):
         super().__init__(parent)
@@ -918,14 +935,14 @@ class Window_value_range_parameter(tk.Toplevel):
     def __init__(self, parent, line, index):
         super().__init__(parent)
         self.title("Paramètres de la plage de valeurs")
-        self.geometry(f"400x450+{self.master.winfo_x() + 50}+{self.master.winfo_y() + 50}")
+        self.geometry(f"400x500+{self.master.winfo_x() + 50}+{self.master.winfo_y() + 50}")
         
         self.line = line
         self.index = index
 
         # Create a frame for the value range parameters
         frame_value_range_params = ttk.LabelFrame(self, text="Plage de valeurs", padding=(10, 10), style='TkPlotCanvas.TLabelframe')
-        frame_value_range_params.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        frame_value_range_params.pack(fill=tk.BOTH, padx=10, pady=10, side=tk.TOP)
 
         # Add controls for value range parameters here (e.g., vmin, vmax)
         ttk.Label(frame_value_range_params, text="Valeur min:", style='TkPlotCanvas.TLabel').grid(row=0, column=0, sticky="e", padx=5, pady=5)
@@ -937,22 +954,104 @@ class Window_value_range_parameter(tk.Toplevel):
         ttk.Entry(frame_value_range_params, textvariable=self.vmax_var, width=15, style='TkPlotCanvas.TEntry').grid(row=1, column=1, sticky="w", padx=5, pady=5)
 
         # Button to apply changes
-        ttk.Button(frame_value_range_params, text="Appliquer", command=self.apply_changes).grid(row=2, column=0, columnspan=2, pady=(10, 0))
+        frame_button_apply = ttk.Frame(self)
+        frame_button_apply.pack(fill=tk.BOTH,padx=10, pady=10, side=tk.BOTTOM)
+        ttk.Button(frame_button_apply, text="Appliquer", command=self.apply_changes).pack(expand=True, fill=tk.X)
+
+        # Create a frame for the value range parameters
+        labelframe_choix_class = ttk.LabelFrame(self, text="Choix des classes :", padding=(10, 10), style='TkPlotCanvas.TLabelframe')
+        labelframe_choix_class.pack(fill=tk.BOTH, expand=True, padx=10, pady=10, side=tk.TOP)
+
+        levels_graph = list(map(float, self.line.levels))        
+        self.frame_choix_classe = choix_classe(labelframe_choix_class, v_max = self.vmax_var.get(), v_min = self.vmin_var.get(), nb_classes= len(levels_graph)-1, classes = levels_graph)
+        self.frame_choix_classe.pack(fill=tk.BOTH)
+
+
     
     def apply_changes(self):
         """Apply the changes to the value range based on user input."""
-        try:
-            new_vmin = float(self.vmin_var.get())
-            new_vmax = float(self.vmax_var.get())
+        
+        classes =  self.frame_choix_classe.get_classes()
 
-            # Update the line's value range
-            self.line.set_clim(vmin=new_vmin, vmax=new_vmax)
+        if classes != [] :
+            self._replace_contour_levels(classes)
 
             # Redraw the canvas to reflect changes
             self.master.master._canvas.draw()
 
             # Close the parameter window
             self.destroy()
-        except ValueError:
-            tk.messagebox.showerror("Invalid input", "Please enter valid numeric values for vmin and vmax.")
+        else : 
+            try:
+                new_vmin = float(self.vmin_var.get())
+                new_vmax = float(self.vmax_var.get())
+
+                # Update the line's value range
+                self.line.set_clim(vmin=new_vmin, vmax=new_vmax)
+
+                # Redraw the canvas to reflect changes
+                self.master.master._canvas.draw()
+
+                # Close the parameter window
+                self.destroy()
+            except ValueError:
+                tk.messagebox.showerror("Invalid input", "Please enter valid numeric values for vmin and vmax.")
+
+    def _replace_contour_levels(self, classes):
+        """
+        TODO : Fonction à modifier / à  déplacer dans le main, pour replot un graphique spécifique ? 
+        """
+
+        """Recreate the contour set because Matplotlib levels are not mutable."""
+        plot = self.master.master
+        dataset = plot.list_data_xarray[self.index]
+        x_name = plot.xarray_data["x"]
+        y_name = plot.xarray_data["y"]
+        z_name = plot.xarray_data["z"]
+
+        x = dataset[x_name].values
+        y = dataset[y_name].values
+        z = dataset[z_name].values
+        if (len(x), len(y)) == z.shape:
+            z = z.T
+
+        old_colorbar = getattr(plot, "_colorbar", None)
+        colorbar_label = ""
+        colorbar_orientation = "vertical"
+        if old_colorbar is not None:
+            colorbar_orientation = old_colorbar.orientation
+            colorbar_label = (old_colorbar.ax.get_ylabel()
+                              if colorbar_orientation == "vertical"
+                              else old_colorbar.ax.get_xlabel())
+
+        new_line = plot.axes.contourf(
+            x,
+            y,
+            z,
+            levels=classes,
+            cmap=self.line.get_cmap(),
+            alpha=self.line.get_alpha(),
+            antialiased=False,
+        )
+        new_line.set_label(self.line.get_label())
+        is_colorbar_shown = False
+        if old_colorbar is not None:
+            
+            try :
+                old_colorbar.remove()
+                is_colorbar_shown = True
+            except :
+                pass
+        self.line.remove()
+        plot._lines[self.index] = new_line
+
+        if is_colorbar_shown :
+            plot._colorbar = plot.figure.colorbar(
+                new_line,
+                ax=plot.axes,
+                orientation=colorbar_orientation,
+            )
+            plot._colorbar.set_label(colorbar_label)
+
+        self.line = new_line
             

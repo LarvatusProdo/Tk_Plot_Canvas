@@ -8,9 +8,15 @@ from typing import Iterable, Optional
 from functools import partial
 
 import matplotlib
+import logging
+
+# Ensure TkAgg is selected before importing backend-specific classes.
+matplotlib.use("TkAgg")
+
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 import matplotlib.font_manager as fm
+from matplotlib.artist import Artist 
 
 import copy
 import json
@@ -22,6 +28,7 @@ import platform
 
 from vertical_frame import VerticalScrolledFrame
 from class_menu_graphique import Menu_graphique
+
 
 """Tkinter plotting widgets with Matplotlib integration.
 
@@ -125,10 +132,12 @@ class TkPlotCanvas(ttk.Frame):
         self.menu_click.add_command(label="Modification du graphique", command=partial(self.open_menu_graphique, "Axes et titre"))
 
         self._canvas.get_tk_widget().bind("<Button-3>", self.do_popup)
+        self._canvas.get_tk_widget().bind("<Control-g>", self.load_parameters)
+        self._canvas.get_tk_widget().bind("<Control-s>", self.save_parameters)
 
         # load the view if specified
         if load_view is not None  and os.path.isfile(load_view) :
-            self.parametre_vue = self.load_parameters(load_view)
+            self.parametre_vue = self.load_parameters(path_to_load = load_view)
         else : 
             self.parametre_vue = {}
 
@@ -343,10 +352,13 @@ class TkPlotCanvas(ttk.Frame):
 
         return True
 
-    def save_parameters(self):
+    def save_parameters(self, *args):
 
         if hasattr(self.open_menu_graphique, "master"): # Check if the Menu_graphique Window is open 
-            window_parent = self.open_menu_graphique
+            if self.open_menu_graphique.winfo_exists():
+                window_parent = self.open_menu_graphique
+            else : 
+                window_parent = self
         else:
             window_parent = self
 
@@ -472,22 +484,58 @@ class TkPlotCanvas(ttk.Frame):
                 "y" : self.xarray_data["y"],
                 "z" : self.xarray_data["z"] if "z" in self.xarray_data else None,
             },
-            "xarray_3D": {
-                "has_colorbar": self._colorbar is not None,
-                "colorbar_label": (
-                    self._colorbar.get_label()
-                    if self._colorbar is not None and hasattr(self._colorbar, "get_label")
-                    else (self._colorbar.ax.get_ylabel() if self._colorbar is not None and hasattr(self._colorbar, "ax") else None)
-                ),
-                "cmap": self._lines[0].get_cmap().name if getattr(self, "type_plot", "") == "3D" and len(self._lines) > 0 and hasattr(self._lines[0], "get_cmap") else None,
-                "clim": tuple(self._lines[0].get_clim()) if getattr(self, "type_plot", "") == "3D" and len(self._lines) > 0 and hasattr(self._lines[0], "get_clim") else None,
-            }
         }
+
+        # Add 3D plot parameters if applicable
+        parameters = self.get_3D_parameters(parameters)
+
+        return parameters
+
+    def get_3D_parameters(self, parameters):
+        """
+        Get the parameters specific to 3D plots, such as colorbar properties, colormap, and color limits, and add them to the provided parameters dictionary.
+        Args:
+            parameters: A dictionary to which the 3D plot parameters will be added.
+        Returns:
+            The updated parameters dictionary with 3D plot parameters included.
+        """
+        # Add 3D plot parameters if applicable
+        if getattr(self, "type_plot", "") == "3D" and len(self._lines) > 0:
+            parameters["xarray_3D"] = {
+                "has_colorbar": self._colorbar is not None,
+                "colorbar_orientation": self._colorbar.orientation if self._colorbar is not None and hasattr(self._colorbar, "orientation") else None,
+                "cmap": self._lines[0].get_cmap().name if hasattr(self._lines[0], "get_cmap") else None,
+                "clim": tuple(self._lines[0].get_clim()) if hasattr(self._lines[0], "get_clim") else None,
+                "alpha": self._lines[0].get_alpha() if hasattr(self._lines[0], "get_alpha") else None,
+            }
+
+            if self._colorbar is not None and hasattr(self._colorbar, "ax"):
+                if self._colorbar.orientation == "vertical" :
+                    parameters["xarray_3D"]["colorbar_font"] = {
+                        "fontname": self._colorbar.ax.yaxis.label.get_fontproperties().get_name() ,
+                        "fontsize": self._colorbar.ax.yaxis.label.get_fontsize(),
+                        "fontstyle": self._colorbar.ax.yaxis.label.get_fontproperties().get_style(),
+                        "fontweight": self._colorbar.ax.yaxis.label.get_fontproperties().get_weight(),
+                    }
+                    parameters["xarray_3D"]["colorlabel_colorbar"] = self._colorbar.ax.yaxis.label.get_color() if self._colorbar.ax.yaxis.label.get_color() is not None else "black"
+
+                elif self._colorbar.orientation == "horizontal" :
+                    parameters["xarray_3D"]["colorbar_font"] = {
+                        "fontname": self._colorbar.ax.xaxis.label.get_fontproperties().get_name() ,
+                        "fontsize": self._colorbar.ax.xaxis.label.get_fontsize(),
+                        "fontstyle": self._colorbar.ax.xaxis.label.get_fontproperties().get_style(),
+                        "fontweight": self._colorbar.ax.xaxis.label.get_fontproperties().get_weight(),
+                    }
+                    parameters["xarray_3D"]["colorlabel_colorbar"] = self._colorbar.ax.xaxis.label.get_color() if self._colorbar.ax.xaxis.label.get_color() is not None else "black"
+
+        # Ensure that the "xarray_3D" key exists in the parameters dictionary, even if it's empty, to maintain consistency when saving/loading views.
+        if not "xarray_3D" in parameters:
+            parameters["xarray_3D"] = {}
 
         return parameters
 
 
-    def load_parameters(self, path_to_load=None, parameters_to_load = None):
+    def load_parameters(self, *args, path_to_load=None, parameters_to_load = None, reload_plot = False):
         """Load parameters from a JSON file and apply them to the plot to restore a previous view. If parameters_to_load is provided, it will be used directly instead of loading from a file."""
 
         if  parameters_to_load is not None:
@@ -495,11 +543,14 @@ class TkPlotCanvas(ttk.Frame):
         else:
             # Implement loading parameters from a JSON file here
             if path_to_load is None:
-                if hasattr(self.open_menu_graphique, "master"): # Check if the Menu_graphique Window is open
-                    window_parent = self.open_menu_graphique
+                if hasattr(self.open_menu_graphique, "master"): # Check if the Menu_graphique Window exist
+                    if self.open_menu_graphique.winfo_exists(): # Check if the Menu_graphique Window is shown
+                        window_parent = self.open_menu_graphique
+                    else : 
+                        window_parent = self
                 else :
                     window_parent = self
-
+                
                 path_to_load = filedialog.askopenfilename(parent = window_parent, initialdir=".", title="Charger les paramètres",
                                                             defaultextension=".json", filetypes=[("JSON files", "*.json")])
                 if not path_to_load:
@@ -510,9 +561,20 @@ class TkPlotCanvas(ttk.Frame):
 
             except Exception as e:
                 parameters = {}
-            
+
+        # If the parameters are loaded from a file, update the xarray_data attributes accordingly. This ensures that the xarray data settings are restored when loading a saved view.
+        if parameters_to_load is None  :
+            if "xarray_data" in parameters: 
+                self.xarray_data["x"] = parameters["xarray_data"].get("x", "")
+                self.xarray_data["y"] = parameters["xarray_data"].get("y", "")
+                self.xarray_data["z"] = parameters["xarray_data"].get("z", "")
+
+        if reload_plot :
+            self.update_plot()  # Update the plot to reflect any changes in the xarray data settings         
+
         # Apply loaded parameters to the plot (axes limits, scale types, font properties, curve properties, cartouche parameters, legend parameters)
-        if "background_color" in parameters:
+        if "background_color" in parameters and parameters.get("plot_type", "2D") == "2D" :
+            # Only for 2D plot (by defatult). For 3D plot, it will create a unwanted graph. 
             self.bg_color_graph = parameters["background_color"]
             self.figure.set_facecolor(self.bg_color_graph)
             self.axes.set_facecolor(self.bg_color_graph)
@@ -521,6 +583,7 @@ class TkPlotCanvas(ttk.Frame):
                     line.set_color(self.bg_color_graph)
             self._canvas.get_tk_widget().configure(background=self.bg_color_graph)
             self._canvas.draw()
+
         if "plot_type" in parameters:
             self.type_plot = parameters["plot_type"]
         if "window_size" in parameters:
@@ -555,26 +618,27 @@ class TkPlotCanvas(ttk.Frame):
                 parameters["ylabel"]["fontname"] = self.font_default
             self.axes.set_ylabel(self._ylabel_var.get(), **ylabel_params)
 
-        for index, line in enumerate(self._lines):
-            if "curves" in parameters and str(index) in parameters["curves"]:
-                curve_params = parameters["curves"][str(index)]
-                if curve_params.get("type") == "line" and hasattr(line, "set_color"):
-                    line.set_color(curve_params.get("color"))
-                    line.set_linewidth(curve_params.get("linewidth"))
-                    line.set_linestyle(curve_params.get("linestyle"))
-                    line.set_marker(curve_params.get("marker"))
-                    line.set_markersize(curve_params.get("markersize"))
-                elif curve_params.get("type") == "contour":
-                    if hasattr(line, "set_cmap") and curve_params.get("cmap"):
-                        try:
-                            line.set_cmap(matplotlib.cm.get_cmap(curve_params["cmap"]))
-                        except Exception:
-                            pass
-                    if hasattr(line, "set_clim") and curve_params.get("clim"):
-                        try:
-                            line.set_clim(curve_params["clim"])
-                        except Exception:
-                            pass
+        if parameters.get("plot_type","2D") == "2D" :
+            for index, line in enumerate(self._lines):
+                if "curves" in parameters and str(index) in parameters["curves"]:
+                    curve_params = parameters["curves"][str(index)]
+                    if curve_params.get("type") == "line" and hasattr(line, "set_color"):
+                        line.set_color(curve_params.get("color"))
+                        line.set_linewidth(curve_params.get("linewidth"))
+                        line.set_linestyle(curve_params.get("linestyle"))
+                        line.set_marker(curve_params.get("marker"))
+                        line.set_markersize(curve_params.get("markersize"))
+                    elif curve_params.get("type") == "contour":
+                        if hasattr(line, "set_cmap") and curve_params.get("cmap"):
+                            try:
+                                line.set_cmap(matplotlib.cm.get_cmap(curve_params["cmap"]))
+                            except Exception:
+                                pass
+                        if hasattr(line, "set_clim") and curve_params.get("clim"):
+                            try:
+                                line.set_clim(curve_params["clim"])
+                            except Exception:
+                                pass
 
         if "cartouche" in parameters:
             cartouche_params = parameters["cartouche"]
@@ -586,7 +650,10 @@ class TkPlotCanvas(ttk.Frame):
 
             self.Is_cartouche_display = cartouche_params.get("Is_cartouche_display", True)
             if not self.Is_cartouche_display:
-                self.panedwindow.forget(self._cartouche_frame)
+                try :
+                    self.panedwindow.forget(self._cartouche_frame)
+                except:
+                    pass
             
             # Load the cartouche title grid and font parameters, and update the cartouche display accordingly
             self.cartouch_to_show = cartouche_params.get("cartouche_title_grid", [])
@@ -610,22 +677,44 @@ class TkPlotCanvas(ttk.Frame):
      
             self._update_legende()
 
-        if "xarray_3D" in parameters:
+        if "xarray_3D" in parameters and parameters.get("plot_type","2D") == "3D":
             xarray_3D_params = parameters["xarray_3D"]
             if len(self._lines) > 0:
+                # Colorbar parameters to load, if has_colorbar is in xarray_3D_params
                 if xarray_3D_params.get("has_colorbar", False):
                     if self._colorbar is None:
                         try:
                             self._colorbar = self.figure.colorbar(self._lines[0], ax=self.axes)
                         except Exception:
                             self._colorbar = None
+
                     if self._colorbar is not None:
-                        colorbar_label = xarray_3D_params.get("colorbar_label")
-                        if colorbar_label:
-                            try:
-                                self._colorbar.set_label(colorbar_label)
-                            except Exception:
-                                pass
+                        
+                        orientation = xarray_3D_params.get("colorbar_orientation")
+                        if self._colorbar.orientation == "vertical":
+                            colorbar_label = self._colorbar.ax.get_ylabel() if self._colorbar.ax.get_ylabel() is not None else ""
+                            colorbar_axis = self._colorbar.ax.yaxis  
+                            if orientation == "horizontal" :
+                                # Change the orientation of the colorbar
+                                self._colorbar = self.change_orientation_colorbar(colorbar_axis, orientation)
+                        
+                        else:
+                            colorbar_label = self._colorbar.ax.get_xlabel() if self._colorbar.ax.get_xlabel() is not None else ""
+                            colorbar_axis = self._colorbar.ax.xaxis 
+                            if orientation == "horizontal" :
+                                # Change the orientation of the colorbar
+                                self._colorbar = self.change_orientation_colorbar(colorbar_axis, orientation)
+                        
+                        
+                        if colorbar_label :
+                            self._colorbar.set_label(colorbar_label)
+
+                        font_colorbar =  xarray_3D_params.get("colorbar_font", False)
+                       
+                        if colorbar_label and font_colorbar:
+                            colorlabel_colorbar =  xarray_3D_params.get("colorlabel_colorbar", False)
+                            self.apply_font_to_the_colorbar(colorbar_axis, font_colorbar, colorlabel_colorbar )
+            
                 else:
                     if self._colorbar is not None:
                         try:
@@ -633,40 +722,46 @@ class TkPlotCanvas(ttk.Frame):
                         except Exception:
                             pass
                         self._colorbar = None
-
+                
                 cmap_name = xarray_3D_params.get("cmap")
                 if cmap_name and hasattr(self._lines[0], "set_cmap"):
                     try:
                         self._lines[0].set_cmap(matplotlib.cm.get_cmap(cmap_name))
                     except Exception:
                         pass
+
                 clim = xarray_3D_params.get("clim")
                 if clim and hasattr(self._lines[0], "set_clim"):
-                    try:
-                        self._lines[0].set_clim(clim)
-                    except Exception:
-                        pass
+                    
+                    self._lines[0].set_clim(clim)
+                    
 
-        try :
-            self.xarray_data["x"] = parameters["xarray_data"].get("x", "")
-            self.xarray_data["y"] = parameters["xarray_data"].get("y", "")
-            self.xarray_data["z"] = parameters["xarray_data"].get("z", "")
-        except Exception:
-            pass
+                alpha = xarray_3D_params.get("alpha")
+                if alpha and hasattr(self._lines[0], "set_alpha"):
+                    
+                    self._lines[0].set_alpha(alpha)
+                    
 
         self._canvas.draw()
 
-        # Reload the legend menu to update the comboboxes and entries based on the loaded parameters
+        # If the open_menu_graphique exists, retrieve the title and current notebook to maintain consistency in the plot display.
+        if hasattr(self, "open_menu_graphique") and self.open_menu_graphique is not None:
             # Get the current notebook shown
-        current_notebook = self.open_menu_graphique._notebook if hasattr(self.open_menu_graphique, "_notebook") else None
+            current_notebook = self.open_menu_graphique._notebook if hasattr(self.open_menu_graphique, "_notebook") else None
+            notebook_selected = current_notebook.tab(current_notebook.select(), "text") if current_notebook is not None else ''
+        else:
+            notebook_selected = ""
+
+        # Reload the legend menu to update the comboboxes and entries based on the loaded parameters
             # If a notebook is currently shown, get its name and reopen the menu with the same notebook shown to update the legend menu display based on the loaded parameters
-        if current_notebook is not None:
-            notebook_shown = current_notebook.tab(current_notebook.select(), "text")
+        if notebook_selected != "":
             self.open_menu_graphique.destroy()  # Close the current menu
-            self.open_menu_graphique = Menu_graphique(self, notebook_shown=notebook_shown)  # Reopen the menu with the same notebook shown
+            self.open_menu_graphique = Menu_graphique(self, notebook_shown = notebook_selected)  # Reopen the menu with the same notebook shown
 
+    
         return parameters  # Return loaded parameters for potential further use
-
+    
+    
     def _safe_font_name(self, font_name:str):
         """Parse a font name string and return a safe font name that exists in the system, falling back to default if necessary."""
         list_font_name = font_name.split(" ")
@@ -950,31 +1045,17 @@ class TkPlotCanvas(ttk.Frame):
         ) -> None:
         """Plot a curve in the embedded canvas if the xarray Dataset has 1 dimension."""
         if clear:
-                self.axes.cla()
-                self._lines.clear()
-                self._line_labels.clear()
-                if self._colorbar is not None:
-                    try:
-                        self._colorbar.remove()
-                    except Exception:
-                        pass
-                    self._colorbar = None
+            self.axes.cla()
+            self._lines.clear()
+            self._line_labels.clear()
+            if self._colorbar is not None:
+                try:
+                    self._colorbar.remove()
+                except Exception:
+                    pass
+                self._colorbar = None
 
-        # Construct label string from dict
-        label_str = None
-        if label:           
-            label_str = self.get_string_legende(label, shown_keys=self.Is_title_display)
-
-        # Set a priority for plot_kwargs provided by the user, but allow modifications from loaded view parameters if they exist.
-        modif_plot_kwargs = copy.copy(plot_kwargs)   
-        if self.parametre_vue != {}: # Si un fichier json a été chargé : 
-            # Changement de self.parametre_vue, si l'utilisateuur spécifie des attriibues
-            n_lines = len(self._lines) 
-            if str(n_lines) in self.parametre_vue["curves"] :
-                for key in self.parametre_vue["curves"][str(n_lines)]:
-                    if not key in plot_kwargs:
-                        modif_plot_kwargs[key] = self.parametre_vue["curves"][str(n_lines)][key]
-        
+        # List dimension and variable of the xarray data
         list_dim_var = list(ds.dims) + list(ds.data_vars)
         dimension_abscisse = self.xarray_data["x"] if self.xarray_data["x"] in list_dim_var else list(ds.dims)[0]
         dimension_ordonnee = self.xarray_data["y"] if self.xarray_data["y"] in list_dim_var else list(ds.dims)[1]
@@ -990,9 +1071,9 @@ class TkPlotCanvas(ttk.Frame):
         z = ds[variable].values
 
         # Check if the dimensions of x, y, and z are consistent for contourf plotting
-        if (len(x) , len(y)) == z.shape:
+        if (len(y) , len(x)) == z.shape:
             pass  # Dimensions are consistent, no action needed
-        elif (len(y) , len(x)) == z.shape:
+        elif (len(x) , len(y)) == z.shape:
             z = z.T  # Transpose z to match the dimensions of x and y
         else:
             tk.messagebox.showerror("Error", f"Dimensions of x, y, and z are inconsistent for contourf plotting. x: {len(x)}, y: {len(y)}, z: {z.shape}", parent=self)
@@ -1008,7 +1089,7 @@ class TkPlotCanvas(ttk.Frame):
             self.axes.yaxis_date()
             
         # Create a filled contour plot using the xarray data
-        mapping = self.axes.contourf(y, x, z)
+        mapping = self.axes.contourf(x, y, z, antialiased=False)
 
         # Add a colorbar to the plot, removing any existing colorbar first to avoid overlap
         if self._colorbar is not None:
@@ -1033,63 +1114,34 @@ class TkPlotCanvas(ttk.Frame):
         else :
             self.update_cartouche_frame()
 
+        # Apply labels on the chart
+        if title is not None:
+            self.axes.set_title(title)
+            self._title_var.set(title)
+
+        if dimension_abscisse is not None:
+            # Get unit label from xarray variable attributes if it exists
+            if "units" in ds[dimension_abscisse].attrs:
+                dimension_label = f"{dimension_abscisse.capitalize()}"
+            else:
+                dimension_label = dimension_abscisse.capitalize()
+
+            self.axes.set_xlabel(dimension_label)
+            self._xlabel_var.set(dimension_label)
+
+        if dimension_ordonnee is not None:
+            # Get unit label from xarray variable attributes if it exists
+            if "units" in ds[dimension_ordonnee].attrs:
+                variable_label = f"{dimension_ordonnee.capitalize()}"
+            else:
+                variable_label = dimension_ordonnee.capitalize()
+
+            self.axes.set_ylabel(variable_label)
+            self._ylabel_var.set(variable_label)
+
         # Apply loaded view parameters to the new plot if a view has been loaded, to ensure consistency with the loaded view settings for axes, title, and labels.
-        if self.parametre_vue != {}: # if a json file has been loaded :
-            # Update X et Y axis from self.parameter_vue
-            self._update_axis(self.axes.xaxis, self.parametre_vue.get("X_axis"), axe= "X" )
-            self._update_axis(self.axes.yaxis, self.parametre_vue.get("Y_axis"), axe= "Y" )
-
-            if title is not None and "title" in self.parametre_vue :
-                self.axes.set_title(title, self.parametre_vue["title"])
-                self._title_var.set(title)
-
-            if dimension_abscisse is not None and "xlabel" in self.parametre_vue :
-                # Get unit label from xarray variable attributes if it exists
-                if "units" in ds[dimension_abscisse].attrs:
-                    dimension_label = f"{dimension_abscisse.capitalize()} ({ds[dimension_abscisse].attrs['units']})"
-                else:
-                    dimension_label = dimension_abscisse.capitalize()
-
-                self.axes.set_xlabel(dimension_label, self.parametre_vue["xlabel"])
-                self._xlabel_var.set(dimension_label)
-
-            if dimension_ordonnee is not None and "ylabel" in self.parametre_vue : 
-                # Get unit label from xarray variable attributes if it exists
-                if "units" in ds[dimension_ordonnee].attrs:
-                    variable_label = f"{dimension_ordonnee.capitalize()} ({ds[dimension_ordonnee].attrs['units']})"
-                else:
-                    variable_label = dimension_ordonnee.capitalize()
-
-                self.axes.set_ylabel(variable_label, self.parametre_vue["ylabel"])
-                self._ylabel_var.set(variable_label)
-        
-        else : 
-            # Apply default labels if no view parameters are loaded
-            if title is not None:
-                self.axes.set_title(title)
-                self._title_var.set(title)
-
-            if dimension_abscisse is not None:
-                # Get unit label from xarray variable attributes if it exists
-                if "units" in ds[dimension_abscisse].attrs:
-                    dimension_label = f"{dimension_abscisse.capitalize()}"
-                else:
-                    dimension_label = dimension_abscisse.capitalize()
-
-                self.axes.set_xlabel(dimension_label)
-                self._xlabel_var.set(dimension_label)
-
-            if dimension_ordonnee is not None:
-                # Get unit label from xarray variable attributes if it exists
-                if "units" in ds[dimension_ordonnee].attrs:
-                    variable_label = f"{dimension_ordonnee.capitalize()}"
-                else:
-                    variable_label = dimension_ordonnee.capitalize()
-
-                self.axes.set_ylabel(variable_label)
-                self._ylabel_var.set(variable_label)
-
-
+        if self.parametre_vue != {} and self.parametre_vue is not None : # if a json file has been loaded :
+            self.load_parameters(parameters_to_load=self.parametre_vue)
 
         self._canvas.draw()
 
@@ -1102,23 +1154,35 @@ class TkPlotCanvas(ttk.Frame):
         
         self.clear_plot()  # Clear the plot before re-plotting with updated data or parameters.
 
-        title = self.open_menu_graphique._title_var.get()
+        # If the open_menu_graphique exists, retrieve the title and current notebook to maintain consistency in the plot display.
+        if hasattr(self, "open_menu_graphique") and self.open_menu_graphique is not None:
+            # Get the title from the open_menu_graphique if it exists
+            title = self.open_menu_graphique._title_var.get() if hasattr(self.open_menu_graphique, "_title_var") else None
+            # Get the current notebook shown
+            current_notebook = self.open_menu_graphique._notebook if hasattr(self.open_menu_graphique, "_notebook") else None
+            notebook_selected = current_notebook.tab(current_notebook.select(), "text") if current_notebook is not None else ''
+        else:
+            title = None
+            notebook_selected = ""
 
         for index, ds in enumerate(self.list_data_xarray):
             self.plot_xarray(ds, clear=False, replot=True, label= self._line_labels[index], title= title if index == 0 else None, legend=True)
 
-
         # Reload the legend menu to update the comboboxes and entries based on the loaded parameters
-            # Get the current notebook shown
-        current_notebook = self.open_menu_graphique._notebook if hasattr(self.open_menu_graphique, "_notebook") else None
             # If a notebook is currently shown, get its name and reopen the menu with the same notebook shown to update the legend menu display based on the loaded parameters
-        if current_notebook is not None:
-            notebook_shown = current_notebook.tab(current_notebook.select(), "text")
+        if notebook_selected != "":
             self.open_menu_graphique.destroy()  # Close the current menu
-            self.open_menu_graphique = Menu_graphique(self, notebook_shown=notebook_shown)  # Reopen the menu with the same notebook shown
+            self.open_menu_graphique = Menu_graphique(self, notebook_shown = notebook_selected)  # Reopen the menu with the same notebook shown
 
     def clear_plot(self):
         """Clear the plot and reset the canvas."""
+        if self._colorbar is not None:
+            try :
+                self._colorbar.remove()
+            except:
+                pass
+            self._colorbar = None
+
         self.axes.cla()
         self._lines.clear()
         self._canvas.draw()
@@ -1130,6 +1194,52 @@ class TkPlotCanvas(ttk.Frame):
             self.fill_cartouche_frame(label_to_display=label_dict, line_index=index, line_display=True)
 
         pass
+
+    def change_orientation_colorbar(self, colorbar, orientation, index = 0) :
+        """ Remove the previous colorbar and apply the new one."""
+          
+        current_font = colorbar.label.get_fontproperties()
+        current_label = colorbar.ax.get_ylabel() if orientation == "vertical" else colorbar.ax.get_xlabel()
+
+        # Remove the existing colorbar and create a new one with the new orientation
+        try : 
+            colorbar.remove()
+        except :
+            return
+
+        colorbar = self.master.master.figure.colorbar(self._lines[index], ax=self.axes, orientation=orientation)
+        if current_label is not None :
+            colorbar.set_label(current_label, fontproperties=current_font)
+
+        return colorbar
+    
+    def apply_font_to_the_colorbar(self, colorbar_axis, current_font, color):
+        """ Apply the new font to the colorbar."""
+        if colorbar_axis is not None:
+            try : 
+                colorbar_axis.label.set_fontname(current_font["fontname"])
+            except:
+                pass
+            try : 
+                colorbar_axis.label.set_fontsize(current_font["fontsize"])
+            except:
+                pass
+            try : 
+                colorbar_axis.label.set_fontstyle(current_font["fontstyle"])
+            except:
+                pass
+            try : 
+                colorbar_axis.label.set_fontweight(current_font["fontweight"])
+            except:
+                pass
+
+            try : 
+                if color :
+                    colorbar_axis.label.set_color(color)
+            except:
+                pass
+
+        return colorbar_axis
 
 if __name__ == "__main__":
 
