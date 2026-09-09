@@ -244,6 +244,9 @@ class choix_classe(ttk.Frame):
 
     def bind_hover(self, widget, row=None):
         """Bind hover events to a widget, changing its style when hovered."""
+        if row is None and hasattr(widget.master, '_hover_count'):
+            row = widget.master
+
         if row is not None:
             widget.bind("<Enter>", lambda event, row=row: self._on_row_hover(row, True))
             widget.bind("<Leave>", lambda event, row=row: self._on_row_hover(row, False))
@@ -273,12 +276,19 @@ class choix_classe(ttk.Frame):
 
     def _on_row_hover(self, row, enter: bool):
         """Handle hover events for a row of entries in the 'Manuel' frame."""
-        if enter:
-            row._hover_count += 1
-        else:
-            row._hover_count = max(0, row._hover_count - 1)
+        try:
+            pointer_widget = row.winfo_toplevel().winfo_containing(
+                row.winfo_toplevel().winfo_pointerx(),
+                row.winfo_toplevel().winfo_pointery(),
+            )
+            is_inside = pointer_widget is not None
+            while is_inside and pointer_widget is not row:
+                pointer_widget = pointer_widget.master
+                is_inside = pointer_widget is not None
+        except tk.TclError:
+            is_inside = False
 
-        state = ['active'] if row._hover_count > 0 else ['!active']
+        state = ['active'] if is_inside else ['!active']
         try:
             row.state(state)
         except tk.TclError:
@@ -291,7 +301,7 @@ class choix_classe(ttk.Frame):
                 pass
 
         if hasattr(row, '_buttons'):
-            if row._hover_count > 0:
+            if is_inside:
                 for button, info in zip(row._buttons, row._button_grid_info):
                     button.grid(**info)
             else:
