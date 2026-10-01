@@ -24,6 +24,7 @@ import xarray as xr
 import os
 from numpy import datetime64
 from numpy import timedelta64
+from numpy import linspace
 import platform
 
 from vertical_frame import VerticalScrolledFrame
@@ -82,6 +83,7 @@ class TkPlotCanvas(ttk.Frame):
         self.Is_Date_on_x_axis = False
         self.Is_cartouche_display = True
         self._colorbar = None
+        self.plot_3D_classe = "Auto" 
 
         # Panedwindow for resizable layout
         self.panedwindow = ttk.Panedwindow(self, orient=tk.VERTICAL)
@@ -501,12 +503,19 @@ class TkPlotCanvas(ttk.Frame):
         """
         # Add 3D plot parameters if applicable
         if getattr(self, "type_plot", "") == "3D" and len(self._lines) > 0:
+
+            # Get the levels type 
+                # Get the type of class (Auto / manuel / ) :
+            #type_level = 
+
+            # Retrieve the 3D parameters of the chart : 
             parameters["xarray_3D"] = {
                 "has_colorbar": self._colorbar is not None,
                 "colorbar_orientation": self._colorbar.orientation if self._colorbar is not None and hasattr(self._colorbar, "orientation") else None,
                 "cmap": self._lines[0].get_cmap().name if hasattr(self._lines[0], "get_cmap") else None,
                 "clim": tuple(self._lines[0].get_clim()) if hasattr(self._lines[0], "get_clim") else None,
                 "alpha": self._lines[0].get_alpha() if hasattr(self._lines[0], "get_alpha") else None,
+                "levels": self.get_current_levels(index = 0) if hasattr(self._lines[0], "levels") else None,
             }
 
             if self._colorbar is not None and hasattr(self._colorbar, "ax"):
@@ -740,6 +749,34 @@ class TkPlotCanvas(ttk.Frame):
                 if alpha and hasattr(self._lines[0], "set_alpha"):
                     
                     self._lines[0].set_alpha(alpha)
+
+                levels = xarray_3D_params.get("levels", None)
+                print("Loaded levels:", levels)  # Debugging statement to check the loaded levels
+                if levels is not None :
+                    if levels.keys() == {"Auto"}:
+                        # Set the plot_3D_classe to "Auto" to indicate that the contour levels are automatically generated based on the data range.
+                        self.plot_3D_classe= list(levels.keys())[0] 
+
+                        vmax = self._lines[0].get_array().max() if hasattr(self._lines[0], "get_array") else None
+                        vmin = self._lines[0].get_array().min() if hasattr(self._lines[0], "get_array") else None
+                        if vmax is not None and vmin is not None:
+                            # If the levels are set to "Auto", we can automatically generate contour levels based on the data range.
+                            num_levels = levels["Auto"]
+                            auto_levels = linspace(vmin, vmax, num_levels)
+                            self._replace_contour_levels(auto_levels, index=0)  # Replace contour levels for the first line (index 0)
+                        
+                    elif levels.keys() == {"Manuel"}:
+                        # Set the plot_3D_classe to "Manuel" to indicate that the contour levels are manually specified by the user.
+                        self.plot_3D_classe= list(levels.keys())[0] 
+                                  
+                        # If the levels are set to "Manuel", we can replace them with the provided manual levels.
+                        self._replace_contour_levels(levels["Manuel"], index=0)  # Replace contour levels for the first line (index 0)
+
+                    else:
+                        # If the levels are in an unexpected format, we can log a warning or handle it as needed.
+                        print("Warning: Unexpected levels format in loaded parameters. Levels not updated.")
+
+                
                     
 
         self._canvas.draw()
@@ -1240,6 +1277,81 @@ class TkPlotCanvas(ttk.Frame):
                 pass
 
         return colorbar_axis
+
+    def get_current_levels(self, index = 0):
+        """Get the current contour levels of the contour set."""
+        if index < len(self._lines):
+            line = self._lines[index]
+            if hasattr(line, "levels"):
+                levels = line.levels
+
+        if levels is not None:
+            if  self.plot_3D_classe == "Auto" :
+                return {"Auto": len(levels)}
+            else :
+                return {"Manuel": levels.tolist()}
+        else:
+            return None
+        
+
+    def _replace_contour_levels(self, classes, index = 0):
+        """Recreate the contour set because Matplotlib levels are not mutable."""
+        
+        classes.sort()
+
+        dataset = self.list_data_xarray[index]
+
+        line = self._lines[index]
+
+        x_name = self.xarray_data["x"]
+        y_name = self.xarray_data["y"]
+        z_name = self.xarray_data["z"]
+
+        x = dataset[x_name].values
+        y = dataset[y_name].values
+        z = dataset[z_name].values
+        if (len(x), len(y)) == z.shape:
+            z = z.T
+
+        old_colorbar = getattr(self, "_colorbar", None)
+        colorbar_label = ""
+        colorbar_orientation = "vertical"
+        if old_colorbar is not None:
+            colorbar_orientation = old_colorbar.orientation
+            colorbar_label = (old_colorbar.ax.get_ylabel()
+                              if colorbar_orientation == "vertical"
+                              else old_colorbar.ax.get_xlabel())
+
+        new_line = self.axes.contourf(
+            x,
+            y,
+            z,
+            levels=classes,
+            cmap= line.get_cmap(),
+            alpha= line.get_alpha(),
+            antialiased=False,
+        )
+        new_line.set_label(line.get_label())
+        is_colorbar_shown = False
+        if old_colorbar is not None:
+            
+            try :
+                old_colorbar.remove()
+                is_colorbar_shown = True
+            except :
+                pass
+        line.remove()
+        self._lines[index] = new_line
+
+        if is_colorbar_shown :
+            self._colorbar = self.figure.colorbar(
+                new_line,
+                ax=self.axes,
+                orientation=colorbar_orientation,
+            )
+            self._colorbar.set_label(colorbar_label)
+
+        
 
 if __name__ == "__main__":
 
