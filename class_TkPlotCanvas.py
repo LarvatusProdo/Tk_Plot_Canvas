@@ -751,7 +751,7 @@ class TkPlotCanvas(ttk.Frame):
                     self._lines[0].set_alpha(alpha)
 
                 levels = xarray_3D_params.get("levels", None)
-                print("Loaded levels:", levels)  # Debugging statement to check the loaded levels
+
                 if levels is not None :
                     if levels.keys() == {"Auto"}:
                         # Set the plot_3D_classe to "Auto" to indicate that the contour levels are automatically generated based on the data range.
