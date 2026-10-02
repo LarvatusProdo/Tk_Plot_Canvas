@@ -723,7 +723,7 @@ class Menu_graphique(tk.Toplevel):
 
     def fill__frame_courbe_3D(self):
         """Create the 3D curve settings tab with controls for 3D plot properties."""
-        ttk.Label(self.tab_courbe, text="Paramètres du graphique 3D:", style='Titre_parammetre.TLabel').grid(row=0, column=0, sticky="w", padx=5, pady=10, columnspan=50)
+        ttk.Label(self.tab_courbe, text="Paramètres du graphique 3D:", style='Titre_parammetre.TLabel').grid(row=0, column=0, sticky="w", padx=5, pady=10, columnspan=10)
 
         ttk.Label(self.tab_courbe, text="Indice", style='TkPlotCanvas_Courbe.TLabel').grid(row=1, column=1,  padx=5, pady=5)
         ttk.Label(self.tab_courbe, text="Variable affichée", style='TkPlotCanvas_Courbe.TLabel').grid(row=1, column=5, padx=5, pady=5)
@@ -732,6 +732,13 @@ class Menu_graphique(tk.Toplevel):
         ttk.Label(self.tab_courbe, text="Transparence", style='TkPlotCanvas_Courbe.TLabel').grid(row=1, column=30, padx=5, pady=5)
         ttk.Label(self.tab_courbe, text="Afficahge colorbar", style='TkPlotCanvas_Courbe.TLabel').grid(row=1, column=40, padx=5, pady=5)
         ttk.Label(self.tab_courbe, text="Paramêtre colorbar", style='TkPlotCanvas_Courbe.TLabel').grid(row=1, column=50, padx=5, pady=5)
+
+        
+        self.checkbutton_map_show_var = tk.BooleanVar(value= self.master.plot_3D_map)
+        self.checkbutton_map_show = ttk.Checkbutton(self.tab_courbe, text="Affichage d'une carte", variable= self.checkbutton_map_show_var, command= self._affichage_carte)
+        self.checkbutton_map_show.grid(row=0, column=20, padx=5, pady=5)
+        
+
 
         self.list_widget = {}
         for index, line in enumerate(self.master._lines):
@@ -858,6 +865,15 @@ class Menu_graphique(tk.Toplevel):
 
             # Update the plot to reflect the variable change   
             self.master.update_plot()
+
+
+    def _affichage_carte(self):
+        """
+        
+        """
+        self.master.plot_3D_map = self.checkbutton_map_show_var.get()
+        self.master.update_plot(is_map = self.master.plot_3D_map)
+
     
 class Window_colorbar_parameter(tk.Toplevel):
     def __init__(self, parent, colorbar, index  = 0):
