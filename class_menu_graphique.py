@@ -723,7 +723,7 @@ class Menu_graphique(tk.Toplevel):
 
     def fill__frame_courbe_3D(self):
         """Create the 3D curve settings tab with controls for 3D plot properties."""
-        ttk.Label(self.tab_courbe, text="Paramètres du graphique 3D:", style='Titre_parammetre.TLabel').grid(row=0, column=0, sticky="w", padx=5, pady=10, columnspan=50)
+        ttk.Label(self.tab_courbe, text="Paramètres du graphique 3D:", style='Titre_parammetre.TLabel').grid(row=0, column=0, sticky="w", padx=5, pady=10, columnspan=10)
 
         ttk.Label(self.tab_courbe, text="Indice", style='TkPlotCanvas_Courbe.TLabel').grid(row=1, column=1,  padx=5, pady=5)
         ttk.Label(self.tab_courbe, text="Variable affichée", style='TkPlotCanvas_Courbe.TLabel').grid(row=1, column=5, padx=5, pady=5)
@@ -732,6 +732,13 @@ class Menu_graphique(tk.Toplevel):
         ttk.Label(self.tab_courbe, text="Transparence", style='TkPlotCanvas_Courbe.TLabel').grid(row=1, column=30, padx=5, pady=5)
         ttk.Label(self.tab_courbe, text="Afficahge colorbar", style='TkPlotCanvas_Courbe.TLabel').grid(row=1, column=40, padx=5, pady=5)
         ttk.Label(self.tab_courbe, text="Paramêtre colorbar", style='TkPlotCanvas_Courbe.TLabel').grid(row=1, column=50, padx=5, pady=5)
+
+        
+        self.checkbutton_map_show_var = tk.BooleanVar(value= self.master.plot_3D_map)
+        self.checkbutton_map_show = ttk.Checkbutton(self.tab_courbe, text="Affichage d'une carte", variable= self.checkbutton_map_show_var, command= self._affichage_carte)
+        self.checkbutton_map_show.grid(row=0, column=20, padx=5, pady=5)
+        
+
 
         self.list_widget = {}
         for index, line in enumerate(self.master._lines):
@@ -858,6 +865,15 @@ class Menu_graphique(tk.Toplevel):
 
             # Update the plot to reflect the variable change   
             self.master.update_plot()
+
+
+    def _affichage_carte(self):
+        """
+        
+        """
+        self.master.plot_3D_map = self.checkbutton_map_show_var.get()
+        self.master.update_plot(is_map = self.master.plot_3D_map)
+
     
 class Window_colorbar_parameter(tk.Toplevel):
     def __init__(self, parent, colorbar, index  = 0):
@@ -963,7 +979,12 @@ class Window_value_range_parameter(tk.Toplevel):
         labelframe_choix_class.pack(fill=tk.BOTH, expand=True, padx=10, pady=10, side=tk.TOP)
 
         levels_graph = list(map(float, self.line.levels))        
-        self.frame_choix_classe = choix_classe(labelframe_choix_class, v_max = self.vmax_var.get(), v_min = self.vmin_var.get(), nb_classes= len(levels_graph)-1, classes = levels_graph)
+        self.frame_choix_classe = choix_classe(
+            labelframe_choix_class,
+            v_max = self.vmax_var.get(), v_min = self.vmin_var.get(),
+            nb_classes= len(levels_graph)-1, classes = levels_graph,
+            type_class = self.master.master.plot_3D_classe
+            )
         self.frame_choix_classe.pack(fill=tk.BOTH)
 
 
@@ -971,10 +992,10 @@ class Window_value_range_parameter(tk.Toplevel):
     def apply_changes(self):
         """Apply the changes to the value range based on user input."""
         
-        classes =  self.frame_choix_classe.get_classes()
+        self.master.master.plot_3D_classe, classes =  self.frame_choix_classe.get_classes()
 
         if classes != [] :
-            self._replace_contour_levels(classes)
+            self.master.master._replace_contour_levels(classes, index = self.index)
 
             # Redraw the canvas to reflect changes
             self.master.master._canvas.draw()
@@ -997,61 +1018,5 @@ class Window_value_range_parameter(tk.Toplevel):
             except ValueError:
                 tk.messagebox.showerror("Invalid input", "Please enter valid numeric values for vmin and vmax.")
 
-    def _replace_contour_levels(self, classes):
-        """
-        TODO : Fonction à modifier / à  déplacer dans le main, pour replot un graphique spécifique ? 
-        """
 
-        """Recreate the contour set because Matplotlib levels are not mutable."""
-        plot = self.master.master
-        dataset = plot.list_data_xarray[self.index]
-        x_name = plot.xarray_data["x"]
-        y_name = plot.xarray_data["y"]
-        z_name = plot.xarray_data["z"]
-
-        x = dataset[x_name].values
-        y = dataset[y_name].values
-        z = dataset[z_name].values
-        if (len(x), len(y)) == z.shape:
-            z = z.T
-
-        old_colorbar = getattr(plot, "_colorbar", None)
-        colorbar_label = ""
-        colorbar_orientation = "vertical"
-        if old_colorbar is not None:
-            colorbar_orientation = old_colorbar.orientation
-            colorbar_label = (old_colorbar.ax.get_ylabel()
-                              if colorbar_orientation == "vertical"
-                              else old_colorbar.ax.get_xlabel())
-
-        new_line = plot.axes.contourf(
-            x,
-            y,
-            z,
-            levels=classes,
-            cmap=self.line.get_cmap(),
-            alpha=self.line.get_alpha(),
-            antialiased=False,
-        )
-        new_line.set_label(self.line.get_label())
-        is_colorbar_shown = False
-        if old_colorbar is not None:
-            
-            try :
-                old_colorbar.remove()
-                is_colorbar_shown = True
-            except :
-                pass
-        self.line.remove()
-        plot._lines[self.index] = new_line
-
-        if is_colorbar_shown :
-            plot._colorbar = plot.figure.colorbar(
-                new_line,
-                ax=plot.axes,
-                orientation=colorbar_orientation,
-            )
-            plot._colorbar.set_label(colorbar_label)
-
-        self.line = new_line
             

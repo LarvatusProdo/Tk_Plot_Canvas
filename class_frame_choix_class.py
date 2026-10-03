@@ -6,7 +6,7 @@ from vertical_frame import VerticalScrolledFrame
 class choix_classe(ttk.Frame):
     _initialized_style: bool = False
 
-    def __init__(self, master, *args, classes = [], with_buttons=False, v_max = 1.0, v_min = 0.0, nb_classes = 10, **kwargs):
+    def __init__(self, master, *args, type_class = "Auto", classes = [], with_buttons=False, v_max = 1.0, v_min = 0.0, nb_classes = 10, **kwargs):
 
         super().__init__(master, *args, **kwargs)
 
@@ -14,6 +14,9 @@ class choix_classe(ttk.Frame):
             self._initialized_style = True
             self._setup_styles()
 
+        # Initialize : 
+        self.type_class = type_class
+        
         # Frame : choix du type de classe : Auto / Manuel / Aucune
         self._frame_choix_class = ttk.LabelFrame(self, text="Choix du type de classe", style='TkPlotCanvas.TLabelframe')
         self._frame_choix_class.pack(side="top", fill="x", padx=5, pady=5)
@@ -47,7 +50,7 @@ class choix_classe(ttk.Frame):
 
         self.fill_frame_manuel(classes = classes)  # Fill the frame for the 'Manuel' class
 
-        self.show_frame_choix_class()  # Show the appropriate frame based on the default selection in the combobox
+        self.show_frame_choix_class(state = self.type_class)  # Show the appropriate frame based on the default selection in the combobox
 
         if with_buttons:
             # Frame for buttons
@@ -212,7 +215,9 @@ class choix_classe(ttk.Frame):
         # Add buttons for adding/removing rows
         self._add_button_row_frame_manuel(frame_row, n_row)
 
-        
+        ttk.Label(frame_row, text= " ".join([" "]*10), style='choix_classe.TLabel').grid(row=0, column=10, sticky="we", padx=0, pady=pady)
+        self.bind_hover(frame_row.winfo_children()[-1], row=frame_row)
+
         # store tuple: (left_entry, right_entry, left_var, right_var)
         if where == "end" :
             self.list_entries_manuel.append((left_entry, right_entry, left_var, right_var))
@@ -295,7 +300,10 @@ class choix_classe(ttk.Frame):
         except tk.TclError:
             pass
 
+        buttons = getattr(row, '_buttons', ())
         for child in row.winfo_children():
+            if child in buttons:
+                continue
             try:
                 child.state(state)
             except tk.TclError:
@@ -309,8 +317,10 @@ class choix_classe(ttk.Frame):
                 for button in row._buttons:
                     button.grid_forget()
 
-    def show_frame_choix_class(self, event=None):
+    def show_frame_choix_class(self, event=None, state=None):
         """Show the frame with the appropriate widgets based on the selected class type."""
+        if state is not None:
+            self._combobox_choix_class.set(state)
 
         if self._combobox_choix_class.get() == "Auto":
             self.frame_manuel.pack_forget()
@@ -338,6 +348,7 @@ class choix_classe(ttk.Frame):
 
             classes = [v_min + i * (v_max - v_min) / n_classes for i in range(n_classes+1)] if n_classes > 1 else [v_min]
 
+            self.type_class = "Auto"
 
         elif self._combobox_choix_class.get() == "Manuel":
             # Add the first left value to the classes list
@@ -356,7 +367,9 @@ class choix_classe(ttk.Frame):
                 if float_right_val is not None :
                     classes.append(float_right_val) 
 
-        return classes
+            self.type_class = "Manuel"
+
+        return self.type_class, classes
 
     def safe_float_value(self, value_str):
         """Convert a string to a float, returning None if conversion fails."""
@@ -372,7 +385,7 @@ class choix_classe(ttk.Frame):
 
         # Button to remove the current row from the frame
         button_remove_row = ttk.Button(frame, text="x", width=3, style='TkPlotCanvas.TButton', command=lambda: self._remove_row_manuel(frame))
-        button_remove_row.grid(row=0, column=8, sticky="w", padx=5, pady=pady)
+        button_remove_row.grid(row=0, column=8, sticky="w", padx=(20,100) , pady=pady)
         self.bind_hover(button_remove_row, row=frame)
         list_buttons.append(button_remove_row)
 
@@ -395,6 +408,6 @@ class choix_classe(ttk.Frame):
 if __name__ == "__main__":
     root = tk.Tk()
     root.title("Test choix_class")
-    choix_class_frame = choix_classe(root, with_buttons=True, classes=[0, 10, 20, 30])
+    choix_class_frame = choix_classe(root, with_buttons=True, classes=[0, 10, 20, 30], type_class="Auto", nb_classes=5, v_min=0.0, v_max=30.0)
     choix_class_frame.pack(fill="both", expand=True)
     root.mainloop()
