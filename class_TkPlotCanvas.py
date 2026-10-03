@@ -2,7 +2,7 @@
 import tkinter as tk
 from tkinter import filedialog
 from tkinter import ttk
-from typing import Iterable, Optional
+from typing import Optional
 from functools import partial
 
 import matplotlib
@@ -14,25 +14,29 @@ from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 import matplotlib.font_manager as fm
 
-import copy
-import json
 import xarray as xr
 import os
 from numpy import datetime64
 from numpy import timedelta64
-from numpy import linspace
 import platform
 
-from vertical_frame import VerticalScrolledFrame
-from class_menu_graphique import Menu_graphique
 
-try : 
-    import cartopy.crs as ccrs
-    import cartopy.feature as cfeature
-    CARTOPY_INSTALLED = True
-except Exception:
-    CARTOPY_INSTALLED = False
-    
+from vertical_frame import VerticalScrolledFrame
+from menu.class_menu_graphique import Menu_graphique
+
+
+from plot.xarray_plotting import XarrayPlotMixin
+from plot.standard_plotting import StandardPlotMixin
+from plot.plot_metadata import PlotMetadataMixin
+from plot.plot_colorbar_contour import ColorbarContourMixin
+from plot.plot_view_parameters import (
+    get_3D_parameters as capture_3D_parameters,
+    get_current_parameters as capture_current_parameters,
+    read_parameters,
+    update_variables_from_parameters as restore_plot_variables,
+    write_parameters,
+)
+
 """Tkinter plotting widgets with Matplotlib integration.
 
 This module provides a Tkinter-based plotting canvas with embedded
@@ -40,7 +44,13 @@ Matplotlib figures, a context menu for customizing axes, curves,
 cartouche metadata, and legend settings, and support for saving/loading views.
 """
 
-class TkPlotCanvas(ttk.Frame):
+class TkPlotCanvas(
+    ttk.Frame,
+    StandardPlotMixin,
+    XarrayPlotMixin,
+    PlotMetadataMixin,
+    ColorbarContourMixin,
+):
     """A Tkinter Frame that embeds a Matplotlib Figure.
 
     Attributes:
@@ -204,108 +214,6 @@ class TkPlotCanvas(ttk.Frame):
             pass
         self.open_menu_graphique = Menu_graphique(self, notebook_shown=menu_type)
 
-    def fill_cartouche_frame(self, label_to_display: Optional[dict] = None, line_index: int = 0, line_display: bool = True) -> None:
-        """
-        Fill the cartouche frame with metadata information for a given line index.
-        Args:            
-            label_to_display: A dictionary of metadata to display in the cartouche, where keys are the metadata names and values are the corresponding values to display.
-            line_index: The index of the line for which to display the metadata in the cartouche.
-            line_display: Whether to display the line style and marker in the cartouche.
-        """
-        
-        # Clear previous cartouche content for this line index
-        if len(self._cartouche_grid) > line_index+1 : 
-            for widget in self._cartouche_grid[line_index]:
-                try :
-                    widget.destroy()
-                except Exception:
-                    pass
-            self._cartouche_grid[line_index] = []
-        else :
-            self._cartouche_grid.append([])
-            while len(self._cartouche_grid) <= line_index+1 :
-                self._cartouche_grid.append([])
-
-        
-        # Add a label to display metadata from the active line.
-        if not(label_to_display is None):
-                     
-            column_index = 1
-            if not self.cartouche_initialized:
-                for key in label_to_display:
-                    self._cartouche_title_grid.append(ttk.Label(self._cartouche_frame, text=key, style='Cartouche_titre.TLabel'))
-                    self._cartouche_title_grid[-1].grid(row=0, column=column_index, sticky="w", padx=5, pady=5)
-                    column_index += 1
-                self.cartouche_initialized = True
-            
-        if line_display and self.type_plot == "2D":
-            # Add line show :
-            line = self._lines[line_index] 
-            color = line.get_color()
-            linestyle = line.get_linestyle() if line.get_linestyle() != "None" else ""
-            if linestyle == '-':
-                linestyle = "―"
-            marker = line.get_marker() if line.get_marker() != "None" else ""
-
-            self._cartouche_grid[line_index].append(tk.Label(self._cartouche_frame, text=f"{linestyle}{marker}", background=self.bg_color_graph, foreground=color, width=3, font=("Helvetica", 15, 'bold')))
-            self._cartouche_grid[line_index][-1].grid(row= line_index + 1, column=0, sticky="w", padx=(5,0), pady=0)
-            
-        else : 
-            self._cartouche_grid[line_index].append(None)
-
-        if not(label_to_display is None):
-            # Add the values of the metadata in the cartouche
-            column_index = 1       
-            for key, value in label_to_display.items():
-                self._cartouche_grid[line_index].append(ttk.Label(self._cartouche_frame, text=str(value), style="Cartouche.TLabel"))
-                self._cartouche_grid[line_index][-1].grid(row=line_index + 1, column=column_index, sticky="w", padx=5, pady=5)
-                column_index += 1   
-
-    def get_string_legende(self, label_dict, shown_keys = False):
-        """Build the legend string from a metadata dictionary based on selected display keys."""
-        
-        string_legende = []
-
-        for key in self.legend_to_show :
-            if key in label_dict :
-                value = label_dict[key]
-
-                if shown_keys:
-                    string_legende.append(f"{key}: {value}")
-                else:
-                    string_legende.append(f"{value}")
-
-        return ", ".join(string_legende)
-
-
-    def _update_legende(self):
-        """Refresh legend labels and redraw the legend when settings change."""
-
-        for index, line in enumerate(self._lines):
-            label_dict = self._line_labels[index]
-            line.set_label(self.get_string_legende(label_dict, shown_keys=self.Is_title_display))  # Update line label based on legend entry values and whether to show key titles
-
-        # Update legend to reflect changes if lines are in the canvas
-        if self.Is_legend_display and len(self._lines) > 0:
-            if len(self.legend_to_show) > 0:
-                self.axes.legend(draggable=True)  
-            else :
-                # If no keys are selected to show in the legend, remove the legend from the axes
-                try : 
-                    legend = self.axes.get_legend()
-                    if legend:
-                        legend.remove()  # Hide legend if no keys are selected to show
-                except Exception:
-                    pass
-                
-        # If legend display is turned off, remove the legend from the axes if it exists
-        elif not self.Is_legend_display and len(self._lines) > 0: 
-            legend = self.axes.get_legend()
-            if legend:
-                legend.remove()  # Hide legend
-
-        self._canvas.draw()
-
     def _update_axis(self, axis_to_update, parameters = {}, axe = "X"):
         """Apply saved axis settings such as tick font, limits, and scale type."""
         
@@ -389,164 +297,17 @@ class TkPlotCanvas(ttk.Frame):
 
         parameters = self.get_current_parameters()
         try : 
-            with open(path_to_save, 'w') as f:
-                json.dump(parameters, f, indent=4)
+            write_parameters(path_to_save, parameters)
         except Exception as e:
             tk.messagebox.showerror("Error", f"An error occurred while saving the parameters:\n{e}")
 
     def get_current_parameters(self):
-        """
-        Get the current parameters of the plot to be able to save them in a json file and reload them later to restore the view.
-        """
-        
-        parameters = {
-
-            "background_color": self.bg_color_graph,
-            "window_size": (self.master.winfo_width(), self.master.winfo_height()),
-            "window_position": (self.master.winfo_x(), self.master.winfo_y()),
-
-
-            "X_axis": {
-                "lim": self.axes.get_xlim(),
-                "scale": self.axes.get_xscale(),
-                "autoscale": self.axes.get_autoscalex_on(),  # Assuming you want to save the autoscale state for x-axis
-                "inversion_axis" : bool(self.axes.xaxis_inverted()),
-                "ticks": {
-                    "name" : self.axes.xaxis.get_ticklabels()[0].get_fontname() if len(self.axes.xaxis.get_ticklabels()) > 0 else None,
-                    "size": self.axes.xaxis.get_ticklabels()[0].get_fontsize() if len(self.axes.xaxis.get_ticklabels()) > 0 else None,
-                    "style": self.axes.xaxis.get_ticklabels()[0].get_fontstyle() if len(self.axes.xaxis.get_ticklabels()) > 0 else None,
-                    "weight": self.axes.xaxis.get_ticklabels()[0].get_fontweight() if len(self.axes.xaxis.get_ticklabels()) > 0 else None,
-                    "color": self.axes.xaxis.get_ticklabels()[0].get_color() if len(self.axes.xaxis.get_ticklabels()) > 0 else None
-                }
-            },
-            "Y_axis": {
-                "lim": self.axes.get_ylim(),
-                "scale": self.axes.get_yscale(),
-                "autoscale": self.axes.get_autoscaley_on(),  # Assuming you want to save the autoscale state for x-axis
-                "inversion_axis" : bool(self.axes.yaxis_inverted()),
-                "ticks": {
-                    "name" : self.axes.yaxis.get_ticklabels()[0].get_fontname() if len(self.axes.yaxis.get_ticklabels()) > 0 else None,
-                    "size": self.axes.yaxis.get_ticklabels()[0].get_fontsize() if len(self.axes.yaxis.get_ticklabels()) > 0 else None,
-                    "style": self.axes.yaxis.get_ticklabels()[0].get_fontstyle() if len(self.axes.yaxis.get_ticklabels()) > 0 else None,
-                    "weight": self.axes.yaxis.get_ticklabels()[0].get_fontweight() if len(self.axes.yaxis.get_ticklabels()) > 0 else None,
-                    "color": self.axes.yaxis.get_ticklabels()[0].get_color() if len(self.axes.yaxis.get_ticklabels()) > 0 else None
-                    },
-            },
-            "title": {
-                "fontname" : self.axes.title.get_fontproperties().get_name(), 
-                "fontsize": self.axes.title.get_fontsize(),
-                "fontstyle": self.axes.title.get_fontproperties().get_style(),
-                "fontweight": self.axes.title.get_fontproperties().get_weight(),
-                "color": self.axes.title.get_color()
-            },
-            "xlabel": {
-                "fontname" : self.axes.xaxis.label.get_fontproperties().get_name(), 
-                "fontsize": self.axes.xaxis.label.get_fontsize(),
-                "fontstyle": self.axes.xaxis.label.get_fontproperties().get_style(),
-                "fontweight": self.axes.xaxis.label.get_fontproperties().get_weight(),
-                "color": self.axes.xaxis.label.get_color()
-            },
-            "ylabel": {
-                "fontname" : self.axes.yaxis.label.get_fontproperties().get_name(), 
-                "fontsize": self.axes.yaxis.label.get_fontsize(),
-                "fontstyle": self.axes.yaxis.label.get_fontproperties().get_style(),
-                "fontweight": self.axes.yaxis.label.get_fontproperties().get_weight(),
-                "color": self.axes.yaxis.label.get_color()
-            },
-            "plot_type": getattr(self, "type_plot", "2D"),
-            "curves": {
-                str(index): (
-                    {
-                        "type": "contour",
-                        "cmap": line.get_cmap().name if hasattr(line, "get_cmap") else None,
-                        "clim": tuple(line.get_clim()) if hasattr(line, "get_clim") else None,
-                    }
-                    if hasattr(line, "get_cmap")
-                    else {
-                        "type": "line",
-                        "color": line.get_color(),
-                        "linewidth": line.get_linewidth(),
-                        "linestyle": line.get_linestyle(),
-                        "marker": line.get_marker(),
-                        "markersize": line.get_markersize(),
-                    }
-                )
-                for index, line in enumerate(self._lines)
-            },
-            "cartouche": {
-                "cartouche_title_grid": [label.cget("text") for label in self._cartouche_title_grid],
-                "cartouche_font_title": self.style.configure('Cartouche_titre.TLabel'),
-                "cartouche_font_line": self.style.configure('Cartouche.TLabel'),
-                "Is_cartouche_display": self.Is_cartouche_display,
-            },
-            "legend": {
-                "displayed_keys": [ key for key in self.legend_to_show if key != '' ] if len(self.legend_to_show) > 0 else [],
-                "Is_legend_display" : self.Is_legend_display,
-                "Is_title_display": self.Is_title_display ,
-
-            },
-            "xarray_data" : {
-                "x" : self.xarray_data["x"],
-                "y" : self.xarray_data["y"],
-                "z" : self.xarray_data["z"] if "z" in self.xarray_data else None,
-            },
-        }
-
-        # Add 3D plot parameters if applicable
-        parameters = self.get_3D_parameters(parameters)
-
-        return parameters
+        """Return the current view settings in the persisted JSON format."""
+        return capture_current_parameters(self)
 
     def get_3D_parameters(self, parameters):
-        """
-        Get the parameters specific to 3D plots, such as colorbar properties, colormap, and color limits, and add them to the provided parameters dictionary.
-        Args:
-            parameters: A dictionary to which the 3D plot parameters will be added.
-        Returns:
-            The updated parameters dictionary with 3D plot parameters included.
-        """
-        # Add 3D plot parameters if applicable
-        if getattr(self, "type_plot", "") == "3D" and len(self._lines) > 0:
-
-            # Get the levels type 
-                # Get the type of class (Auto / manuel / ) :
-            #type_level = 
-
-            # Retrieve the 3D parameters of the chart : 
-            parameters["xarray_3D"] = {
-                "has_colorbar": self._colorbar is not None,
-                "colorbar_orientation": self._colorbar.orientation if self._colorbar is not None and hasattr(self._colorbar, "orientation") else None,
-                "cmap": self._lines[0].get_cmap().name if hasattr(self._lines[0], "get_cmap") else None,
-                "clim": tuple(self._lines[0].get_clim()) if hasattr(self._lines[0], "get_clim") else None,
-                "alpha": self._lines[0].get_alpha() if hasattr(self._lines[0], "get_alpha") else None,
-                "levels": self.get_current_levels(index = 0) if hasattr(self._lines[0], "levels") else None,
-                "affichage_map": self.plot_3D_map,
-            }
-
-            if self._colorbar is not None and hasattr(self._colorbar, "ax"):
-                if self._colorbar.orientation == "vertical" :
-                    parameters["xarray_3D"]["colorbar_font"] = {
-                        "fontname": self._colorbar.ax.yaxis.label.get_fontproperties().get_name() ,
-                        "fontsize": self._colorbar.ax.yaxis.label.get_fontsize(),
-                        "fontstyle": self._colorbar.ax.yaxis.label.get_fontproperties().get_style(),
-                        "fontweight": self._colorbar.ax.yaxis.label.get_fontproperties().get_weight(),
-                    }
-                    parameters["xarray_3D"]["colorlabel_colorbar"] = self._colorbar.ax.yaxis.label.get_color() if self._colorbar.ax.yaxis.label.get_color() is not None else "black"
-
-                elif self._colorbar.orientation == "horizontal" :
-                    parameters["xarray_3D"]["colorbar_font"] = {
-                        "fontname": self._colorbar.ax.xaxis.label.get_fontproperties().get_name() ,
-                        "fontsize": self._colorbar.ax.xaxis.label.get_fontsize(),
-                        "fontstyle": self._colorbar.ax.xaxis.label.get_fontproperties().get_style(),
-                        "fontweight": self._colorbar.ax.xaxis.label.get_fontproperties().get_weight(),
-                    }
-                    parameters["xarray_3D"]["colorlabel_colorbar"] = self._colorbar.ax.xaxis.label.get_color() if self._colorbar.ax.xaxis.label.get_color() is not None else "black"
-
-        # Ensure that the "xarray_3D" key exists in the parameters dictionary, even if it's empty, to maintain consistency when saving/loading views.
-        if not "xarray_3D" in parameters:
-            parameters["xarray_3D"] = {}
-
-        return parameters
+        """Add 3D view settings to a parameter dictionary."""
+        return capture_3D_parameters(self, parameters)
 
 
     def load_parameters(self, *args, path_to_load=None, parameters_to_load = None, reload_plot = False):
@@ -570,18 +331,14 @@ class TkPlotCanvas(ttk.Frame):
                 if not path_to_load:
                     return  # User cancelled the save dialog
             try:
-                with open(path_to_load, 'r') as f:
-                    parameters = json.load(f)
+                parameters = read_parameters(path_to_load)
 
-            except Exception as e:
+            except Exception:
                 parameters = {}
 
         # If the parameters are loaded from a file, update the xarray_data attributes accordingly. This ensures that the xarray data settings are restored when loading a saved view.
         if parameters_to_load is None  :
-            if "xarray_data" in parameters: 
-                self.xarray_data["x"] = parameters["xarray_data"].get("x", "")
-                self.xarray_data["y"] = parameters["xarray_data"].get("y", "")
-                self.xarray_data["z"] = parameters["xarray_data"].get("z", "")
+            self.update_variables_from_parameters(parameters)
 
         if reload_plot :
             self.update_plot()  # Update the plot to reflect any changes in the xarray data settings         
@@ -691,98 +448,8 @@ class TkPlotCanvas(ttk.Frame):
      
             self._update_legende()
 
-        if "xarray_3D" in parameters and parameters.get("plot_type","2D") == "3D":
-            xarray_3D_params = parameters["xarray_3D"]
-            if len(self._lines) > 0:
-                # Colorbar parameters to load, if has_colorbar is in xarray_3D_params
-                if xarray_3D_params.get("has_colorbar", False):
-                    if self._colorbar is None:
-                        try:
-                            self._colorbar = self.figure.colorbar(self._lines[0], ax=self.axes)
-                        except Exception:
-                            self._colorbar = None
-
-                    if self._colorbar is not None:
-                        
-                        orientation = xarray_3D_params.get("colorbar_orientation")
-                        if self._colorbar.orientation == "vertical":
-                            colorbar_label = self._colorbar.ax.get_ylabel() if self._colorbar.ax.get_ylabel() is not None else ""
-                            colorbar_axis = self._colorbar.ax.yaxis  
-                            if orientation == "horizontal" :
-                                # Change the orientation of the colorbar
-                                self._colorbar = self.change_orientation_colorbar(colorbar_axis, orientation)
-                        
-                        else:
-                            colorbar_label = self._colorbar.ax.get_xlabel() if self._colorbar.ax.get_xlabel() is not None else ""
-                            colorbar_axis = self._colorbar.ax.xaxis 
-                            if orientation == "horizontal" :
-                                # Change the orientation of the colorbar
-                                self._colorbar = self.change_orientation_colorbar(colorbar_axis, orientation)
-                        
-                        
-                        if colorbar_label :
-                            self._colorbar.set_label(colorbar_label)
-
-                        font_colorbar =  xarray_3D_params.get("colorbar_font", False)
-                       
-                        if colorbar_label and font_colorbar:
-                            colorlabel_colorbar =  xarray_3D_params.get("colorlabel_colorbar", False)
-                            self.apply_font_to_the_colorbar(colorbar_axis, font_colorbar, colorlabel_colorbar )
-            
-                else:
-                    if self._colorbar is not None:
-                        try:
-                            self._colorbar.remove()
-                        except Exception:
-                            pass
-                        self._colorbar = None
-                
-                cmap_name = xarray_3D_params.get("cmap")
-                if cmap_name and hasattr(self._lines[0], "set_cmap"):
-                    try:
-                        self._lines[0].set_cmap(matplotlib.cm.get_cmap(cmap_name))
-                    except Exception:
-                        pass
-
-                clim = xarray_3D_params.get("clim")
-                if clim and hasattr(self._lines[0], "set_clim"):
-                    
-                    self._lines[0].set_clim(clim)
-                    
-
-                alpha = xarray_3D_params.get("alpha")
-                if alpha and hasattr(self._lines[0], "set_alpha"):
-                    
-                    self._lines[0].set_alpha(alpha)
-
-                levels = xarray_3D_params.get("levels", None)
-
-                if levels is not None :
-                    if levels.keys() == {"Auto"}:
-                        # Set the plot_3D_classe to "Auto" to indicate that the contour levels are automatically generated based on the data range.
-                        self.plot_3D_classe= list(levels.keys())[0] 
-
-                        vmax = self._lines[0].get_array().max() if hasattr(self._lines[0], "get_array") else None
-                        vmin = self._lines[0].get_array().min() if hasattr(self._lines[0], "get_array") else None
-                        if vmax is not None and vmin is not None:
-                            # If the levels are set to "Auto", we can automatically generate contour levels based on the data range.
-                            num_levels = levels["Auto"]
-                            auto_levels = linspace(vmin, vmax, num_levels)
-                            self._replace_contour_levels(auto_levels, index=0)  # Replace contour levels for the first line (index 0)
-                        
-                    elif levels.keys() == {"Manuel"}:
-                        # Set the plot_3D_classe to "Manuel" to indicate that the contour levels are manually specified by the user.
-                        self.plot_3D_classe= list(levels.keys())[0] 
-                                  
-                        # If the levels are set to "Manuel", we can replace them with the provided manual levels.
-                        self._replace_contour_levels(levels["Manuel"], index=0)  # Replace contour levels for the first line (index 0)
-
-                    else:
-                        # If the levels are in an unexpected format, we can log a warning or handle it as needed.
-                        print("Warning: Unexpected levels format in loaded parameters. Levels not updated.")
-
-                
-                    
+        if "xarray_3D" in parameters and parameters.get("plot_type", "2D") == "3D":
+            self.apply_3d_parameters(parameters["xarray_3D"])
 
         self._canvas.draw()
 
@@ -834,405 +501,9 @@ class TkPlotCanvas(ttk.Frame):
 
         return safe_font
 
-    def plot(
-        self,
-        x: Iterable[float],
-        y: Iterable[float],
-        *,
-        title: Optional[str] = None,
-        xlabel: Optional[str] = None,
-        ylabel: Optional[str] = None,
-        grid: bool = True,
-        clear: bool = True,
-        legend: bool = False,
-        label: Optional[dict] = None,
-        **plot_kwargs,
-    ) -> None:
-        """Plot a curve in the embedded canvas.
-
-        Args:
-            x: X data values.
-            y: Y data values.
-            title: Optional plot title.
-            xlabel: Optional x-axis label.
-            ylabel: Optional y-axis label.
-            grid: Whether to show a grid.
-            clear: Whether to clear previous plot before plotting.
-            legend: Whether to show a legend (if labels are provided).
-            label: Optional dict of metadata to display in the legend (e.g., {'name': 'curve', 'value': 42}).
-            **plot_kwargs: Passed to `Axes.plot`.
-        """
-        if clear:
-            self.axes.cla()
-            self._lines.clear()
-            self._line_labels.clear()
-
-        self.type_plot = "2D"
-
-        # Construct label string from dict
-        label_str = None
-        if label:           
-            label_str = self.get_string_legende(label, shown_keys=self.Is_title_display)
-        
-        modif_plot_kwargs = copy.copy(plot_kwargs)   
-        if self.parametre_vue != {}: # Si un fichier json a été chargé : 
-            # Changement de self.parametre_vue, si l'utilisateuur spécifie des attriibues
-            n_lines = len(self._lines) 
-            for key in self.parametre_vue["curves"][str(n_lines)]:
-                if not key in plot_kwargs:
-                    modif_plot_kwargs[key] = self.parametre_vue["curves"][str(n_lines)][key]
-
-        if type(x[0]) == datetime64:
-            self.Is_Date_on_x_axis = True
-            self.axes.xaxis_date()  # Set x-axis to date format if x data is datetime
-
-        
-        line, = self.axes.plot(x, y, label=label_str, **modif_plot_kwargs)
-        self._lines.append(line)
-        self._line_labels.append(label)
-
-        # Cartouche: Update the cartouche with the metadata of the newly added line.
-        label_cartouche = dict()
-        for key in self.cartouch_to_show :
-            if label is not None and key in label:
-                label_cartouche[key] = label[key]
-
-        self.fill_cartouche_frame(label_to_display= label_cartouche, line_index=len(self._lines)-1, line_display=True)
-
-        if title is not None and "title" in self.parametre_vue :
-            self.axes.set_title(title, self.parametre_vue["title"])
-            self._title_var.set(title)
-        if xlabel is not None and "xlabel" in self.parametre_vue :
-            self.axes.set_xlabel(xlabel, self.parametre_vue["xlabel"])
-            self._xlabel_var.set(xlabel)
-        if ylabel is not None and "ylabel" in self.parametre_vue : 
-            self.axes.set_ylabel(ylabel, self.parametre_vue["ylabel"])
-            self._ylabel_var.set(ylabel)
-
-        self.axes.grid(grid)
-
-        if self.parametre_vue != {}: # Si un fichier json a été chargé : 
-            # Update X et Y axis from self.parameter_vue
-            self._update_axis(self.axes.xaxis, self.parametre_vue.get("X_axis"), axe= "X" )
-            self._update_axis(self.axes.yaxis, self.parametre_vue.get("Y_axis"), axe= "Y" )
-
-        if legend and label_str is not None:
-            if self.Is_legend_display:
-                self.axes.legend(draggable=True)  # Make the legend draggable
-
-        self._canvas.draw()
-
-
-    def plot_xarray(
-        self,
-        ds: xr.Dataset,
-        *,
-        title: Optional[str] = None,
-        grid: bool = True,
-        clear: bool = True,
-        legend: bool = False,
-        label: Optional[dict] = None,
-        replot: bool = False,
-        **plot_kwargs,  
-        )-> None:
-        """
-        Plot data from an xarray Dataset in the embedded canvas.
-
-        """
-
-        if clear:
-            self.axes.cla()
-            self._lines.clear()
-            self._line_labels.clear()
-
-        
-        # construction des variables associées au xarray : 
-        if not replot :
-            self.list_data_xarray.append(ds)
-
-        if len(ds.dims) == 1 : 
-            self.type_plot = "2D"
-            self.plot_xarray_2D(ds, title=title, grid=grid, clear=clear, legend=legend, label=label, replot=replot, **plot_kwargs)
-        
-        elif len(ds.dims) == 2 :
-            self.type_plot = "3D"
-            self.plot_xarray_3D(ds, title=title, grid=grid, clear=clear, legend=legend, label=label, replot=replot, **plot_kwargs)
-        else :
-            raise ValueError("The xarray dataset must have either 1 or 2 dimensions for plotting.")
-
-       
-
-
-
-
-    def plot_xarray_2D(
-        self,
-        ds: xr.Dataset,
-        *,
-        title: Optional[str] = None,
-        grid: bool = True,
-        clear: bool = True,
-        legend: bool = False,
-        label: Optional[dict] = None,
-        replot: bool = False,
-        **plot_kwargs,
-        ) -> None:
-        """Plot a curve in the embedded canvas if the xarray Dataset has 1 dimension.
-
-        Args:
-            ds: xarray Dataset containing the data to plot.
-            title: Optional plot title.
-            grid: Whether to show a grid.
-            clear: Whether to clear previous plot before plotting.
-            legend: Whether to show a legend (if labels are provided).
-            label: Optional dict of metadata to display in the legend (e.g., {'name': 'curve', 'value': 42}).
-            **plot_kwargs: Passed to `Axes.plot`.
-        """
-        # Construct label string from dict
-        label_str = None
-        if label:           
-            label_str = self.get_string_legende(label, shown_keys=self.Is_title_display)
-
-        modif_plot_kwargs = copy.copy(plot_kwargs)   
-        if self.parametre_vue != {}: # Si un fichier json a été chargé : 
-            # Changement de self.parametre_vue, si l'utilisateuur spécifie des attriibues
-            n_lines = len(self._lines) 
-            if str(n_lines) in self.parametre_vue["curves"] :
-                for key in self.parametre_vue["curves"][str(n_lines)]:
-                    if not key in plot_kwargs:
-                        modif_plot_kwargs[key] = self.parametre_vue["curves"][str(n_lines)][key]
-
-        # remove type option from modif_plot_kwargs if it exists, since it's not needed for 2D plotting
-        if "type" in modif_plot_kwargs:
-            del modif_plot_kwargs["type"]
-
-        list_dim_var = list(ds.dims) + list(ds.data_vars)
-        dimension = self.xarray_data["x"] if self.xarray_data["x"] in list_dim_var else list(ds.dims)[0]
-        variable = self.xarray_data["y"] if self.xarray_data["y"] in list_dim_var else list(ds.data_vars)[0]
-
-        x = ds[dimension].values
-        y = ds[variable].values
-
-        if type(x[0]) == datetime64:
-            self.Is_Date_on_x_axis = True
-            self.axes.xaxis_date()  # Set x-axis to date format if x data is datetime
-
-        # On sauvegarde pour le prochain xarray : 
-        self.xarray_data["x"] = dimension
-        self.xarray_data["y"] = variable
-    
-        line, = self.axes.plot(x, y, label=label_str, **modif_plot_kwargs)
-        self._lines.append(line)
-        self._line_labels.append(label)
-
-        # Cartouche: Update the cartouche with the metadata of the newly added line.
-        if not replot :
-            label_cartouche = dict()
-            for key in self.cartouch_to_show :
-                if label is not None and key in label:
-                    label_cartouche[key] = label[key]
-            self.fill_cartouche_frame(label_to_display=label_cartouche, line_index=len(self._lines)-1, line_display=True)
-        else :
-            self.update_cartouche_frame()
-
-        self.axes.grid(grid)
-
-        # Apply loaded view parameters to the new plot if a view has been loaded, to ensure consistency with the loaded view settings for axes, title, and labels.
-        if self.parametre_vue != {}: # if a json file has been loaded :
-            # Update X et Y axis from self.parameter_vue
-            self._update_axis(self.axes.xaxis, self.parametre_vue.get("X_axis"), axe= "X" )
-            self._update_axis(self.axes.yaxis, self.parametre_vue.get("Y_axis"), axe= "Y" )
-
-            if title is not None and "title" in self.parametre_vue :
-                self.axes.set_title(title, self.parametre_vue["title"])
-                self._title_var.set(title)
-
-            if dimension is not None and "xlabel" in self.parametre_vue :
-                # Get unit label from xarray variable attributes if it exists
-                if "units" in ds[dimension].attrs:
-                    dimension_label = f"{dimension.capitalize()} ({ds[dimension].attrs['units']})"
-                else:
-                    dimension_label = dimension.capitalize()
-
-                self.axes.set_xlabel(dimension_label, self.parametre_vue["xlabel"])
-                self._xlabel_var.set(dimension_label)
-
-            if variable is not None and "ylabel" in self.parametre_vue : 
-                # Get unit label from xarray variable attributes if it exists
-                if "units" in ds[variable].attrs:
-                    variable_label = f"{variable.capitalize()} ({ds[variable].attrs['units']})"
-                else:
-                    variable_label = variable.capitalize()
-
-                self.axes.set_ylabel(variable_label, self.parametre_vue["ylabel"])
-                self._ylabel_var.set(variable_label)
-
-        if legend and label_str is not None:
-            if self.Is_legend_display:
-                self.axes.legend(draggable=True)  # Make the legend draggable
-
-        self._canvas.draw()
-    
-    def plot_xarray_3D(
-        self,
-        ds: xr.Dataset,
-        *,
-        title: Optional[str] = None,
-        grid: bool = True,
-        clear: bool = True,
-        legend: bool = False,
-        label: Optional[dict] = None,
-        replot: bool = False,
-        is_map: bool = None,
-        **plot_kwargs,
-        ) -> None:
-        """Plot a curve in the embedded canvas if the xarray Dataset has 1 dimension."""
-        if clear:
-            self.axes.cla()
-            self._lines.clear()
-            self._line_labels.clear()
-            if self._colorbar is not None:
-                try:
-                    self._colorbar.remove()
-                except Exception:
-                    pass
-                self._colorbar = None
-
-        # List dimension and variable of the xarray data
-        list_dim_var = list(ds.dims) + list(ds.data_vars)
-        dimension_abscisse = self.xarray_data["x"] if self.xarray_data["x"] in list_dim_var else list(ds.dims)[0]
-        dimension_ordonnee = self.xarray_data["y"] if self.xarray_data["y"] in list_dim_var else list(ds.dims)[1]
-        variable = self.xarray_data["z"] if self.xarray_data["z"] in list_dim_var else list(ds.data_vars)[0]
-
-        # On sauvegarde pour le prochain xarray : 
-        self.xarray_data["x"] = dimension_abscisse
-        self.xarray_data["y"] = dimension_ordonnee
-        self.xarray_data["z"] = variable
-
-     
-        # Use the existing plot_3D_map attribute if is_map is not provided
-        if is_map is None:
-            is_map = self.plot_3D_map 
-        
-        list_dimension_lower = [dimension_abscisse.lower(), dimension_ordonnee.lower()]
-
-        # Check if the dimensions are longitude and latitude to determine if it's a map. If both "longitude" and "latitude" are present in the dimension names, we can assume it's a map and set is_map to True. Otherwise, set is_map to False.
-        if "longitude" in list_dimension_lower and "latitude" in list_dimension_lower:
-            is_map = self.plot_3D_map  # If the dimensions are longitude and latitude, we can assume it's a map and set is_map to True
-        else :
-            is_map = False  # If the dimensions are not longitude and latitude, we can assume it's not a map and set is_map to False
-
-        # If is_map is True and Cartopy is installed, we will create a new axes with a PlateCarree projection and add coastlines and borders for geographical context. Otherwise, we will keep the existing axes for non-map plots.
-        if is_map and CARTOPY_INSTALLED : 
-            spec = self.axes.get_subplotspec()   # mémorise l'emplacement
-            self.axes.remove()                   # supprime l'ancien axe
-            self.axes = self.figure.add_subplot(spec, projection=ccrs.PlateCarree())
-            self.axes.add_feature(cfeature.COASTLINE, linewidth=0.5)
-            self.axes.add_feature(cfeature.BORDERS, linewidth=0.3)
-            self.axes.xaxis.set_visible(True)
-            self.axes.yaxis.set_visible(True)
-            #self.axes.tick_params(axis="x", which="both", bottom=False, top=False, labelbottom=False)
-            #self.axes.tick_params(axis="y", which="both", left=False, right=False, labelleft=False)
-            self.plot_3D_map = True
-        else :
-            self.plot_3D_map = False
-
-        x = ds[dimension_abscisse].values
-        y = ds[dimension_ordonnee].values
-        z = ds[variable].values
-
-        # Check if the dimensions of x, y, and z are consistent for contourf plotting
-        if (len(y) , len(x)) == z.shape:
-            pass  # Dimensions are consistent, no action needed
-        elif (len(x) , len(y)) == z.shape:
-            z = z.T  # Transpose z to match the dimensions of x and y
-        else:
-            tk.messagebox.showerror("Error", f"Dimensions of x, y, and z are inconsistent for contourf plotting. x: {len(x)}, y: {len(y)}, z: {z.shape}", parent=self)
-            return # Exit the function if dimensions are inconsistent
-        
-        # Set x-axis to date format if x data is datetime
-        if type(x[0]) == datetime64:
-            self.Is_Date_on_x_axis = True
-            self.axes.xaxis_date()  
-        # Set y-axis to date format if y data is datetime
-        if type(y[0]) == datetime64:
-            self.Is_Date_on_y_axis = True
-            self.axes.yaxis_date()
-            
-        # Create a filled contour plot using the xarray data
-        mapping = self.axes.contourf(x, y, z, antialiased=False)
-
-        # Add a colorbar to the plot, removing any existing colorbar first to avoid overlap
-        if self._colorbar is not None:
-            try:
-                self._colorbar.remove()
-            except Exception:
-                pass
-            self._colorbar = None
-        self._colorbar = self.figure.colorbar(mapping, ax=self.axes)
-        self._colorbar.set_label(variable.capitalize() + (f" ({ds[variable].attrs['units']})" if "units" in ds[variable].attrs else ""))
-
-        self._lines.append(mapping)
-        self._line_labels.append(label)      
-
-        # Cartouche: Update the cartouche with the metadata of the newly added line.
-        if not replot :
-            label_cartouche = dict()
-            for key in self.cartouch_to_show :
-                if label is not None and key in label:
-                    label_cartouche[key] = label[key]
-            self.fill_cartouche_frame(label_to_display=label_cartouche, line_index=len(self._lines)-1, line_display=True)
-        else :
-            self.update_cartouche_frame()
-
-        # Apply labels on the chart
-        if title is not None:
-            self.axes.set_title(title)
-            self._title_var.set(title)
-
-        if dimension_abscisse is not None:
-            # Get unit label from xarray variable attributes if it exists
-            if "units" in ds[dimension_abscisse].attrs:
-                dimension_label = f"{dimension_abscisse.capitalize()}"
-            else:
-                dimension_label = dimension_abscisse.capitalize()
-
-            self.axes.set_xlabel(dimension_label)
-            self._xlabel_var.set(dimension_label)
-
-        if dimension_ordonnee is not None:
-            # Get unit label from xarray variable attributes if it exists
-            if "units" in ds[dimension_ordonnee].attrs:
-                variable_label = f"{dimension_ordonnee.capitalize()}"
-            else:
-                variable_label = dimension_ordonnee.capitalize()
-
-            self.axes.set_ylabel(variable_label)
-            self._ylabel_var.set(variable_label)
-
-        # Apply loaded view parameters to the new plot if a view has been loaded, to ensure consistency with the loaded view settings for axes, title, and labels.
-        if self.parametre_vue != {} and self.parametre_vue is not None : # if a json file has been loaded :
-            self.load_parameters(parameters_to_load=self.parametre_vue)
-
-        self.axes.xaxis.set_visible(True)
-        self.axes.yaxis.set_visible(True)
-
-        self._canvas.draw()
-
     def update_variables_from_parameters(self, parameters):
-        """Update the globals variables based on the loaded parameters."""
-        if "xarray_data" in parameters: 
-            self.xarray_data["x"] = parameters["xarray_data"].get("x", "")
-            self.xarray_data["y"] = parameters["xarray_data"].get("y", "")
-            self.xarray_data["z"] = parameters["xarray_data"].get("z", "")
-
-        if "plot_type" in parameters:
-            self.type_plot = parameters["plot_type"]
-
-        if "xarray_3D" in parameters : 
-            self.plot_3D_map = parameters["xarray_3D"].get("affichage_map", False)
-
-
+        """Restore plot variables that affect subsequent xarray plots."""
+        restore_plot_variables(self, parameters)
 
     def update_plot(self, **kwargs):
         """Redraw the canvas to reflect any updates to the plot."""
@@ -1271,135 +542,6 @@ class TkPlotCanvas(ttk.Frame):
         self.axes.cla()
         self._lines.clear()
         self._canvas.draw()
-
-    def update_cartouche_frame(self):
-        """Update the cartouche frame to reflect any changes in the metadata of the plotted lines."""
-        for index, line in enumerate(self._lines):
-            label_dict = self._line_labels[index]
-            self.fill_cartouche_frame(label_to_display=label_dict, line_index=index, line_display=True)
-
-        pass
-
-    def change_orientation_colorbar(self, colorbar, orientation, index = 0) :
-        """ Remove the previous colorbar and apply the new one."""
-          
-        current_font = colorbar.label.get_fontproperties()
-        current_label = colorbar.ax.get_ylabel() if orientation == "vertical" else colorbar.ax.get_xlabel()
-
-        # Remove the existing colorbar and create a new one with the new orientation
-        try : 
-            colorbar.remove()
-        except :
-            return
-
-        colorbar = self.master.master.figure.colorbar(self._lines[index], ax=self.axes, orientation=orientation)
-        if current_label is not None :
-            colorbar.set_label(current_label, fontproperties=current_font)
-
-        return colorbar
-    
-    def apply_font_to_the_colorbar(self, colorbar_axis, current_font, color):
-        """ Apply the new font to the colorbar."""
-        if colorbar_axis is not None:
-            try : 
-                colorbar_axis.label.set_fontname(current_font["fontname"])
-            except:
-                pass
-            try : 
-                colorbar_axis.label.set_fontsize(current_font["fontsize"])
-            except:
-                pass
-            try : 
-                colorbar_axis.label.set_fontstyle(current_font["fontstyle"])
-            except:
-                pass
-            try : 
-                colorbar_axis.label.set_fontweight(current_font["fontweight"])
-            except:
-                pass
-
-            try : 
-                if color :
-                    colorbar_axis.label.set_color(color)
-            except:
-                pass
-
-        return colorbar_axis
-
-    def get_current_levels(self, index = 0):
-        """Get the current contour levels of the contour set."""
-        if index < len(self._lines):
-            line = self._lines[index]
-            if hasattr(line, "levels"):
-                levels = line.levels
-
-        if levels is not None:
-            if  self.plot_3D_classe == "Auto" :
-                return {"Auto": len(levels)}
-            else :
-                return {"Manuel": levels.tolist()}
-        else:
-            return None
-        
-
-    def _replace_contour_levels(self, classes, index = 0):
-        """Recreate the contour set because Matplotlib levels are not mutable."""
-        
-        classes.sort()
-
-        dataset = self.list_data_xarray[index]
-
-        line = self._lines[index]
-
-        x_name = self.xarray_data["x"]
-        y_name = self.xarray_data["y"]
-        z_name = self.xarray_data["z"]
-
-        x = dataset[x_name].values
-        y = dataset[y_name].values
-        z = dataset[z_name].values
-        if (len(x), len(y)) == z.shape:
-            z = z.T
-
-        old_colorbar = getattr(self, "_colorbar", None)
-        colorbar_label = ""
-        colorbar_orientation = "vertical"
-        if old_colorbar is not None:
-            colorbar_orientation = old_colorbar.orientation
-            colorbar_label = (old_colorbar.ax.get_ylabel()
-                              if colorbar_orientation == "vertical"
-                              else old_colorbar.ax.get_xlabel())
-
-        new_line = self.axes.contourf(
-            x,
-            y,
-            z,
-            levels=classes,
-            cmap= line.get_cmap(),
-            alpha= line.get_alpha(),
-            antialiased=False,
-        )
-        new_line.set_label(line.get_label())
-        is_colorbar_shown = False
-        if old_colorbar is not None:
-            
-            try :
-                old_colorbar.remove()
-                is_colorbar_shown = True
-            except :
-                pass
-        line.remove()
-        self._lines[index] = new_line
-
-        if is_colorbar_shown :
-            self._colorbar = self.figure.colorbar(
-                new_line,
-                ax=self.axes,
-                orientation=colorbar_orientation,
-            )
-            self._colorbar.set_label(colorbar_label)
-
-        
 
 if __name__ == "__main__":
 

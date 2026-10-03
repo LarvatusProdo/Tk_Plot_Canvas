@@ -2,9 +2,9 @@
 
 ## Description
 
-`class_TkPlotCanvas.py` est un module Python qui fournit une classe `TkPlotCanvas` pour créer des interfaces graphiques de tracé interactives en utilisant Tkinter et Matplotlib. Ce module permet d'intégrer des figures Matplotlib dans des applications Tkinter avec des fonctionnalités avancées de personnalisation, telles que la modification des axes, des courbes, des légendes et d'un cartouche de métadonnées.
+`class_TkPlotCanvas.py` fournit un point d'entrée compatible vers la classe `TkPlotCanvas`, implémentée dans le sous-dossier `plot/`. Le projet permet d'intégrer des figures Matplotlib dans des applications Tkinter avec des fonctionnalités avancées de personnalisation, telles que la modification des axes, des courbes, des légendes et d'un cartouche de métadonnées.
 
-Le script inclut également des classes auxiliaires comme `Window_font_parameter` pour la personnalisation des polices et `Menu_graphique` pour un menu de modification des paramètres du graphique.
+Les panneaux de réglages et leurs dialogues sont regroupés dans `menu/`. Les modules de tracé et le canevas sont regroupés dans `plot/`.
 
 ## Fonctionnalités
 
@@ -34,10 +34,10 @@ pip install matplotlib xarray numpy
 
 ## Utilisation
 
-Importez la classe `TkPlotCanvas` et créez une instance dans votre application Tkinter :
+Importez la classe `TkPlotCanvas` depuis son nouveau module et créez une instance dans votre application Tkinter :
 
 ```python
-from class_TkPlotCanvas import TkPlotCanvas
+from plot.class_TkPlotCanvas import TkPlotCanvas
 import tkinter as tk
 
 root = tk.Tk()
@@ -66,7 +66,10 @@ plot_canvas = TkPlotCanvas(root, load_view='vue.json')
 
 ## Structure du projet
 
-- `class_TkPlotCanvas.py` : Script principal contenant les classes `TkPlotCanvas`, `Menu_graphique` et `Window_font_parameter`.
+- `plot/` : Implémentation du canevas et modules de tracé standard, xarray, colorbar, métadonnées et paramètres de vue.
+- `menu/` : Fenêtre de réglages, panneaux de configuration et dialogues associés.
+- `class_TkPlotCanvas.py` : Façade conservant l'import historique `from class_TkPlotCanvas import TkPlotCanvas`.
+- `class_menu_graphique.py` : Façade conservant les imports historiques du menu et des dialogues 3D.
 - `vertical_frame.py` : Module auxiliaire pour des frames défilantes verticales.
 - `vue.json` : Exemple de fichier de vue sauvegardée.
 - `vue_xarray.json` : Exemple de vue pour données xarray.
