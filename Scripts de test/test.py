@@ -1,6 +1,12 @@
 from class_TkPlotCanvas import TkPlotCanvas
 import tkinter as tk
 
+"""
+This script is used to test the plotting of numpy arrays using the TkPlotCanvas class.
+
+command : python -m "Scripts de test.test"
+"""
+
 root = tk.Tk()
 plot_canvas = TkPlotCanvas(root)
 plot_canvas.pack(fill=tk.BOTH, expand=True)
