@@ -1,6 +1,4 @@
 
-from cProfile import label
-from operator import index
 import tkinter as tk
 from tkinter import filedialog
 from tkinter import ttk
@@ -15,8 +13,6 @@ matplotlib.use("TkAgg")
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 import matplotlib.font_manager as fm
-from matplotlib.artist import Artist 
-from matplotlib.pyplot import axes
 
 import copy
 import json
