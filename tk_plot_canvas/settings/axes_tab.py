@@ -5,6 +5,9 @@ from functools import partial
 from tkinter import messagebox, ttk
 from typing import Any, Callable, Optional
 
+import matplotlib.dates as mdates
+import numpy as np
+
 from ..config import (
     FONT_TARGET_TITLE,
     STYLE_BUTTON,
@@ -23,20 +26,25 @@ AXIS_TITLES = {"x": "Abscisse", "y": "Ordonnée"}
 LIMIT_KEYWORDS = {"x": ("left", "right"), "y": ("bottom", "top")}
 
 
-def parse_limit(variable: tk.StringVar) -> Optional[float]:
+def parse_limit(variable: tk.StringVar, is_date: bool = False) -> Optional[float]:
     """Read an axis limit typed by the user.
 
     Args:
         variable: Variable of the limit entry.
+        is_date: True when the axis shows dates ("YYYY-MM-DD" or "YYYY-MM-DD hh:mm:ss").
 
     Returns:
-        The limit, or None when the entry is empty.
+        The limit (matplotlib date number on a date axis), or None when the entry is empty.
 
     Raises:
-        ValueError: If the entry is not a number.
+        ValueError: If the entry is not a number (or not a valid date).
     """
-    text = variable.get()
-    return float(text) if text else None
+    text = variable.get().strip()
+    if not text:
+        return None
+    if is_date:
+        return float(mdates.date2num(np.datetime64(text.replace(" ", "T"))))
+    return float(text)
 
 
 def set_limits(
@@ -187,14 +195,22 @@ class AxesTab(SettingsTab):
         axes = self.canvas.axes
         x_controls, y_controls = self.axis_controls["x"], self.axis_controls["y"]
         try:
-            x_limits = (parse_limit(x_controls.min_var), parse_limit(x_controls.max_var))
-            y_limits = (parse_limit(y_controls.min_var), parse_limit(y_controls.max_var))
+            x_limits = (
+                parse_limit(x_controls.min_var, x_controls.is_date),
+                parse_limit(x_controls.max_var, x_controls.is_date),
+            )
+            y_limits = (
+                parse_limit(y_controls.min_var, y_controls.is_date),
+                parse_limit(y_controls.max_var, y_controls.is_date),
+            )
             set_limits(axes.set_xlim, "x", *x_limits)
             set_limits(axes.set_ylim, "y", *y_limits)
-            if not self.canvas.is_date_on_x_axis:
+            if not x_controls.is_date:
                 axes.set_xscale(x_controls.scale_var.get())
-            axes.set_yscale(y_controls.scale_var.get())
+            if not y_controls.is_date:
+                axes.set_yscale(y_controls.scale_var.get())
         except ValueError:
             messagebox.showerror(
-                "Invalid input", "Please enter valid numeric values for axis limits."
+                "Invalid input",
+                "Please enter valid axis limits (numbers, or YYYY-MM-DD [hh:mm:ss] on a date axis).",
             )

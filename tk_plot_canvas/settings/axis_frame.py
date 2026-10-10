@@ -6,6 +6,7 @@ from functools import partial
 from tkinter import ttk
 from typing import TYPE_CHECKING, Optional
 
+import matplotlib.dates as mdates
 import numpy as np
 from matplotlib.axes import Axes
 
@@ -26,6 +27,22 @@ if TYPE_CHECKING:
 PADDING = (5, 5)
 FRAME_PADDING = (10, 10)
 SEPARATOR_PADY = (10, 10)
+DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
+
+
+def format_limit(value: float, is_date: bool) -> str:
+    """Format an axis limit for its entry.
+
+    Args:
+        value: Limit in data coordinates (matplotlib date number on a date axis).
+        is_date: True when the axis shows dates.
+
+    Returns:
+        A "YYYY-MM-DD HH:MM:SS" text on a date axis, else the rounded number.
+    """
+    if is_date:
+        return mdates.num2date(value).strftime(DATE_FORMAT)
+    return str(np.round(value, AXIS_LIMIT_DECIMALS))
 
 
 @dataclass
@@ -39,25 +56,27 @@ class AxisControls:
     autoscale_var: tk.BooleanVar
     inverted_var: tk.BooleanVar
     variable_combobox: Optional[ttk.Combobox] = None
+    is_date: bool = False
 
     def show_limits(self, axes: Axes, axis_name: str) -> None:
-        """Display the current limits of an axis, rounded.
+        """Display the current limits of an axis (dates as text, numbers rounded).
 
         Args:
             axes: Matplotlib axes.
             axis_name: "x" or "y".
         """
         lower, upper = getattr(axes, f"get_{axis_name}lim")()
-        self.min_var.set(np.round(lower, AXIS_LIMIT_DECIMALS))
-        self.max_var.set(np.round(upper, AXIS_LIMIT_DECIMALS))
+        self.min_var.set(format_limit(lower, self.is_date))
+        self.max_var.set(format_limit(upper, self.is_date))
 
 
-def create_axis_controls(axes: Axes, axis_name: str) -> AxisControls:
+def create_axis_controls(axes: Axes, axis_name: str, is_date: bool = False) -> AxisControls:
     """Create the Tk variables of an axis from its current state.
 
     Args:
         axes: Matplotlib axes.
         axis_name: "x" or "y".
+        is_date: True when the axis shows dates.
 
     Returns:
         The axis controls (without the variable combobox).
@@ -65,11 +84,12 @@ def create_axis_controls(axes: Axes, axis_name: str) -> AxisControls:
     lower, upper = getattr(axes, f"get_{axis_name}lim")()
     return AxisControls(
         label_var=tk.StringVar(value=getattr(axes, f"get_{axis_name}label")()),
-        min_var=tk.StringVar(value=np.round(lower, AXIS_LIMIT_DECIMALS)),
-        max_var=tk.StringVar(value=np.round(upper, AXIS_LIMIT_DECIMALS)),
+        min_var=tk.StringVar(value=format_limit(lower, is_date)),
+        max_var=tk.StringVar(value=format_limit(upper, is_date)),
         scale_var=tk.StringVar(value=getattr(axes, f"get_{axis_name}scale")()),
         autoscale_var=tk.BooleanVar(value=getattr(axes, f"get_autoscale{axis_name}_on")()),
         inverted_var=tk.BooleanVar(value=bool(getattr(axes, f"{axis_name}axis_inverted")())),
+        is_date=is_date,
     )
 
 
@@ -94,7 +114,8 @@ class AxisFrame:
         """
         self._tab = tab
         self._axis_name = axis_name
-        self.controls = create_axis_controls(tab.canvas.axes, axis_name)
+        is_date = getattr(tab.canvas, f"is_date_on_{axis_name}_axis")
+        self.controls = create_axis_controls(tab.canvas.axes, axis_name, is_date)
         self._frame = ttk.LabelFrame(
             tab.frame,
             text=f"Axe {axis_name.upper()}",
@@ -157,8 +178,11 @@ class AxisFrame:
         """Create the minimum and maximum limit entries."""
         self._add_field_label("Valeur min:", 6)
         self._add_field_label("Valeur max:", 7)
+        entry_width = 20 if self.controls.is_date else 15
         for row, variable in ((6, self.controls.min_var), (7, self.controls.max_var)):
-            entry = ttk.Entry(self._frame, textvariable=variable, width=15, style=STYLE_ENTRY)
+            entry = ttk.Entry(
+                self._frame, textvariable=variable, width=entry_width, style=STYLE_ENTRY
+            )
             entry.grid(row=row, column=1, sticky="we")
             entry.bind("<KeyRelease>", lambda _event: self.controls.autoscale_var.set(False))
             entry.bind("<Return>", lambda _event: self._tab.apply_changes())
