@@ -230,7 +230,7 @@ def _apply_line_style(line: Any, curve: Parameters) -> None:
 
 
 def _apply_contour_style(contour: Any, curve: Parameters) -> None:
-    """Apply colormap and color limits to a contour set (errors ignored).
+    """Apply the colormap to a contour set (errors ignored).
 
     Args:
         contour: Matplotlib contour set.
@@ -240,11 +240,6 @@ def _apply_contour_style(contour: Any, curve: Parameters) -> None:
         try:
             contour.set_cmap(get_colormap(curve["cmap"]))
         except (KeyError, ValueError):
-            pass
-    if hasattr(contour, "set_clim") and curve.get("clim"):
-        try:
-            contour.set_clim(curve["clim"])
-        except (TypeError, ValueError):
             pass
 
 

@@ -15,6 +15,7 @@ from ..config import (
     COLORBAR_VERTICAL,
     CURVE_TYPE_CONTOUR,
     CURVE_TYPE_LINE,
+    KEY_VALUE_RANGE,
     KEY_XARRAY_3D,
     PLOT_TYPE_3D,
     STYLE_CARTOUCHE_CELL,
@@ -127,7 +128,6 @@ def _capture_curve(line: Any) -> dict[str, Any]:
         return {
             "type": CURVE_TYPE_CONTOUR,
             "cmap": line.get_cmap().name,
-            "clim": tuple(line.get_clim()) if hasattr(line, "get_clim") else None,
         }
     return {
         "type": CURVE_TYPE_LINE,
@@ -198,7 +198,7 @@ def _capture_surface(canvas: "TkPlotCanvas") -> dict[str, Any]:
         canvas: Canvas to inspect.
 
     Returns:
-        Colorbar presence/orientation, colormap, limits, alpha and levels.
+        Colorbar presence/orientation, colormap, alpha and levels.
     """
     surface = canvas.lines[0]
     colorbar = canvas.colorbar
@@ -206,9 +206,9 @@ def _capture_surface(canvas: "TkPlotCanvas") -> dict[str, Any]:
         "has_colorbar": colorbar is not None,
         "colorbar_orientation": getattr(colorbar, "orientation", None),
         "cmap": surface.get_cmap().name if hasattr(surface, "get_cmap") else None,
-        "clim": tuple(surface.get_clim()) if hasattr(surface, "get_clim") else None,
         "alpha": surface.get_alpha() if hasattr(surface, "get_alpha") else None,
         "levels": canvas.get_current_levels(index=0) if hasattr(surface, "levels") else None,
+        KEY_VALUE_RANGE: canvas.get_value_range_parameter(),
         "affichage_map": canvas.show_map,
     }
 

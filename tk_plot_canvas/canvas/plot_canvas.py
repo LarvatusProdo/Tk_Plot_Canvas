@@ -124,6 +124,7 @@ class TkPlotCanvas(
         self.is_date_on_y_axis = False
         self.plot_type = PLOT_TYPE_2D
         self.contour_class_mode = CLASS_MODE_AUTO
+        self.contour_value_range: Optional[tuple[float, float]] = None
         self.colorbar: Optional[Any] = None
         self.lines: list[Any] = []
         self.line_labels: list[Optional[dict]] = []

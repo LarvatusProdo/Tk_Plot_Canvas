@@ -119,6 +119,8 @@ CURVE_TYPE_CONTOUR = "contour"
 KEY_XARRAY_3D = "xarray_3D"
 KEY_LEVELS_AUTO = CLASS_MODE_AUTO
 KEY_LEVELS_MANUAL = CLASS_MODE_MANUAL
+KEY_VALUE_RANGE = "value_range"
+VALUE_RANGE_DEFAULT = "valeur par défaut"
 
 # --- Demo --------------------------------------------------------------------
 DEMO_WINDOW_TITLE = "Tkinter + Matplotlib Plot Demo"

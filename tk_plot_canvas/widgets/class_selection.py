@@ -11,6 +11,7 @@ from ..config import (
     CLASS_MODES,
     HOVER_BACKGROUND,
     STYLE_BUTTON,
+    STYLE_CHECKBUTTON,
     STYLE_COMBOBOX,
     STYLE_ENTRY,
     STYLE_HOVER_ENTRY,
@@ -81,6 +82,8 @@ class ClassSelectionFrame(ttk.Frame):
         v_max: Any = 1.0,
         v_min: Any = 0.0,
         nb_classes: int = 10,
+        default_range: Optional[tuple[float, float]] = None,
+        use_default_range: bool = False,
         **kwargs: Any,
     ) -> None:
         """Build the frame.
@@ -94,11 +97,16 @@ class ClassSelectionFrame(ttk.Frame):
             v_max: Initial maximum of the automatic classes.
             v_min: Initial minimum of the automatic classes.
             nb_classes: Initial number of automatic classes.
+            default_range: ``(minimum, maximum)`` of the variable; enables the
+                "Valeurs par défaut" checkbutton when given.
+            use_default_range: Whether the checkbutton is initially checked.
             **kwargs: Passed to ``ttk.Frame``.
         """
         super().__init__(master, *args, **kwargs)
         configure_class_selection_styles()
         self.class_mode = type_class
+        self.default_range = default_range
+        self.default_range_var = tk.BooleanVar(value=use_default_range and default_range is not None)
         self._build_mode_selector()
         self.auto_frame = ttk.Frame(self)
         self._fill_auto_frame(nb_classes, v_min, v_max)
@@ -149,6 +157,41 @@ class ClassSelectionFrame(ttk.Frame):
         self.min_entry = self._add_auto_entry(2, v_min)
         self._add_auto_label("Valeur maximale :", 3)
         self.max_entry = self._add_auto_entry(3, v_max)
+        if self.default_range is not None:
+            ttk.Checkbutton(
+                self.auto_frame,
+                text="Valeurs par défaut (min et max de la variable)",
+                variable=self.default_range_var,
+                style=STYLE_CHECKBUTTON,
+                command=self._toggle_default_range,
+            ).grid(row=4, column=0, columnspan=2, sticky="w", padx=LABEL_PADX, pady=LABEL_PADY)
+            self._toggle_default_range()
+
+    def _toggle_default_range(self) -> None:
+        """Fill the min/max entries with the variable bounds and lock them when checked."""
+        if self.default_range_var.get():
+            for entry, value in zip((self.min_entry, self.max_entry), self.default_range):
+                entry.configure(state="normal")
+                entry.delete(0, tk.END)
+                entry.insert(0, str(value))
+                entry.configure(state="disabled")
+        else:
+            self.min_entry.configure(state="normal")
+            self.max_entry.configure(state="normal")
+
+    def get_value_range(self) -> Optional[tuple[float, float]]:
+        """Return the min/max chosen for the automatic classes.
+
+        Returns:
+            ``(minimum, maximum)``, or None when the default bounds are used
+            or an entry is not a number.
+        """
+        if self.default_range_var.get():
+            return None
+        try:
+            return float(self.min_entry.get()), float(self.max_entry.get())
+        except ValueError:
+            return None
 
     def _add_auto_label(self, text: str, row: int) -> None:
         """Add a field label to the automatic-mode frame.

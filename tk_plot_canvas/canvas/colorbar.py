@@ -13,6 +13,8 @@ from ..config import (
     COLORBAR_VERTICAL,
     KEY_LEVELS_AUTO,
     KEY_LEVELS_MANUAL,
+    KEY_VALUE_RANGE,
+    VALUE_RANGE_DEFAULT,
 )
 
 LOGGER = logging.getLogger(__name__)
@@ -37,8 +39,30 @@ class ColorbarMixin:
 
     Requires the host canvas attributes ``figure``, ``axes``, ``lines``,
     ``colorbar``, ``datasets``, ``xarray_variables`` and
-    ``contour_class_mode``.
+    ``contour_class_mode`` and ``contour_value_range``.
     """
+
+    def get_data_range(self, index: int = 0) -> tuple[float, float]:
+        """Return the bounds of the z variable of a plot.
+
+        Args:
+            index: Index of the dataset.
+
+        Returns:
+            ``(minimum, maximum)`` of the z values, ignoring NaN.
+        """
+        z_values = self._contour_data(index)[2]
+        return float(np.nanmin(z_values)), float(np.nanmax(z_values))
+
+    def get_value_range_parameter(self) -> Any:
+        """Describe the chosen value range of the automatic classes for persistence.
+
+        Returns:
+            ``"valeur par défaut"`` or ``[minimum, maximum]``.
+        """
+        if self.contour_value_range is None:
+            return VALUE_RANGE_DEFAULT
+        return list(self.contour_value_range)
 
     def remove_colorbar(self) -> None:
         """Remove the current colorbar, if any."""
@@ -213,6 +237,10 @@ class ColorbarMixin:
             return
         self._apply_colorbar_parameters(parameters)
         self._apply_surface_appearance(parameters)
+        value_range = parameters.get(KEY_VALUE_RANGE, VALUE_RANGE_DEFAULT)
+        self.contour_value_range = (
+            None if value_range == VALUE_RANGE_DEFAULT else tuple(float(v) for v in value_range)
+        )
         self._apply_levels(parameters.get("levels"))
 
     def _apply_colorbar_parameters(self, parameters: dict[str, Any]) -> None:
@@ -253,7 +281,7 @@ class ColorbarMixin:
         return True
 
     def _apply_surface_appearance(self, parameters: dict[str, Any]) -> None:
-        """Restore the colormap, color limits and transparency of the first plot.
+        """Restore the colormap and transparency of the first plot.
 
         Args:
             parameters: "xarray_3D" entry of the view parameters.
@@ -265,9 +293,6 @@ class ColorbarMixin:
                 surface.set_cmap(get_colormap(cmap_name))
             except (KeyError, ValueError):
                 pass
-        clim = parameters.get("clim")
-        if clim and hasattr(surface, "set_clim"):
-            surface.set_clim(clim)
         alpha = parameters.get("alpha")
         if alpha and hasattr(surface, "set_alpha"):
             surface.set_alpha(alpha)
@@ -282,10 +307,9 @@ class ColorbarMixin:
             return
         if levels.keys() == {KEY_LEVELS_AUTO}:
             self.contour_class_mode = KEY_LEVELS_AUTO
-            surface = self.lines[0]
-            if hasattr(surface, "get_array"):
-                values = surface.get_array()
-                bounds = np.linspace(values.min(), values.max(), levels[KEY_LEVELS_AUTO])
+            if hasattr(self.lines[0], "levels"):
+                v_min, v_max = self.contour_value_range or self.get_data_range(index=0)
+                bounds = np.linspace(v_min, v_max, levels[KEY_LEVELS_AUTO])
                 self.replace_contour_levels(bounds, index=0)
         elif levels.keys() == {KEY_LEVELS_MANUAL}:
             self.contour_class_mode = KEY_LEVELS_MANUAL
