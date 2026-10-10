@@ -106,7 +106,7 @@ class FontControls:
             button: Button whose background displays the color.
         """
         color_code = colorchooser.askcolor(
-            parent=self._dialog, title="Choisir une couleur de police"
+            button.cget("bg"), parent=self._dialog, title="Choisir une couleur de police"
         )
         if color_code and color_code[1]:
             button.configure(bg=color_code[1])

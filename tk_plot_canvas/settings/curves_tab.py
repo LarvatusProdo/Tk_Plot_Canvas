@@ -152,7 +152,10 @@ class CurvesTab(SettingsTab):
         Args:
             index: Curve index.
         """
-        color_code = colorchooser.askcolor(parent=self.window, title="Choisir une couleur")
+        color_button = self.curve_widgets[index].color_button
+        color_code = colorchooser.askcolor(
+            color_button.cget("bg"), parent=self.window, title="Choisir une couleur"
+        )
         if not (color_code and color_code[1]):
             return
         color = color_code[1]
@@ -161,7 +164,7 @@ class CurvesTab(SettingsTab):
         if self.canvas.show_legend and line.get_label() != NO_LEGEND_LABEL:
             self.canvas.axes.legend(draggable=True)
         self.redraw()
-        self.curve_widgets[index].color_button.configure(bg=color)
+        color_button.configure(bg=color)
         self.canvas.cartouche_rows[index][0].configure(foreground=color)
 
     def _update_line_property(
