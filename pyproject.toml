@@ -1,0 +1,18 @@
+[project]
+name = "tk-plot-canvas"
+version = "1.0.0"
+description = "Matplotlib figures embedded in Tkinter, with interactive settings and JSON views."
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = ["matplotlib", "numpy", "xarray"]
+
+[project.optional-dependencies]
+maps = ["cartopy"]
+netcdf = ["h5netcdf"]
+dev = ["black", "flake8", "pep8-naming", "pydocstyle"]
+
+[tool.black]
+line-length = 99
+
+[tool.pydocstyle]
+convention = "google"

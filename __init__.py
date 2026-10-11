@@ -1,3 +1,5 @@
+"""Project root package: re-exports the public widgets of :mod:`tk_plot_canvas`."""
 
-from .vertical_frame import VerticalScrolledFrame
-from .class_TkPlotCanvas import TkPlotCanvas
+from .tk_plot_canvas import TkPlotCanvas, VerticalScrolledFrame
+
+__all__ = ["TkPlotCanvas", "VerticalScrolledFrame"]

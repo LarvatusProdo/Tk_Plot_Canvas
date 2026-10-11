@@ -26,12 +26,12 @@
     },
     "Y_axis": {
         "lim": [
-            121.0,
-            0.0
+            0.0,
+            121.0
         ],
         "scale": "linear",
         "autoscale": true,
-        "inversion_axis": true,
+        "inversion_axis": false,
         "ticks": {
             "name": "Times New Roman",
             "size": 17.0,
@@ -61,30 +61,27 @@
         "fontweight": "bold",
         "color": "black"
     },
+    "plot_type": "2D",
     "curves": {
         "0": {
+            "type": "line",
             "color": "#0000ff",
-            "linewidth": 6.0,
+            "linewidth": 1.0,
             "linestyle": "-",
-            "marker": "None",
+            "marker": "o",
             "markersize": 6.0
         },
         "1": {
-            "color": "#ff0000",
-            "linewidth": 5.5,
-            "linestyle": "-",
-            "marker": "None",
-            "markersize": 6.0
-        },
-        "2": {
-            "color": "#00ff00",
+            "type": "line",
+            "color": "#1f77b4",
             "linewidth": 1.5,
             "linestyle": "-",
             "marker": "None",
             "markersize": 6.0
         },
-        "3": {
-            "color": "#00ffff",
+        "2": {
+            "type": "line",
+            "color": "#ff7f0e",
             "linewidth": 1.5,
             "linestyle": "-",
             "marker": "None",
@@ -119,6 +116,8 @@
     },
     "xarray_data": {
         "x": "time",
-        "y": "temperature"
-    }
+        "y": "temperature",
+        "z": ""
+    },
+    "xarray_3D": {}
 }

@@ -1,17 +1,17 @@
 {
     "background_color": "white",
     "window_size": [
-        1104,
-        715
+        1173,
+        700
     ],
     "window_position": [
-        26,
-        26
+        46,
+        179
     ],
     "X_axis": {
         "lim": [
-            0.0,
-            359.75
+            -180.0,
+            180.0
         ],
         "scale": "linear",
         "autoscale": true,
@@ -34,10 +34,10 @@
         "inversion_axis": false,
         "ticks": {
             "name": "DejaVu Sans",
-            "size": 12.0,
+            "size": 10.0,
             "style": "normal",
             "weight": "bold",
-            "color": "#800040"
+            "color": "black"
         }
     },
     "title": {
@@ -49,27 +49,23 @@
     },
     "xlabel": {
         "fontname": "DejaVu Sans",
-        "fontsize": 12.0,
+        "fontsize": 10.0,
         "fontstyle": "normal",
         "fontweight": "bold",
         "color": "black"
     },
     "ylabel": {
         "fontname": "DejaVu Sans",
-        "fontsize": 12.0,
+        "fontsize": 10.0,
         "fontstyle": "normal",
         "fontweight": "bold",
-        "color": "#0000a0"
+        "color": "black"
     },
     "plot_type": "3D",
     "curves": {
         "0": {
             "type": "contour",
-            "cmap": "viridis",
-            "clim": [
-                -60.0,
-                45.0
-            ]
+            "cmap": "bwr"
         }
     },
     "cartouche": {
@@ -92,17 +88,35 @@
         "Is_title_display": false
     },
     "xarray_data": {
-        "x": "latitude",
-        "y": "longitude",
+        "x": "longitude",
+        "y": "latitude",
         "z": "temperature"
     },
     "xarray_3D": {
         "has_colorbar": true,
-        "colorbar_label": "Temperature (\u00b0C)",
-        "cmap": "viridis",
-        "clim": [
-            -60.0,
-            45.0
-        ]
+        "colorbar_orientation": "vertical",
+        "cmap": "bwr",
+        "alpha": null,
+        "levels": {
+            "Auto": 7
+        },
+        "value_range": "valeur par d\u00e9faut",
+        "affichage_map": true,
+        "colorbar_style": {
+            "location": "right",
+            "shrink": 0.77,
+            "aspect": 10.0,
+            "pad": 0.02,
+            "fraction": 0.12,
+            "tick_labelsize": 10.0,
+            "outline_width": 0.9
+        },
+        "colorbar_font": {
+            "fontname": "DejaVu Sans",
+            "fontsize": 12.0,
+            "fontstyle": "normal",
+            "fontweight": "bold"
+        },
+        "colorlabel_colorbar": "black"
     }
 }
