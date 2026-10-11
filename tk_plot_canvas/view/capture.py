@@ -15,6 +15,7 @@ from ..config import (
     COLORBAR_VERTICAL,
     CURVE_TYPE_CONTOUR,
     CURVE_TYPE_LINE,
+    KEY_COLORBAR_STYLE,
     KEY_VALUE_RANGE,
     KEY_XARRAY_3D,
     PLOT_TYPE_3D,
@@ -210,6 +211,7 @@ def _capture_surface(canvas: "TkPlotCanvas") -> dict[str, Any]:
         "levels": canvas.get_current_levels(index=0) if hasattr(surface, "levels") else None,
         KEY_VALUE_RANGE: canvas.get_value_range_parameter(),
         "affichage_map": canvas.show_map,
+        KEY_COLORBAR_STYLE: canvas.get_colorbar_style_parameter(),
     }
 
 

@@ -162,7 +162,7 @@ class XarraySurfacePlotMixin:
             label: Colorbar label.
         """
         self.remove_colorbar()
-        self.colorbar = self.figure.colorbar(surface, ax=self.axes)
+        self.create_colorbar(surface)
         self.colorbar.set_label(label)
 
     def _apply_surface_texts(self, title: Optional[str], x_label: str, y_label: str) -> None:

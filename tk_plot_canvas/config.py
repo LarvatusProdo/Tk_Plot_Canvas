@@ -56,6 +56,19 @@ BORDER_WIDTH = 0.3
 COLORBAR_VERTICAL = "vertical"
 COLORBAR_HORIZONTAL = "horizontal"
 COLORBAR_ORIENTATIONS = [COLORBAR_VERTICAL, COLORBAR_HORIZONTAL]
+COLORBAR_LOCATIONS = ["right", "left", "top", "bottom"]
+KEY_COLORBAR_STYLE = "colorbar_style"
+# Matplotlib defaults: length (shrink), thickness (aspect = length/width),
+# distance to the axes (pad), share of the axes space (fraction).
+COLORBAR_STYLE_DEFAULT = {
+    "location": "right",
+    "shrink": 1.0,
+    "aspect": 20.0,
+    "pad": 0.05,
+    "fraction": 0.15,
+    "tick_labelsize": 10.0,
+    "outline_width": 0.8,
+}
 
 # --- Layout ------------------------------------------------------------------
 CARTOUCHE_HEIGHT = 100

@@ -2,13 +2,12 @@
 
 import tkinter as tk
 from functools import partial
-from tkinter import ttk
+from tkinter import messagebox, ttk
 from typing import TYPE_CHECKING, Any
 
 from ..config import (
-    COLORBAR_ORIENTATIONS,
+    COLORBAR_LOCATIONS,
     COLORBAR_VERTICAL,
-    DIALOG_SIZE,
     STYLE_BUTTON,
     STYLE_ENTRY,
     STYLE_LABEL,
@@ -22,6 +21,16 @@ if TYPE_CHECKING:
 
 PADDING = 5
 SEPARATOR_PADY = (10, 10)
+DIALOG_SIZE_COLORBAR = "420x640"
+# (style key, label, minimum, maximum, step)
+SPIN_FIELDS = [
+    ("shrink", "Longueur (fraction):", 0.1, 1.0, 0.05),
+    ("aspect", "Finesse (longueur/épaisseur):", 1, 100, 1),
+    ("pad", "Distance au graphique:", 0.0, 0.5, 0.01),
+    ("fraction", "Espace occupé:", 0.02, 0.5, 0.01),
+    ("tick_labelsize", "Taille des graduations:", 4, 40, 1),
+    ("outline_width", "Épaisseur du contour:", 0.1, 5, 0.1),
+]
 
 
 class ColorbarDialog(tk.Toplevel):
@@ -40,7 +49,7 @@ class ColorbarDialog(tk.Toplevel):
         """
         super().__init__(parent)
         self.title("Paramètres de la colorbar")
-        place_window(self, parent, DIALOG_SIZE)
+        place_window(self, parent, DIALOG_SIZE_COLORBAR)
         self.canvas = canvas
         self.colorbar = colorbar
         self.index = index
@@ -102,15 +111,28 @@ class ColorbarDialog(tk.Toplevel):
         ttk.Separator(frame, orient="horizontal").grid(
             row=20, column=0, columnspan=3, sticky="we", pady=SEPARATOR_PADY
         )
-        self._add_label(frame, "Orientation:", 30)
-        self.orientation_var = tk.StringVar(value=self.colorbar.orientation)
+        style = self.canvas.colorbar_style
+        self._add_label(frame, "Position:", 30)
+        self.location_var = tk.StringVar(value=style["location"])
         ttk.Combobox(
             frame,
-            values=COLORBAR_ORIENTATIONS,
-            textvariable=self.orientation_var,
+            values=COLORBAR_LOCATIONS,
+            textvariable=self.location_var,
             state="readonly",
             width=15,
         ).grid(row=30, column=1, sticky="w", padx=PADDING, pady=PADDING)
+        self.style_vars: dict[str, tk.StringVar] = {}
+        for row, (key, text, low, high, step) in enumerate(SPIN_FIELDS, start=31):
+            self._add_label(frame, text, row)
+            self.style_vars[key] = tk.StringVar(value=str(style[key]))
+            ttk.Spinbox(
+                frame,
+                textvariable=self.style_vars[key],
+                from_=low,
+                to=high,
+                increment=step,
+                width=8,
+            ).grid(row=row, column=1, sticky="w", padx=PADDING, pady=PADDING)
         ttk.Separator(frame, orient="horizontal").grid(
             row=99, column=0, columnspan=3, sticky="we", pady=SEPARATOR_PADY
         )
@@ -119,16 +141,23 @@ class ColorbarDialog(tk.Toplevel):
         )
 
     def apply_changes(self) -> None:
-        """Apply the label and, if changed, the orientation of the colorbar."""
+        """Apply the label and the geometry (position, size, thickness...)."""
         new_label = self.label_var.get()
-        new_orientation = self.orientation_var.get()
-        self.colorbar.ax.set_ylabel(new_label)
-        if new_orientation != self.colorbar.orientation:
-            new_colorbar = self.canvas.recreate_colorbar(
-                new_orientation, self.index, label=new_label, colorbar=self.colorbar
-            )
-            if new_colorbar is None:
+        new_style: dict[str, Any] = {"location": self.location_var.get()}
+        for key, var in self.style_vars.items():
+            try:
+                value = float(var.get().replace(",", "."))
+            except ValueError:
+                messagebox.showerror("Erreur", f"Valeur invalide pour « {key} ».", parent=self)
                 return
+            if value <= 0:
+                messagebox.showerror("Erreur", f"« {key} » doit être positif.", parent=self)
+                return
+            new_style[key] = value
+        self.canvas.set_colorbar_style(new_style, self.index)
+        if self.canvas.colorbar is None:
+            return
+        self.canvas.colorbar.set_label(new_label)
         self.canvas.figure_canvas.draw()
         self.destroy()
 

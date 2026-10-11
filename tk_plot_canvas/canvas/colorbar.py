@@ -10,7 +10,10 @@ from matplotlib.colorbar import Colorbar
 from ..compat import get_colormap
 from ..config import (
     CLASS_MODE_AUTO,
+    COLORBAR_LOCATIONS,
+    COLORBAR_STYLE_DEFAULT,
     COLORBAR_VERTICAL,
+    KEY_COLORBAR_STYLE,
     KEY_LEVELS_AUTO,
     KEY_LEVELS_MANUAL,
     KEY_VALUE_RANGE,
@@ -64,6 +67,57 @@ class ColorbarMixin:
             return VALUE_RANGE_DEFAULT
         return list(self.contour_value_range)
 
+    def create_colorbar(self, mappable: Any, orientation: Optional[str] = None) -> Colorbar:
+        """Create a colorbar using ``colorbar_style``.
+
+        Args:
+            mappable: Filled-contour set the colorbar describes.
+            orientation: Forces the orientation (the location is adapted when
+                it does not match); None keeps the styled location.
+
+        Returns:
+            The new colorbar, also stored in ``self.colorbar``.
+        """
+        style = self.colorbar_style
+        if orientation is not None:
+            vertical = style["location"] in ("left", "right")
+            if vertical != (orientation == COLORBAR_VERTICAL):
+                style["location"] = "right" if orientation == COLORBAR_VERTICAL else "bottom"
+        self.colorbar = self.figure.colorbar(
+            mappable,
+            ax=self.axes,
+            location=style["location"],
+            shrink=style["shrink"],
+            aspect=style["aspect"],
+            pad=style["pad"],
+            fraction=style["fraction"],
+        )
+        self.colorbar.ax.tick_params(labelsize=style["tick_labelsize"])
+        self.colorbar.outline.set_linewidth(style["outline_width"])
+        return self.colorbar
+
+    def set_colorbar_style(self, style: dict[str, Any], index: int = 0) -> None:
+        """Change the geometry of the colorbar and redraw it.
+
+        Args:
+            style: Entries of ``colorbar_style`` to change.
+            index: Index of the plot the colorbar describes.
+        """
+        self.colorbar_style.update(style)
+        if self.colorbar is None:
+            return
+        label_axis = colorbar_label_axis(self.colorbar)
+        text, font = label_axis.label.get_text(), label_axis.label.get_fontproperties()
+        color = label_axis.label.get_color()
+        if not self._try_remove_colorbar():
+            return
+        self.create_colorbar(self.lines[index])
+        self.colorbar.set_label(text, fontproperties=font, color=color)
+
+    def get_colorbar_style_parameter(self) -> dict[str, Any]:
+        """Return the colorbar geometry for persistence."""
+        return dict(self.colorbar_style)
+
     def remove_colorbar(self) -> None:
         """Remove the current colorbar, if any."""
         if self.colorbar is None:
@@ -102,9 +156,7 @@ class ColorbarMixin:
             old_colorbar.remove()
         except Exception:  # noqa: BLE001 - see remove_colorbar
             return None
-        self.colorbar = self.figure.colorbar(
-            self.lines[index], ax=self.axes, orientation=orientation
-        )
+        self.create_colorbar(self.lines[index], orientation)
         self.colorbar.set_label(text, fontproperties=font)
         return self.colorbar
 
@@ -181,9 +233,7 @@ class ColorbarMixin:
         old_surface.remove()
         self.lines[index] = new_surface
         if had_colorbar:
-            self.colorbar = self.figure.colorbar(
-                new_surface, ax=self.axes, orientation=orientation
-            )
+            self.create_colorbar(new_surface, orientation)
             self.colorbar.set_label(colorbar_label)
 
     def _colorbar_state(self) -> tuple[str, str]:
@@ -252,10 +302,16 @@ class ColorbarMixin:
         if not parameters.get("has_colorbar", False):
             self.remove_colorbar()
             return
-        if self.colorbar is None and not self._try_create_colorbar():
-            return
+        saved_style = parameters.get(KEY_COLORBAR_STYLE)
+        if saved_style:
+            self.colorbar_style.update(self._valid_colorbar_style(saved_style))
+        if self.colorbar is None:
+            if not self._try_create_colorbar():
+                return
+        elif saved_style:
+            self.set_colorbar_style({})
         orientation = parameters.get("colorbar_orientation")
-        if orientation is not None and orientation != self.colorbar.orientation:
+        if not saved_style and orientation is not None and orientation != self.colorbar.orientation:
             self.recreate_colorbar(orientation)
         label_axis = colorbar_label_axis(self.colorbar)
         label = label_axis.label.get_text()
@@ -267,6 +323,32 @@ class ColorbarMixin:
                 label_axis, font, parameters.get("colorlabel_colorbar", False)
             )
 
+    @staticmethod
+    def _valid_colorbar_style(saved: dict[str, Any]) -> dict[str, Any]:
+        """Keep the known, well-typed entries of a persisted colorbar style.
+
+        Args:
+            saved: "colorbar_style" entry of the view parameters.
+
+        Returns:
+            The usable entries.
+        """
+        valid: dict[str, Any] = {}
+        for key, default in COLORBAR_STYLE_DEFAULT.items():
+            if key not in saved:
+                continue
+            if key == "location":
+                if saved[key] in COLORBAR_LOCATIONS:
+                    valid[key] = saved[key]
+                continue
+            try:
+                value = float(saved[key])
+            except (TypeError, ValueError):
+                continue
+            if value > 0:
+                valid[key] = value
+        return valid
+
     def _try_create_colorbar(self) -> bool:
         """Create a colorbar for the first plot.
 
@@ -274,7 +356,7 @@ class ColorbarMixin:
             True when the colorbar was created.
         """
         try:
-            self.colorbar = self.figure.colorbar(self.lines[0], ax=self.axes)
+            self.create_colorbar(self.lines[0])
         except Exception:  # noqa: BLE001 - Matplotlib may refuse the mappable
             self.colorbar = None
             return False

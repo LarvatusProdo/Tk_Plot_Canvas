@@ -5,8 +5,8 @@
         700
     ],
     "window_position": [
-        132,
-        252
+        46,
+        179
     ],
     "X_axis": {
         "lim": [
@@ -65,11 +65,7 @@
     "curves": {
         "0": {
             "type": "contour",
-            "cmap": "bwr",
-            "clim": [
-                -52.5,
-                37.5
-            ]
+            "cmap": "bwr"
         }
     },
     "cartouche": {
@@ -100,20 +96,26 @@
         "has_colorbar": true,
         "colorbar_orientation": "vertical",
         "cmap": "bwr",
-        "clim": [
-            -52.5,
-            37.5
-        ],
         "alpha": null,
         "levels": {
             "Auto": 7
         },
+        "value_range": "valeur par d\u00e9faut",
         "affichage_map": true,
+        "colorbar_style": {
+            "location": "right",
+            "shrink": 0.77,
+            "aspect": 10.0,
+            "pad": 0.02,
+            "fraction": 0.12,
+            "tick_labelsize": 10.0,
+            "outline_width": 0.9
+        },
         "colorbar_font": {
             "fontname": "DejaVu Sans",
-            "fontsize": 10.0,
+            "fontsize": 12.0,
             "fontstyle": "normal",
-            "fontweight": "normal"
+            "fontweight": "bold"
         },
         "colorlabel_colorbar": "black"
     }
