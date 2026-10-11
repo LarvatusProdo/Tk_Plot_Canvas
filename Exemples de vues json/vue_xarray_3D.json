@@ -5,8 +5,8 @@
         700
     ],
     "window_position": [
-        46,
-        179
+        2078,
+        119
     ],
     "X_axis": {
         "lim": [
@@ -113,7 +113,7 @@
         },
         "colorbar_font": {
             "fontname": "DejaVu Sans",
-            "fontsize": 12.0,
+            "fontsize": 13.0,
             "fontstyle": "normal",
             "fontweight": "bold"
         },

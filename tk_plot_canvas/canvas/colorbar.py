@@ -157,7 +157,7 @@ class ColorbarMixin:
         except Exception:  # noqa: BLE001 - see remove_colorbar
             return None
         self.create_colorbar(self.lines[index], orientation)
-        self.colorbar.set_label(text, fontproperties=font)
+        self.colorbar.set_label(text, fontproperties=font, color=old_label.get_color())
         return self.colorbar
 
     @staticmethod
@@ -221,6 +221,7 @@ class ColorbarMixin:
         classes.sort()
         old_surface = self.lines[index]
         orientation, colorbar_label = self._colorbar_state()
+        label_font = self._colorbar_label_font()
         new_surface = self.axes.contourf(
             *self._contour_data(index),
             levels=classes,
@@ -234,7 +235,7 @@ class ColorbarMixin:
         self.lines[index] = new_surface
         if had_colorbar:
             self.create_colorbar(new_surface, orientation)
-            self.colorbar.set_label(colorbar_label)
+            self.colorbar.set_label(colorbar_label, **label_font)
 
     def _colorbar_state(self) -> tuple[str, str]:
         """Return the orientation and label of the current colorbar.
@@ -245,6 +246,17 @@ class ColorbarMixin:
         if self.colorbar is None:
             return COLORBAR_VERTICAL, ""
         return self.colorbar.orientation, colorbar_label_axis(self.colorbar).label.get_text()
+
+    def _colorbar_label_font(self) -> dict[str, Any]:
+        """Return the font and color of the current colorbar label.
+
+        Returns:
+            ``set_label`` keyword arguments; empty without colorbar.
+        """
+        if self.colorbar is None:
+            return {}
+        label = colorbar_label_axis(self.colorbar).label
+        return {"fontproperties": label.get_fontproperties().copy(), "color": label.get_color()}
 
     def _try_remove_colorbar(self) -> bool:
         """Remove the colorbar without forgetting it.
@@ -314,11 +326,8 @@ class ColorbarMixin:
         if not saved_style and orientation is not None and orientation != self.colorbar.orientation:
             self.recreate_colorbar(orientation)
         label_axis = colorbar_label_axis(self.colorbar)
-        label = label_axis.label.get_text()
-        if label:
-            self.colorbar.set_label(label)
         font = parameters.get("colorbar_font", False)
-        if label and font:
+        if font:
             self.apply_font_to_colorbar(
                 label_axis, font, parameters.get("colorlabel_colorbar", False)
             )

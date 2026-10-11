@@ -306,16 +306,20 @@ class ColorbarFontDialog(FontDialog):
             controls.set_bold(False)
             controls.set_color(DEFAULT_FONT_COLOR)
             return
-        load_text_font(controls, self.colorbar.ax.yaxis.label)
+        from ..canvas.colorbar import colorbar_label_axis
+
+        load_text_font(controls, colorbar_label_axis(self.colorbar).label)
 
     def apply(self) -> None:
         """Apply the font to the colorbar label (creating the colorbar if needed)."""
         choice = self.sections[NAME_SECTION].read()
-        colorbar = self.colorbar
+        from ..canvas.colorbar import colorbar_label_axis
+
+        colorbar = self.canvas.colorbar
         if colorbar is None or not hasattr(colorbar, "ax"):
             colorbar = self._create_colorbar()
         if colorbar is not None and hasattr(colorbar, "ax"):
-            label = colorbar.ax.yaxis.label
+            label = colorbar_label_axis(colorbar).label
             label.set_fontfamily(choice.family)
             label.set_fontsize(int(choice.size))
             label.set_fontstyle(choice.style)
@@ -333,9 +337,7 @@ class ColorbarFontDialog(FontDialog):
         if len(self.canvas.lines) == 0:
             return None
         try:
-            self.canvas.colorbar = self.canvas.figure.colorbar(
-                self.canvas.lines[0], ax=self.canvas.axes
-            )
+            self.canvas.create_colorbar(self.canvas.lines[0])
         except Exception:  # noqa: BLE001 - Matplotlib may refuse the mappable
             return None
         return self.canvas.colorbar
