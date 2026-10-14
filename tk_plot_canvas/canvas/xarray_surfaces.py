@@ -153,9 +153,9 @@ class XarraySurfacePlotMixin:
         if (len(x_values), len(y_values)) == z_values.shape:
             return x_values, y_values, z_values.T
         messagebox.showerror(
-            "Error",
-            "Dimensions of x, y, and z are inconsistent for contourf plotting. "
-            f"x: {len(x_values)}, y: {len(y_values)}, z: {z_values.shape}",
+            "Erreur",
+            "Les dimensions de x, y et z ne correspondent pas : surface impossible à tracer.\n"
+            f"x : {len(x_values)}, y : {len(y_values)}, z : {z_values.shape}",
             parent=self,
         )
         return None

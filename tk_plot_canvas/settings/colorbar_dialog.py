@@ -1,18 +1,23 @@
-"""Dialog editing the colorbar label, its font and its orientation."""
+"""Dialog editing the colorbar label, its font, its position and its geometry.
+
+Every change is applied immediately; "Annuler" (or Escape) restores the
+colorbar shown when the dialog opened, "Fermer" keeps the changes.
+"""
 
 import tkinter as tk
 from functools import partial
-from tkinter import messagebox, ttk
-from typing import TYPE_CHECKING, Any
+from tkinter import ttk
+from typing import TYPE_CHECKING, Any, Optional
 
 from ..config import (
-    COLORBAR_LOCATIONS,
-    COLORBAR_VERTICAL,
+    COLORBAR_LOCATION_NAMES,
     STYLE_BUTTON,
     STYLE_ENTRY,
     STYLE_LABEL,
     STYLE_LABELFRAME,
 )
+from ..widgets import ToolTip
+from .choices import displayed_names, name_of, value_of
 from .font_dialogs import ColorbarFontDialog
 from .window_placement import setup_dialog
 
@@ -21,83 +26,112 @@ if TYPE_CHECKING:
 
 PADDING = 5
 SEPARATOR_PADY = (10, 10)
-DIALOG_SIZE_COLORBAR = "420x640"
-# (style key, label, minimum, maximum, step)
+DIALOG_SIZE_COLORBAR = "440x520"
+SPIN_TYPING_EVENTS = ("<Return>", "<FocusOut>")
+# (style key, label, minimum, maximum, step, help)
 SPIN_FIELDS = [
-    ("shrink", "Longueur (fraction):", 0.1, 1.0, 0.05),
-    ("aspect", "Finesse (longueur/épaisseur):", 1, 100, 1),
-    ("pad", "Distance au graphique:", 0.0, 0.5, 0.01),
-    ("fraction", "Espace occupé:", 0.02, 0.5, 0.01),
-    ("tick_labelsize", "Taille des graduations:", 4, 40, 1),
-    ("outline_width", "Épaisseur du contour:", 0.1, 5, 0.1),
+    ("shrink", "Longueur :", 0.1, 1.0, 0.05, "Longueur de la colorbar, en fraction (0 à 1)."),
+    (
+        "aspect",
+        "Finesse :",
+        1,
+        100,
+        1,
+        "Rapport longueur / épaisseur : plus la valeur est grande, plus la colorbar est fine.",
+    ),
+    ("pad", "Distance au graphique :", 0.0, 0.5, 0.01, "Écart entre le graphique et la colorbar."),
+    (
+        "fraction",
+        "Espace réservé :",
+        0.02,
+        0.5,
+        0.01,
+        "Part de la figure réservée à la colorbar (0 à 1).",
+    ),
+    ("tick_labelsize", "Taille des graduations :", 4, 40, 1, "Taille du texte des graduations."),
+    ("outline_width", "Épaisseur du contour :", 0.1, 5, 0.1, "Épaisseur du cadre (en points)."),
 ]
 
 
 class ColorbarDialog(tk.Toplevel):
-    """Edit the label (live), font and orientation of the colorbar."""
+    """Edit the label, font, position and geometry of the colorbar (applied live)."""
 
     def __init__(
-        self, parent: tk.Misc, canvas: "TkPlotCanvas", colorbar: Any, index: int = 0
+        self, parent: tk.Misc, canvas: "TkPlotCanvas", colorbar: Any = None, index: int = 0
     ) -> None:
         """Create the dialog.
 
         Args:
             parent: Window the dialog is positioned against.
             canvas: The plot canvas being edited.
-            colorbar: Colorbar to edit.
+            colorbar: Unused; the colorbar displayed by ``canvas`` is edited.
             index: Index of the plot described by the colorbar.
         """
         super().__init__(parent)
-        self.title("Paramètres de la colorbar")
-        setup_dialog(self, parent, DIALOG_SIZE_COLORBAR)
+        self.title("Colorbar")
+        setup_dialog(self, parent, DIALOG_SIZE_COLORBAR, on_escape=self.cancel)
         self.canvas = canvas
-        self.colorbar = colorbar
         self.index = index
-        frame = ttk.LabelFrame(
-            self, text="Paramètres de la colorbar", padding=(10, 10), style=STYLE_LABELFRAME
-        )
+        self._initial_style = dict(canvas.colorbar_style)
+        self._initial_label = self._current_label()
+        frame = ttk.LabelFrame(self, text="Colorbar", padding=(10, 10), style=STYLE_LABELFRAME)
         frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
         self._build_label_controls(frame, parent)
-        self._build_orientation_controls(frame)
+        self._build_geometry_controls(frame)
+        self._build_buttons()
 
-    def _current_label(self) -> str:
-        """Return the label of the edited colorbar.
+    def _label_text(self) -> Optional[Any]:
+        """Return the label of the displayed colorbar.
 
         Returns:
-            The y label of a vertical colorbar, the x label otherwise.
+            The Matplotlib label, or None without colorbar.
         """
-        if self.colorbar.orientation == COLORBAR_VERTICAL:
-            return self.colorbar.ax.get_ylabel()
-        return self.colorbar.ax.get_xlabel()
+        from ..canvas.colorbar import colorbar_label_axis
 
-    def _add_label(self, frame: ttk.LabelFrame, text: str, row: int) -> None:
+        if self.canvas.colorbar is None:
+            return None
+        return colorbar_label_axis(self.canvas.colorbar).label
+
+    def _current_label(self) -> str:
+        """Return the label text of the displayed colorbar.
+
+        Returns:
+            The label text ("" without colorbar).
+        """
+        label = self._label_text()
+        return label.get_text() if label is not None else ""
+
+    def _add_label(self, frame: ttk.LabelFrame, text: str, row: int) -> ttk.Label:
         """Add a right-aligned field label in column 0.
 
         Args:
             frame: Parent frame.
             text: Label text.
             row: Grid row.
+
+        Returns:
+            The created label.
         """
-        ttk.Label(frame, text=text, style=STYLE_LABEL).grid(
-            row=row, column=0, sticky="e", padx=PADDING, pady=PADDING
-        )
+        label = ttk.Label(frame, text=text, style=STYLE_LABEL)
+        label.grid(row=row, column=0, sticky="e", padx=PADDING, pady=PADDING)
+        return label
 
     def _build_label_controls(self, frame: ttk.LabelFrame, parent: tk.Misc) -> None:
-        """Create the label entry (updated live) and the font button.
+        """Create the label entry (applied while typing) and the font button.
 
         Args:
             frame: Parent frame.
             parent: Window owning the font dialog.
         """
-        self._add_label(frame, "Label:", 0)
-        self.label_var = tk.StringVar(value=self._current_label())
+        self._add_label(frame, "Libellé :", 0)
+        self.label_var = tk.StringVar(value=self._initial_label)
         ttk.Entry(frame, textvariable=self.label_var, width=30, style=STYLE_ENTRY).grid(
             row=0, column=1, sticky="w", padx=PADDING, pady=PADDING
         )
         self.label_var.trace_add("write", self._on_label_changed)
         ttk.Button(
             frame,
-            text="Modifier la police",
+            text="Police du libellé…",
             style=STYLE_BUTTON,
             command=partial(
                 self.canvas.dialogs.show,
@@ -106,8 +140,8 @@ class ColorbarDialog(tk.Toplevel):
             ),
         ).grid(row=10, column=0, columnspan=3, sticky="we", padx=PADDING, pady=PADDING)
 
-    def _build_orientation_controls(self, frame: ttk.LabelFrame) -> None:
-        """Create the orientation combobox and the apply button.
+    def _build_geometry_controls(self, frame: ttk.LabelFrame) -> None:
+        """Create the position combobox and the geometry spinboxes.
 
         Args:
             frame: Parent frame.
@@ -116,53 +150,109 @@ class ColorbarDialog(tk.Toplevel):
             row=20, column=0, columnspan=3, sticky="we", pady=SEPARATOR_PADY
         )
         style = self.canvas.colorbar_style
-        self._add_label(frame, "Position:", 30)
-        self.location_var = tk.StringVar(value=style["location"])
-        ttk.Combobox(
+        self._add_label(frame, "Position :", 30)
+        self.location_var = tk.StringVar(value=name_of(COLORBAR_LOCATION_NAMES, style["location"]))
+        location_combobox = ttk.Combobox(
             frame,
-            values=COLORBAR_LOCATIONS,
+            values=displayed_names(COLORBAR_LOCATION_NAMES),
             textvariable=self.location_var,
             state="readonly",
             width=15,
-        ).grid(row=30, column=1, sticky="w", padx=PADDING, pady=PADDING)
-        self.style_vars: dict[str, tk.StringVar] = {}
-        for row, (key, text, low, high, step) in enumerate(SPIN_FIELDS, start=31):
-            self._add_label(frame, text, row)
-            self.style_vars[key] = tk.StringVar(value=str(style[key]))
-            ttk.Spinbox(
-                frame,
-                textvariable=self.style_vars[key],
-                from_=low,
-                to=high,
-                increment=step,
-                width=8,
-            ).grid(row=row, column=1, sticky="w", padx=PADDING, pady=PADDING)
-        ttk.Separator(frame, orient="horizontal").grid(
-            row=99, column=0, columnspan=3, sticky="we", pady=SEPARATOR_PADY
         )
-        ttk.Button(frame, text="Appliquer", command=self.apply_changes).grid(
-            row=100, column=0, columnspan=2, sticky="we", pady=SEPARATOR_PADY
+        location_combobox.grid(row=30, column=1, sticky="w", padx=PADDING, pady=PADDING)
+        location_combobox.bind("<<ComboboxSelected>>", lambda _event: self.apply_geometry())
+        self.style_vars: dict[str, tk.StringVar] = {}
+        for row, field in enumerate(SPIN_FIELDS, start=31):
+            self._add_spinbox(frame, row, *field)
+
+    def _add_spinbox(
+        self,
+        frame: ttk.LabelFrame,
+        row: int,
+        key: str,
+        text: str,
+        low: float,
+        high: float,
+        step: float,
+        help_text: str,
+    ) -> None:
+        """Create one labeled geometry spinbox, applied by its arrows, Enter or on leaving.
+
+        Args:
+            frame: Parent frame.
+            row: Grid row.
+            key: ``colorbar_style`` key.
+            text: Field label.
+            low: Minimum of the arrows.
+            high: Maximum of the arrows.
+            step: Arrow increment.
+            help_text: Tooltip text.
+        """
+        ToolTip(self._add_label(frame, text, row), help_text)
+        self.style_vars[key] = tk.StringVar(value=str(self.canvas.colorbar_style[key]))
+        spinbox = ttk.Spinbox(
+            frame,
+            textvariable=self.style_vars[key],
+            from_=low,
+            to=high,
+            increment=step,
+            width=8,
+            command=self.apply_geometry,
+        )
+        spinbox.grid(row=row, column=1, sticky="w", padx=PADDING, pady=PADDING)
+        for sequence in SPIN_TYPING_EVENTS:
+            spinbox.bind(sequence, lambda _event: self.apply_geometry())
+        ToolTip(spinbox, help_text)
+
+    def _build_buttons(self) -> None:
+        """Create the "Annuler" and "Fermer" buttons."""
+        frame = ttk.Frame(self)
+        frame.pack(fill=tk.X, padx=10, pady=(0, 10))
+        ttk.Button(frame, text="Fermer", style=STYLE_BUTTON, command=self.destroy).pack(
+            side="right"
+        )
+        ttk.Button(frame, text="Annuler", style=STYLE_BUTTON, command=self.cancel).pack(
+            side="right", padx=10
         )
 
-    def apply_changes(self) -> None:
-        """Apply the label and the geometry (position, size, thickness...)."""
-        new_label = self.label_var.get()
-        new_style: dict[str, Any] = {"location": self.location_var.get()}
-        for key, var in self.style_vars.items():
+    def _typed_style(self) -> dict[str, Any]:
+        """Read the position and geometry; invalid values are replaced by the current ones.
+
+        Returns:
+            The ``colorbar_style`` entries to apply.
+        """
+        style: dict[str, Any] = {
+            "location": value_of(COLORBAR_LOCATION_NAMES, self.location_var.get())
+        }
+        for key, variable in self.style_vars.items():
+            current = self.canvas.colorbar_style[key]
             try:
-                value = float(var.get().replace(",", "."))
+                value = float(variable.get().strip().replace(",", "."))
             except ValueError:
-                messagebox.showerror("Erreur", f"Valeur invalide pour « {key} ».", parent=self)
-                return
-            if value <= 0:
-                messagebox.showerror("Erreur", f"« {key} » doit être positif.", parent=self)
-                return
-            new_style[key] = value
-        self.canvas.set_colorbar_style(new_style, self.index)
-        if self.canvas.colorbar is None:
+                value = -1.0
+            if value < 0 or (value == 0 and key != "pad"):
+                variable.set(str(current))
+                self.bell()
+                value = current
+            style[key] = value
+        return style
+
+    def apply_geometry(self) -> None:
+        """Apply the position and geometry when they changed (the colorbar is rebuilt)."""
+        style = self._typed_style()
+        current = {key: self.canvas.colorbar_style[key] for key in style}
+        if style == current:
             return
-        self.canvas.colorbar.set_label(new_label)
-        self.canvas.figure_canvas.draw()
+        self.canvas.set_colorbar_style(style, self.index)
+        self.canvas.figure_canvas.draw_idle()
+
+    def cancel(self) -> None:
+        """Restore the colorbar shown when the dialog opened, then close the dialog."""
+        self.canvas.set_colorbar_style(dict(self._initial_style), self.index)
+        label = self._label_text()
+        if label is not None:
+            label.set_text(self._initial_label)
+        self.canvas.figure_canvas.draw_idle()
         self.destroy()
 
     def _on_label_changed(self, *_trace_args: Any) -> None:
@@ -171,5 +261,7 @@ class ColorbarDialog(tk.Toplevel):
         Args:
             *_trace_args: Tk variable trace arguments (unused).
         """
-        self.colorbar.ax.set_ylabel(self.label_var.get())
-        self.canvas.figure_canvas.draw()
+        label = self._label_text()
+        if label is not None:
+            label.set_text(self.label_var.get())
+            self.canvas.figure_canvas.draw_idle()

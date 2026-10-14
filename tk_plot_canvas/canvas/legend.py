@@ -29,6 +29,18 @@ class LegendMixin:
                 parts.append(f"{key}: {label[key]}" if show_keys else f"{label[key]}")
         return ", ".join(parts)
 
+    def set_legend_visible(self, visible: bool) -> None:
+        """Show or hide the legend (showing the first metadata key when none is chosen).
+
+        Args:
+            visible: Whether the legend is displayed.
+        """
+        labels = [label for label in self.line_labels if label]
+        if visible and not self.legend_keys and labels:
+            self.legend_keys = list(labels[0])[:1]
+        self.show_legend = visible
+        self.refresh_legend()
+
     def refresh_legend(self) -> None:
         """Rebuild every legend text, then show or hide the legend."""
         for index, line in enumerate(self.lines):

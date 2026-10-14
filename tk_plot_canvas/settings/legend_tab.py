@@ -33,18 +33,15 @@ class LegendTab(SettingsTab):
 
     def _build_header(self) -> None:
         """Create the title, the toggles and the position button."""
-        ttk.Label(self.frame, text="Paramètres de la légende:", style=STYLE_SECTION_TITLE).grid(
-            row=0, column=0, sticky="w", padx=5, pady=10, columnspan=2
-        )
         self.show_legend_var = tk.BooleanVar(value=self.canvas.axes.get_legend() is not None)
         self._add_checkbutton("Afficher la légende", self.show_legend_var, column=0)
         self.show_key_names_var = tk.BooleanVar(value=self.canvas.show_legend_key_names)
         self._add_checkbutton(
-            "Afficher les titres des colonnes", self.show_key_names_var, column=2
+            "Afficher le nom des clés (clé : valeur)", self.show_key_names_var, column=2
         )
         ttk.Button(
             self.frame,
-            text="Position par défaut",
+            text="Replacer automatiquement",
             command=self._reset_legend_position,
             style=STYLE_BUTTON,
         ).grid(row=0, column=4, columnspan=2, sticky="we", padx=CELL_PADDING, pady=CELL_PADDING)
@@ -73,7 +70,7 @@ class LegendTab(SettingsTab):
         Args:
             label: Curve metadata.
         """
-        ttk.Label(self.frame, text="Indice", style=STYLE_SECTION_TITLE).grid(
+        ttk.Label(self.frame, text="Clé :", style=STYLE_SECTION_TITLE).grid(
             row=2, column=0, sticky="w", padx=CELL_PADDING, pady=CELL_PADDING
         )
         choices = [""] + list(label.keys())

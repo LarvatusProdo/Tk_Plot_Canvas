@@ -36,7 +36,9 @@ class ViewPersistenceMixin:
             write_parameters(path, parameters)
         except Exception as error:  # noqa: BLE001 - reported to the user
             messagebox.showerror(
-                "Error", f"An error occurred while saving the parameters:\n{error}"
+                "Erreur",
+                f"Impossible d'enregistrer la vue :\n{error}",
+                parent=self._dialog_parent(),
             )
 
     def _ask_save_path(self) -> Optional[str]:
@@ -50,13 +52,15 @@ class ViewPersistenceMixin:
             return filedialog.asksaveasfilename(
                 parent=self._dialog_parent(),
                 initialdir=FILE_DIALOG_INITIAL_DIR,
-                title="Enregistrer les paramètres",
+                title="Enregistrer la vue",
                 defaultextension=JSON_EXTENSION,
                 filetypes=JSON_FILE_TYPES,
             )
         except Exception as error:  # noqa: BLE001 - reported to the user
             messagebox.showerror(
-                "Error", f"An error occurred while opening the save dialog:\n{error}"
+                "Erreur",
+                f"Impossible d'ouvrir la fenêtre d'enregistrement :\n{error}",
+                parent=self._dialog_parent(),
             )
             return None
 
@@ -122,7 +126,7 @@ class ViewPersistenceMixin:
             path = filedialog.askopenfilename(
                 parent=self._dialog_parent(),
                 initialdir=FILE_DIALOG_INITIAL_DIR,
-                title="Charger les paramètres",
+                title="Charger une vue",
                 defaultextension=JSON_EXTENSION,
                 filetypes=JSON_FILE_TYPES,
             )

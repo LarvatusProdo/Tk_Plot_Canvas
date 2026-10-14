@@ -1,7 +1,6 @@
 """Settings window: a notebook with one tab per group of plot settings."""
 
 import tkinter as tk
-from functools import partial
 from tkinter import ttk
 from typing import TYPE_CHECKING, Optional
 
@@ -53,7 +52,7 @@ class SettingsWindow(tk.Toplevel):
         """
         super().__init__(canvas)
         self.canvas = canvas
-        self.title("Menu de modification de la courbe")
+        self.title("Réglages du graphique")
         self._place(geometry)
         self._build_buttons()
         self.notebook = ttk.Notebook(self, style=STYLE_NOTEBOOK)
@@ -73,6 +72,7 @@ class SettingsWindow(tk.Toplevel):
         else:
             place_window(self, self.canvas.master, SETTINGS_WINDOW_SIZE, SETTINGS_WINDOW_OFFSET)
         setup_secondary_window(self, self.canvas)
+        self.canvas.bind_view_shortcuts(self)
 
     def _build_buttons(self) -> None:
         """Create the "save" and "load" view buttons."""
@@ -80,14 +80,14 @@ class SettingsWindow(tk.Toplevel):
         buttons_frame.pack(side="top", fill="x")
         ttk.Button(
             buttons_frame,
-            text="Enregistrer les paramètres",
+            text="Enregistrer la vue…",
             command=self.canvas.save_parameters,
             style=STYLE_BUTTON,
         ).pack(side="right", pady=5, padx=10)
         ttk.Button(
             buttons_frame,
-            text="Charger les paramètres",
-            command=partial(self.canvas.load_parameters, reload_plot=True),
+            text="Charger une vue…",
+            command=self.canvas.load_view_file,
             style=STYLE_BUTTON,
         ).pack(side="right", pady=5, padx=10)
 

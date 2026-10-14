@@ -142,6 +142,19 @@ class ColorbarMixin:
         )
         self.remove_colorbar()
 
+    def set_colorbar_visible(self, visible: bool, index: int = 0) -> None:
+        """Show or hide the colorbar, then redraw.
+
+        Args:
+            visible: Whether the colorbar is displayed.
+            index: Index of the plot the colorbar describes.
+        """
+        if visible:
+            self.show_colorbar(index)
+        else:
+            self.hide_colorbar()
+        self.figure_canvas.draw()
+
     def show_colorbar(self, index: int = 0) -> None:
         """Display the colorbar with the stored style and the remembered label.
 

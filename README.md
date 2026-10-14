@@ -16,7 +16,18 @@ cartes 3D (contours remplis, colorbar, classes) et sauvegarde/chargement de vues
 - **Données xarray** : courbes (1 dimension) et cartes en contours remplis (2 dimensions),
   avec côtes et frontières si `cartopy` est installé.
 - **Vues** : enregistrement/chargement des réglages dans des fichiers JSON.
-- **Menu contextuel** : clic droit sur la figure (Ctrl+S : sauvegarder, Ctrl+G : charger).
+- **Menu contextuel** (clic droit sur la figure) : vues, accès direct à chaque onglet de
+  réglages, affichage de la légende / du cartouche / de la colorbar, réinitialisation du zoom,
+  copie et export de l'image.
+- **Raccourcis** : Ctrl+S enregistrer la vue, Ctrl+O charger une vue (Ctrl+G reste accepté),
+  Ctrl+E exporter l'image (PNG, PDF, SVG, JPEG), Ctrl+C copier l'image (Windows).
+- **Double-clic** : sur le titre, un libellé d'axe ou celui de la colorbar pour le modifier sur
+  place ; sur la légende, une courbe, les graduations ou la colorbar pour ouvrir l'onglet
+  correspondant.
+- **Réglages appliqués immédiatement** : dans les onglets, chaque modification est visible tout
+  de suite. Les dialogues (polices, colorbar) montrent un aperçu en direct, avec « Annuler »
+  (ou Échap) pour revenir à l'état d'ouverture et « Fermer » pour garder les changements. Seul le
+  dialogue des classes demande « Appliquer » / « OK », car il valide une liste entière.
 
 ## Prérequis
 
@@ -88,6 +99,7 @@ tk_plot_canvas/                 Package principal
 ├── compat.py                   Compatibilité Matplotlib/Tk (couleurs, colormaps)
 ├── fonts.py                    Analyse et sécurisation des polices Tk
 ├── dpi.py                      Netteté sur écrans mis à l'échelle (Windows)
+├── clipboard.py                Copie d'une image dans le presse-papiers (Windows)
 ├── demos.py                    Démonstrations interactives
 ├── canvas/                     Le widget TkPlotCanvas
 │   ├── plot_canvas.py          Classe TkPlotCanvas (mise en page, menu, fenêtre de réglages)
@@ -99,6 +111,9 @@ tk_plot_canvas/                 Package principal
 │   ├── legend.py               Légende
 │   ├── cartouche.py            Cartouche de métadonnées
 │   ├── colorbar.py             Colorbar et niveaux de contours
+│   ├── context_menu.py         Menu contextuel et raccourcis clavier
+│   ├── double_click.py         Actions du double-clic sur la figure
+│   ├── figure_export.py        Export et copie de l'image
 │   └── view_persistence.py     Sauvegarde/chargement de vues
 ├── view/                       Format des vues JSON
 │   ├── capture.py              État du canevas -> dictionnaire
@@ -111,16 +126,19 @@ tk_plot_canvas/                 Package principal
 │   ├── cartouche_tab.py        Onglet « Cartouche »
 │   ├── curves_tab.py           Onglet « Courbes »
 │   ├── legend_tab.py           Onglet « Légende »
-│   ├── surface_tab.py          Onglet « Graphique 3D »
+│   ├── surface_tab.py, surface_axes_frame.py   Onglet « Surface » et aspect des cartes
 │   ├── font_controls.py, font_dialogs.py   Dialogues de police
 │   ├── colorbar_dialog.py      Dialogue colorbar
 │   ├── value_range_dialog.py   Dialogue plage de valeurs / classes
 │   ├── dialog_manager.py       Un seul dialogue ouvert par élément édité
+│   ├── choices.py              Noms français des choix (styles, échelles, positions)
 │   └── window_placement.py     Positionnement et comportement des fenêtres
 └── widgets/                    Widgets réutilisables
     ├── scrolled_frame.py       VerticalScrolledFrame
     ├── class_selection.py      ClassSelectionFrame (classes Auto/Manuel/Aucune)
-    └── manual_classes.py       Éditeur des classes manuelles
+    ├── manual_classes.py       Éditeur des classes manuelles
+    ├── tooltip.py              Infobulles
+    └── inline_text_editor.py   Édition d'un texte de la figure sur place
 examples/                       Exemples exécutables
 tools/create_temporal_netcdf.py Génération du NetCDF de série temporelle
 Exemples de vues json/          Vues JSON d'exemple

@@ -41,7 +41,8 @@ class CartoucheMixin:
     Requires the host canvas attributes ``cartouche_frame``,
     ``cartouche_rows`` (widgets per curve; column 0 is the line symbol),
     ``cartouche_headers``, ``cartouche_initialized``, ``lines``,
-    ``line_labels``, ``plot_type`` and ``graph_background_color``.
+    ``line_labels``, ``plot_type``, ``graph_background_color``,
+    ``panedwindow`` and ``show_cartouche``.
     """
 
     def fill_cartouche_row(
@@ -67,6 +68,20 @@ class CartoucheMixin:
         if label_to_display is not None:
             for column, value in enumerate(label_to_display.values(), start=1):
                 self._add_cartouche_cell(line_index, column, value)
+
+    def set_cartouche_visible(self, visible: bool) -> None:
+        """Show or hide the cartouche below the plot.
+
+        Args:
+            visible: Whether the cartouche is displayed.
+        """
+        if visible == self.show_cartouche:
+            return
+        if visible:
+            self.panedwindow.add(self.cartouche_frame, weight=0)
+        else:
+            self.panedwindow.forget(self.cartouche_frame)
+        self.show_cartouche = visible
 
     def refresh_cartouche(self) -> None:
         """Rebuild the cartouche rows of every plotted curve."""

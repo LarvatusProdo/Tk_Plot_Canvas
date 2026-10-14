@@ -43,3 +43,7 @@ class SettingsTab:
     def redraw(self) -> None:
         """Redraw the Matplotlib figure of the canvas."""
         self.canvas.figure_canvas.draw()
+
+    def redraw_idle(self) -> None:
+        """Redraw the figure once Tk is idle (cheap enough to call while typing)."""
+        self.canvas.figure_canvas.draw_idle()

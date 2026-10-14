@@ -10,21 +10,22 @@ from ..canvas.cartouche import line_symbol
 from ..compat import to_tk_color
 from ..config import (
     CARTOUCHE_LINE_SYMBOL_FONT,
-    LINE_STYLES,
+    LINE_STYLE_NAMES,
     LINE_WIDTH_RANGE,
+    MARKER_NAMES,
     MARKER_SIZE_RANGE,
-    MARKERS,
     NO_LEGEND_LABEL,
     STYLE_COLUMN_HEADER,
 )
 from .base_tab import SettingsTab
+from .choices import displayed_names, name_of, value_of
 
 COLUMN_TITLES = (
-    "Couleur:",
-    "Épaisseur de ligne:",
-    "Style de ligne:",
-    "Marqueur:",
-    "Taille du marqueur:",
+    "Couleur",
+    "Épaisseur de ligne",
+    "Style de ligne",
+    "Marqueur",
+    "Taille du marqueur",
 )
 CELL_PADDING = 5
 LINE_SYMBOL_WIDTH = 3
@@ -53,9 +54,6 @@ class CurvesTab(SettingsTab):
 
     def build(self) -> None:
         """Create the column titles and one row of widgets per curve."""
-        ttk.Label(self.frame, text="Paramètres des courbes:", style=STYLE_COLUMN_HEADER).grid(
-            row=0, column=0, sticky="w", padx=5, pady=10, columnspan=6
-        )
         for column, title in enumerate(COLUMN_TITLES):
             ttk.Label(self.frame, text=title, style=STYLE_COLUMN_HEADER).grid(
                 row=1, column=column, sticky="w", padx=CELL_PADDING, pady=CELL_PADDING
@@ -85,9 +83,9 @@ class CurvesTab(SettingsTab):
         linewidth = self._add_spinbox(row, 1, "linewidth", index)
         linewidth.set(line.get_linewidth())
         linestyle = self._add_combobox(
-            row, 2, LINE_STYLES, line.get_linestyle(), "linestyle", index
+            row, 2, LINE_STYLE_NAMES, line.get_linestyle(), "linestyle", index
         )
-        marker = self._add_combobox(row, 3, MARKERS, line.get_marker(), "marker", index)
+        marker = self._add_combobox(row, 3, MARKER_NAMES, line.get_marker(), "marker", index)
         markersize = self._add_spinbox(row, 4, "markersize", index)
         markersize.set(line.get_markersize())
         return CurveWidgets(color_button, linewidth, linestyle, marker, markersize)
@@ -145,7 +143,7 @@ class CurvesTab(SettingsTab):
         self,
         row: int,
         column: int,
-        values: list[str],
+        names: dict[str, str],
         current: str,
         property_name: str,
         index: int,
@@ -155,7 +153,7 @@ class CurvesTab(SettingsTab):
         Args:
             row: Grid row.
             column: Grid column.
-            values: Available choices.
+            names: Matplotlib values mapped to their displayed names.
             current: Current value of the property.
             property_name: "linestyle" or "marker".
             index: Curve index.
@@ -163,9 +161,11 @@ class CurvesTab(SettingsTab):
         Returns:
             The created combobox.
         """
-        combobox = ttk.Combobox(self.frame, values=values, state="readonly", width=8)
+        combobox = ttk.Combobox(
+            self.frame, values=displayed_names(names), state="readonly", width=13
+        )
         combobox.grid(row=row, column=column, padx=CELL_PADDING, pady=CELL_PADDING)
-        combobox.current(values.index(current))
+        combobox.set(name_of(names, current))
         combobox.bind(
             "<<ComboboxSelected>>", partial(self._update_line_property, property_name, index)
         )
@@ -204,8 +204,8 @@ class CurvesTab(SettingsTab):
         """
         widgets = self.curve_widgets[index]
         line = self.canvas.lines[index]
-        linestyle = widgets.linestyle_combobox.get()
-        marker = widgets.marker_combobox.get()
+        linestyle = value_of(LINE_STYLE_NAMES, widgets.linestyle_combobox.get())
+        marker = value_of(MARKER_NAMES, widgets.marker_combobox.get())
         if property_name == "linewidth":
             line.set_linewidth(float(widgets.linewidth_spinbox.get()))
         elif property_name == "linestyle":

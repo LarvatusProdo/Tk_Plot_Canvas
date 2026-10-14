@@ -2,14 +2,13 @@
 
 The frame contains the figure (with the Matplotlib toolbar) and, below it,
 a resizable "cartouche" listing the metadata of every curve. A right click on
-the figure opens a context menu to save/load views and to open the settings
-window.
+the figure opens a context menu (views, settings tabs, display toggles, image
+export); a double click edits a text in place or opens the matching settings tab.
 """
 
 import os
 import tkinter as tk
 import tkinter.font as tkfont
-from functools import partial
 from tkinter import ttk
 from typing import Any, Optional, Union
 
@@ -30,7 +29,6 @@ from ..config import (
     STYLE_CARTOUCHE_FRAME,
     STYLE_FRAME,
     SURFACE_AXES_STYLE_DEFAULT,
-    TAB_AXES,
 )
 from ..fonts import default_font_name
 from ..settings import DialogManager, SettingsWindow
@@ -38,6 +36,9 @@ from ..settings.dialog_manager import is_window_open
 from ..widgets import VerticalScrolledFrame
 from .cartouche import CartoucheMixin
 from .colorbar import ColorbarMixin
+from .context_menu import ContextMenuMixin
+from .double_click import DoubleClickMixin
+from .figure_export import FigureExportMixin
 from .legend import LegendMixin
 from .plot_helpers import PlotHelpersMixin
 from .standard_plotting import StandardPlotMixin
@@ -59,6 +60,9 @@ class TkPlotCanvas(
     ColorbarMixin,
     SurfaceAxesMixin,
     ViewPersistenceMixin,
+    ContextMenuMixin,
+    DoubleClickMixin,
+    FigureExportMixin,
 ):
     """A Tkinter frame that embeds a Matplotlib figure.
 
@@ -98,6 +102,7 @@ class TkPlotCanvas(
         self._build_layout()
         self._build_figure(figsize, dpi, bg_color)
         self._build_context_menu()
+        self._connect_double_click()
         self._load_initial_view(load_view)
 
     def _setup_styles(self, background_color: str) -> None:
@@ -175,29 +180,12 @@ class TkPlotCanvas(
         self.axes.set_facecolor(background_color)
         self.figure_canvas = FigureCanvasTkAgg(self.figure, master=self.plot_frame)
         self.figure_canvas.draw()
-        toolbar = NavigationToolbar2Tk(self.figure_canvas, self.plot_frame, pack_toolbar=False)
-        toolbar.update()
-        toolbar.pack(side=tk.TOP, fill=tk.X)
+        self.toolbar = NavigationToolbar2Tk(
+            self.figure_canvas, self.plot_frame, pack_toolbar=False
+        )
+        self.toolbar.update()
+        self.toolbar.pack(side=tk.TOP, fill=tk.X)
         self.figure_canvas.get_tk_widget().pack(fill="both", expand=True)
-
-    def _build_context_menu(self) -> None:
-        """Create the right-click menu and the keyboard shortcuts."""
-        self.context_menu = tk.Menu(self, tearoff=0)
-        self.context_menu.add_command(
-            label="Sauvegarder la vue", command=self.save_parameters, accelerator="Ctrl+S"
-        )
-        self.context_menu.add_command(
-            label="Chargement de la vue", command=self.load_parameters, accelerator="Ctrl+G"
-        )
-        self.context_menu.add_separator()
-        self.context_menu.add_command(
-            label="Modification du graphique",
-            command=partial(self.open_settings_window, TAB_AXES),
-        )
-        widget = self.figure_canvas.get_tk_widget()
-        widget.bind("<Button-3>", self._show_context_menu)
-        widget.bind("<Control-g>", self.load_parameters)
-        widget.bind("<Control-s>", self.save_parameters)
 
     def _load_initial_view(self, load_view: Optional[Union[str, "os.PathLike[str]"]]) -> None:
         """Apply the view file given to the constructor, if it exists.
@@ -210,14 +198,6 @@ class TkPlotCanvas(
             self.restore_xarray_selection(self.view_parameters)
         else:
             self.view_parameters = {}
-
-    def _show_context_menu(self, event: tk.Event) -> None:
-        """Show the context menu at the mouse position.
-
-        Args:
-            event: Tk mouse event.
-        """
-        self.context_menu.tk_popup(event.x_root, event.y_root)
 
     def open_settings_window(self, tab_name: str = "") -> None:
         """Open the settings window, replacing any previous one at the same place.

@@ -2,19 +2,21 @@
 
 import tkinter as tk
 from dataclasses import dataclass
-from functools import partial
 from tkinter import colorchooser, ttk
+from typing import Callable
 
 from ..config import (
     DEFAULT_FONT_SIZE,
     FONT_SIZE_RANGE,
-    FONT_STYLES,
+    FONT_STYLE_NAMES,
     STYLE_CHECKBUTTON,
     STYLE_LABEL,
 )
+from .choices import displayed_names, name_of, value_of
 
 LABEL_PADDING = (5, 5)
 FIELD_PADDING = 5
+SIZE_TYPING_EVENTS = ("<Return>", "<FocusOut>")
 
 
 @dataclass
@@ -37,28 +39,35 @@ class FontChoice:
 
 
 class FontControls:
-    """Font editing widgets laid out in a label frame."""
+    """Font editing widgets laid out in a label frame; every change calls ``on_change``."""
 
-    def __init__(self, frame: ttk.LabelFrame, font_families: list[str], dialog: tk.Misc) -> None:
+    def __init__(
+        self,
+        frame: ttk.LabelFrame,
+        font_families: list[str],
+        dialog: tk.Misc,
+        on_change: Callable[[], None],
+    ) -> None:
         """Create the widgets.
 
         Args:
             frame: Label frame receiving the widgets.
             font_families: Choices of the font family combobox.
             dialog: Window owning the color chooser.
+            on_change: Called after each change made by the user (live preview).
         """
         self._frame = frame
         self._font_families = font_families
         self._dialog = dialog
+        self._on_change = on_change
         self._build_family_and_size_rows()
         self._build_style_row()
-        self._add_label("Couleur de la police:", 3)
-        self.color_button = tk.Button(frame, width=3)
+        self._add_label("Couleur :", 3)
+        self.color_button = tk.Button(frame, width=3, command=self._choose_color)
         self.color_button.grid(row=3, column=1, sticky="w", padx=FIELD_PADDING, pady=FIELD_PADDING)
-        self.color_button.configure(command=partial(self._choose_color, self.color_button))
 
     def _build_family_and_size_rows(self) -> None:
-        """Create the font family combobox and the (empty) size spinbox."""
+        """Create the font family combobox and the size row."""
         self._add_label("Police :", 0)
         self.family_combobox = ttk.Combobox(
             self._frame, values=self._font_families, state="readonly", width=20
@@ -66,14 +75,26 @@ class FontControls:
         self.family_combobox.grid(
             row=0, column=1, sticky="w", columnspan=2, padx=FIELD_PADDING, pady=FIELD_PADDING
         )
-        self._add_label("Taille de la police :", 1)
+        self.family_combobox.bind("<<ComboboxSelected>>", lambda _event: self._on_change())
+        self._build_size_row()
+
+    def _build_size_row(self) -> None:
+        """Create the (empty) size spinbox, applied by its arrows, Enter or on leaving."""
+        self._add_label("Taille :", 1)
         self.size_spinbox = ttk.Spinbox(
-            self._frame, from_=FONT_SIZE_RANGE[0], to=FONT_SIZE_RANGE[1], increment=1, width=10
+            self._frame,
+            from_=FONT_SIZE_RANGE[0],
+            to=FONT_SIZE_RANGE[1],
+            increment=1,
+            width=10,
+            command=self._on_change,
         )
         self.size_spinbox.grid(
             row=1, column=1, columnspan=2, sticky="w", padx=FIELD_PADDING, pady=FIELD_PADDING
         )
         self.size_spinbox.delete(0, "end")
+        for sequence in SIZE_TYPING_EVENTS:
+            self.size_spinbox.bind(sequence, lambda _event: self._on_change())
 
     def _add_label(self, text: str, row: int) -> None:
         """Add a right-aligned field label in column 0.
@@ -88,34 +109,35 @@ class FontControls:
 
     def _build_style_row(self) -> None:
         """Create the font style combobox and the bold checkbutton."""
-        self._add_label("Styles de la police:", 2)
+        self._add_label("Style :", 2)
         self.style_combobox = ttk.Combobox(
-            self._frame, values=FONT_STYLES, state="readonly", width=10
+            self._frame, values=displayed_names(FONT_STYLE_NAMES), state="readonly", width=10
         )
         self.style_combobox.grid(
             row=2, column=1, sticky="w", padx=FIELD_PADDING, pady=FIELD_PADDING
         )
         self.style_combobox.current(0)
+        self.style_combobox.bind("<<ComboboxSelected>>", lambda _event: self._on_change())
         self.bold_var = tk.BooleanVar(value=False)
         self.bold_checkbutton = ttk.Checkbutton(
-            self._frame, text="Gras", variable=self.bold_var, style=STYLE_CHECKBUTTON
+            self._frame,
+            text="Gras",
+            variable=self.bold_var,
+            style=STYLE_CHECKBUTTON,
+            command=self._on_change,
         )
         self.bold_checkbutton.grid(
             row=2, column=2, sticky="w", padx=FIELD_PADDING, pady=FIELD_PADDING
         )
-        self.bold_checkbutton.configure(state=["selected"])
 
-    def _choose_color(self, button: tk.Button) -> None:
-        """Ask for a color and show it on the color button.
-
-        Args:
-            button: Button whose background displays the color.
-        """
+    def _choose_color(self) -> None:
+        """Ask for a color, show it on the color button and apply it."""
         color_code = colorchooser.askcolor(
-            button.cget("bg"), parent=self._dialog, title="Choisir une couleur de police"
+            self.color_button.cget("bg"), parent=self._dialog, title="Couleur de la police"
         )
         if color_code and color_code[1]:
-            button.configure(bg=color_code[1])
+            self.color_button.configure(bg=color_code[1])
+            self._on_change()
 
     def set_family(self, family: str) -> None:
         """Select a font family (the first one when unknown).
@@ -127,11 +149,12 @@ class FontControls:
         self.family_combobox.current(families.index(family) if family in families else 0)
 
     def set_size(self, size: int) -> None:
-        """Insert a font size in the spinbox.
+        """Show a font size in the spinbox.
 
         Args:
             size: Font size.
         """
+        self.size_spinbox.delete(0, "end")
         self.size_spinbox.insert(0, size)
 
     def set_style(self, style: str) -> None:
@@ -140,7 +163,7 @@ class FontControls:
         Args:
             style: "normal", "italic" or "oblique".
         """
-        self.style_combobox.set(style)
+        self.style_combobox.set(name_of(FONT_STYLE_NAMES, style))
 
     def set_bold(self, is_bold: bool) -> None:
         """Check or uncheck the bold checkbutton.
@@ -148,7 +171,6 @@ class FontControls:
         Args:
             is_bold: Whether the font is bold.
         """
-        self.bold_checkbutton.state(["selected"] if is_bold else ["!selected"])
         self.bold_var.set(is_bold)
 
     def set_color(self, color: str) -> None:
@@ -181,7 +203,7 @@ class FontControls:
         return FontChoice(
             family=self.family_combobox.get(),
             size=self._typed_size(),
-            style=self.style_combobox.get(),
+            style=value_of(FONT_STYLE_NAMES, self.style_combobox.get()),
             weight="bold" if self.bold_var.get() else "normal",
             color=self.color_button.cget("bg"),
         )

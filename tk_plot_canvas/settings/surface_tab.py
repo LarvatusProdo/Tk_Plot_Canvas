@@ -14,22 +14,23 @@ from ..config import (
     STYLE_CHECKBUTTON,
     STYLE_COLUMN_HEADER,
     STYLE_COMBOBOX,
-    STYLE_SECTION_TITLE,
     STYLE_SPINBOX,
 )
+from ..widgets import ToolTip
 from .base_tab import SettingsTab
 from .colorbar_dialog import ColorbarDialog
 from .value_range_dialog import ValueRangeDialog
 
 COLUMN_TITLES = (
-    ("Indice", 1),
-    ("Variable affichée", 5),
-    ("Plage de valeur", 10),
-    ("Couleur", 20),
-    ("Transparence", 30),
-    ("Affichage colorbar", 40),
-    ("Paramètre colorbar", 50),
+    ("N°", 1),
+    ("Variable", 5),
+    ("Classes", 10),
+    ("Palette", 20),
+    ("Opacité", 30),
+    ("Colorbar", 40),
 )
+OPACITY_HELP = "Opacité de la surface : 0 = transparente, 1 = opaque."
+MAP_HELP = "Dessiner les côtes et les frontières (données longitude/latitude, cartopy)."
 # Typing applies valid values silently; leaving the field restores an invalid one.
 ALPHA_CHECK_EVENTS = ("<Return>", "<FocusOut>")
 CELL_PADDING = (10, 10)
@@ -55,20 +56,19 @@ class SurfaceTab(SettingsTab):
 
     def build(self) -> None:
         """Create the column titles, the map toggle and one row per plot."""
-        ttk.Label(self.frame, text="Paramètres du graphique 3D:", style=STYLE_SECTION_TITLE).grid(
-            row=0, column=0, sticky="w", padx=5, pady=10, columnspan=10
-        )
         for title, column in COLUMN_TITLES:
             ttk.Label(self.frame, text=title, style=STYLE_COLUMN_HEADER).grid(
                 row=1, column=column, padx=5, pady=5
             )
         self.show_map_var = tk.BooleanVar(value=self.canvas.show_map)
-        ttk.Checkbutton(
+        map_checkbutton = ttk.Checkbutton(
             self.frame,
-            text="Affichage d'une carte",
+            text="Fond de carte (côtes et frontières)",
             variable=self.show_map_var,
             command=self._toggle_map,
-        ).grid(row=0, column=20, padx=5, pady=5)
+        )
+        map_checkbutton.grid(row=0, column=0, columnspan=20, sticky="w", padx=5, pady=10)
+        ToolTip(map_checkbutton, MAP_HELP)
         self.surface_widgets: dict[int, SurfaceWidgets] = {}
         if len(self.canvas.datasets) == 0:
             return
@@ -90,12 +90,12 @@ class SurfaceTab(SettingsTab):
             row=row, column=1, sticky="w", padx=CELL_PADDING, pady=CELL_PADDING
         )
         variable_combobox = self._add_variable_combobox(row, index)
-        self._add_button(row, 10, "Valeurs", partial(self._open_value_range_dialog, index))
+        self._add_button(row, 10, "Classes…", partial(self._open_value_range_dialog, index))
         colormap_combobox = self._add_colormap_combobox(row, index, surface.get_cmap().name)
         alpha_var = self._add_alpha_spinbox(row, index, surface.get_alpha())
         colorbar_var = self._add_colorbar_checkbutton(row, index)
         colorbar_button = self._add_button(
-            row, 50, "Modifier colorbar", partial(self._open_colorbar_dialog, index)
+            row, 50, "Réglages…", partial(self._open_colorbar_dialog, index)
         )
         self._update_colorbar_button(colorbar_button)
         return SurfaceWidgets(
@@ -122,7 +122,7 @@ class SurfaceTab(SettingsTab):
         """Enable the colorbar settings button only while a colorbar is displayed.
 
         Args:
-            button: The "Modifier colorbar" button.
+            button: The colorbar "Réglages…" button.
         """
         button.state(["!disabled"] if self.canvas.colorbar is not None else ["disabled"])
 
@@ -197,6 +197,7 @@ class SurfaceTab(SettingsTab):
             row=row, column=30, columnspan=2, sticky="w", padx=CELL_PADDING, pady=CELL_PADDING
         )
         spinbox.bind("<KeyRelease>", lambda _event: self._update_alpha(index))
+        ToolTip(spinbox, OPACITY_HELP)
         for sequence in ALPHA_CHECK_EVENTS:
             spinbox.bind(sequence, lambda _event: self._validate_alpha(index))
         return alpha_var

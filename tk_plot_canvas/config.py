@@ -26,15 +26,35 @@ OTHER_DEFAULT_FONT = "Arial"
 FALLBACK_FONT_SIZE = "12"
 FALLBACK_FONT_WEIGHT = "normal"
 UI_FONT_SIZE = 10
-FONT_STYLES = ["normal", "italic", "oblique"]
+# Matplotlib/Tk value -> name displayed in the dialogs.
+FONT_STYLE_NAMES = {"normal": "Normal", "italic": "Italique", "oblique": "Oblique"}
+FONT_STYLES = list(FONT_STYLE_NAMES)
 FONT_SIZE_RANGE = (1, 72)
 DEFAULT_FONT_SIZE = 10
 DEFAULT_FONT_COLOR = "#000000"
 CARTOUCHE_LINE_SYMBOL_FONT = ("Helvetica", 15, "bold")
 
 # --- Curves ------------------------------------------------------------------
-LINE_STYLES = ["-", "--", "-.", "None"]
-MARKERS = ["o", "s", "^", "x", "None"]
+# Matplotlib value -> name displayed in the "Courbes" tab.
+LINE_STYLE_NAMES = {
+    "-": "Continu",
+    "--": "Tirets",
+    "-.": "Tirets-points",
+    ":": "Pointillés",
+    "None": "Aucun",
+}
+MARKER_NAMES = {
+    "o": "Cercle",
+    "s": "Carré",
+    "^": "Triangle",
+    "D": "Losange",
+    "x": "Croix",
+    "+": "Plus",
+    ".": "Point",
+    "None": "Aucun",
+}
+LINE_STYLES = list(LINE_STYLE_NAMES)
+MARKERS = list(MARKER_NAMES)
 SOLID_LINE_STYLE = "-"
 SOLID_LINE_SYMBOL = "―"
 NO_STYLE = "None"
@@ -45,7 +65,8 @@ ALPHA_RANGE = (0.0, 1.0, 0.05)
 DEFAULT_ALPHA = "1.0"
 
 # --- Axes --------------------------------------------------------------------
-AXIS_SCALES = ["linear", "log"]
+AXIS_SCALE_NAMES = {"linear": "Linéaire", "log": "Logarithmique"}
+AXIS_SCALES = list(AXIS_SCALE_NAMES)
 AXIS_LIMIT_DECIMALS = 4
 VARIABLE_SEPARATOR = "---------"
 GEOGRAPHIC_DIMENSIONS = ("longitude", "latitude")
@@ -56,7 +77,8 @@ BORDER_WIDTH = 0.3
 COLORBAR_VERTICAL = "vertical"
 COLORBAR_HORIZONTAL = "horizontal"
 COLORBAR_ORIENTATIONS = [COLORBAR_VERTICAL, COLORBAR_HORIZONTAL]
-COLORBAR_LOCATIONS = ["right", "left", "top", "bottom"]
+COLORBAR_LOCATION_NAMES = {"right": "Droite", "left": "Gauche", "top": "Haut", "bottom": "Bas"}
+COLORBAR_LOCATIONS = list(COLORBAR_LOCATION_NAMES)
 KEY_COLORBAR_STYLE = "colorbar_style"
 # Matplotlib defaults: length (shrink), thickness (aspect = length/width),
 # distance to the axes (pad), share of the axes space (fraction).
@@ -94,12 +116,12 @@ SCROLLED_FRAME_INNER_OFFSET = 4
 CLASS_EDITOR_WIDTH = 45
 HOVER_BACKGROUND = "#e6f2ff"
 
-# --- Settings window tab names (also persisted as "selected tab") ------------
+# --- Settings window tab names (shown to the user, never persisted) ----------
 TAB_AXES = "Axes et titre"
 TAB_CARTOUCHE = "Cartouche"
 TAB_CURVES = "Courbes"
 TAB_LEGEND = "Légende"
-TAB_3D = "Graphique 3D"
+TAB_3D = "Surface"
 
 # --- Font dialog targets -----------------------------------------------------
 FONT_TARGET_CARTOUCHE = "cartouche"
@@ -107,6 +129,13 @@ FONT_TARGET_TITLE = "Graphique title"
 FONT_TARGET_XLABEL = "xlabel"
 FONT_TARGET_YLABEL = "ylabel"
 FONT_TARGET_COLORBAR = "colorbar label"
+FONT_DIALOG_TITLES = {
+    FONT_TARGET_CARTOUCHE: "Polices du cartouche",
+    FONT_TARGET_TITLE: "Police du titre",
+    FONT_TARGET_XLABEL: "Polices de l'axe X",
+    FONT_TARGET_YLABEL: "Polices de l'axe Y",
+    FONT_TARGET_COLORBAR: "Police du label de la colorbar",
+}
 
 # --- ttk style names ---------------------------------------------------------
 STYLE_FRAME = "TkPlotCanvas.TFrame"
@@ -131,8 +160,23 @@ STYLE_HOVER_ENTRY = "ClassSelection.TEntry"
 
 # --- File dialogs ------------------------------------------------------------
 JSON_EXTENSION = ".json"
-JSON_FILE_TYPES = [("JSON files", "*.json")]
+JSON_FILE_TYPES = [("Fichiers JSON", "*.json")]
 FILE_DIALOG_INITIAL_DIR = "."
+EXPORT_DPI = 200
+EXPORT_DEFAULT_EXTENSION = ".png"
+EXPORT_FILE_TYPES = [
+    ("Image PNG", "*.png"),
+    ("Document PDF", "*.pdf"),
+    ("Image vectorielle SVG", "*.svg"),
+    ("Image JPEG", "*.jpg"),
+]
+
+# --- Keyboard shortcuts (Tk sequences; upper case covers Caps Lock) ----------
+SHORTCUT_SAVE_VIEW = ("<Control-s>", "<Control-S>")
+# Ctrl+G is kept for compatibility with earlier versions.
+SHORTCUT_LOAD_VIEW = ("<Control-o>", "<Control-O>", "<Control-g>", "<Control-G>")
+SHORTCUT_EXPORT_IMAGE = ("<Control-e>", "<Control-E>")
+SHORTCUT_COPY_IMAGE = ("<Control-c>", "<Control-C>")
 
 # --- Persisted view keys (JSON format, must never change) --------------------
 KEY_PLOT_TYPE = "plot_type"

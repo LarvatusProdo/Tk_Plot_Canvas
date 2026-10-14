@@ -1,7 +1,7 @@
 """Label frame of the "Axes et titre" tab editing the axes settings of 3D plots."""
 
 import tkinter as tk
-from tkinter import messagebox, ttk
+from tkinter import ttk
 from typing import TYPE_CHECKING, Any
 
 from ..canvas.surface_axes import Aspect, parse_aspect
@@ -12,12 +12,19 @@ from ..config import (
     STYLE_LABEL,
     STYLE_LABELFRAME,
 )
+from ..widgets import ToolTip
 from .axis_frame import FRAME_PADDING, PADDING
 
 if TYPE_CHECKING:
     from .axes_tab import AxesTab
 
 ASPECT_EVENTS = ("<<ComboboxSelected>>", "<Return>", "<FocusOut>")
+ASPECT_HELP = (
+    "Rapport d'échelle entre les axes y et x.\n"
+    "« égal » : une unité a la même longueur sur les deux axes ; "
+    "« libre » : le graphique remplit l'espace disponible.\n"
+    "Vous pouvez aussi saisir un nombre positif."
+)
 
 
 def choice_text(choices: dict[str, Any], value: Any) -> str:
@@ -59,7 +66,7 @@ class SurfaceAxesFrame:
         self._canvas = tab.canvas
         self._frame = ttk.LabelFrame(
             tab.frame,
-            text="Paramètres du graphique 3D",
+            text="Surface",
             padding=FRAME_PADDING,
             style=STYLE_LABELFRAME,
         )
@@ -84,8 +91,13 @@ class SurfaceAxesFrame:
             style=STYLE_COMBOBOX,
         )
         aspect_combobox.grid(row=0, column=1, sticky="w", padx=PADDING, pady=PADDING)
+        ToolTip(aspect_combobox, ASPECT_HELP)
         for sequence in ASPECT_EVENTS:
             aspect_combobox.bind(sequence, lambda _event: self._apply_aspect())
+        self._add_grid_control()
+
+    def _add_grid_control(self) -> None:
+        """Create the checkbutton showing or hiding the grid."""
         ttk.Checkbutton(
             self._frame,
             text="Afficher la grille",
@@ -95,16 +107,12 @@ class SurfaceAxesFrame:
         ).grid(row=1, column=0, columnspan=2, sticky="w", padx=PADDING, pady=PADDING)
 
     def _apply_aspect(self) -> None:
-        """Apply the selected aspect, or the typed y/x ratio."""
+        """Apply the selected aspect or the typed y/x ratio (an invalid one is restored)."""
         text = self.aspect_var.get().strip()
         try:
             aspect = ASPECT_CHOICES[text] if text in ASPECT_CHOICES else parse_aspect(text)
         except ValueError:
-            messagebox.showerror(
-                "Invalid input",
-                "Choisissez un aspect dans la liste ou saisissez un nombre positif (rapport y/x).",
-                parent=self._frame,
-            )
+            self._frame.bell()
             self.aspect_var.set(aspect_text(self._canvas.surface_axes_style["aspect"]))
             return
         if aspect != self._canvas.surface_axes_style["aspect"]:

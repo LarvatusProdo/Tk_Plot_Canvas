@@ -220,12 +220,12 @@ class ClassSelectionFrame(ttk.Frame):
         return entry
 
     def _build_buttons(self) -> None:
-        """Create the optional "Get classes" and "Quitter" buttons."""
+        """Create the optional "Calculer les classes" and "Quitter" buttons."""
         buttons_frame = ttk.Frame(self)
         buttons_frame.pack(side="bottom", fill="x", padx=5, pady=5)
         ttk.Button(
             buttons_frame,
-            text="Get classes",
+            text="Calculer les classes",
             command=self.get_classes,
             style=STYLE_BUTTON,
         ).pack(side="right", padx=5, pady=5)

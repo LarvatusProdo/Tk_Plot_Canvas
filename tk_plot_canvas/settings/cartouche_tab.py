@@ -41,22 +41,18 @@ class CartoucheTab(SettingsTab):
 
     def _build_header(self) -> None:
         """Create the title, the visibility toggle and the font button."""
-        ttk.Label(self.frame, text="Paramètres du cartouche:", style=STYLE_SECTION_TITLE).grid(
-            row=0, column=0, sticky="w", padx=5, pady=10, columnspan=3
-        )
         self.show_var = tk.BooleanVar(value=self.canvas.show_cartouche)
         show_checkbutton = ttk.Checkbutton(
             self.frame,
-            text="Affichage du cartouche",
+            text="Afficher le cartouche",
             variable=self.show_var,
             style=STYLE_CHECKBUTTON,
             command=self._toggle_cartouche,
         )
-        show_checkbutton.grid(row=0, column=3, sticky="w", padx=5, pady=10, columnspan=1)
-        show_checkbutton.configure(state=["selected"])
+        show_checkbutton.grid(row=0, column=0, sticky="w", padx=5, pady=10, columnspan=3)
         ttk.Button(
             self.frame,
-            text="Paramètres du cartouche:",
+            text="Polices…",
             style=STYLE_BUTTON,
             command=self._open_font_dialog,
         ).grid(row=0, column=4, sticky="w", padx=5, pady=10, columnspan=2)
@@ -85,7 +81,7 @@ class CartoucheTab(SettingsTab):
             label: Metadata of the first curve.
         """
         if label:
-            ttk.Label(self.frame, text="Indice", style=STYLE_SECTION_TITLE).grid(
+            ttk.Label(self.frame, text="Colonne :", style=STYLE_SECTION_TITLE).grid(
                 row=1, column=0, sticky="w", padx=CELL_PADDING, pady=CELL_PADDING
             )
         choices = [""] + list(label.keys())
@@ -212,9 +208,4 @@ class CartoucheTab(SettingsTab):
 
     def _toggle_cartouche(self) -> None:
         """Show or hide the cartouche below the plot."""
-        if not self.show_var.get():
-            self.canvas.panedwindow.forget(self.canvas.cartouche_frame)
-            self.canvas.show_cartouche = False
-        else:
-            self.canvas.panedwindow.add(self.canvas.cartouche_frame, weight=0)
-            self.canvas.show_cartouche = True
+        self.canvas.set_cartouche_visible(self.show_var.get())
