@@ -29,6 +29,7 @@ from ..config import (
     PLOT_TYPE_2D,
     STYLE_CARTOUCHE_FRAME,
     STYLE_FRAME,
+    SURFACE_AXES_STYLE_DEFAULT,
     TAB_AXES,
 )
 from ..fonts import default_font_name
@@ -40,6 +41,7 @@ from .legend import LegendMixin
 from .plot_helpers import PlotHelpersMixin
 from .standard_plotting import StandardPlotMixin
 from .styles import configure_canvas_styles
+from .surface_axes import SurfaceAxesMixin
 from .view_persistence import ViewPersistenceMixin
 from .xarray_curves import XarrayCurvePlotMixin
 from .xarray_surfaces import XarraySurfacePlotMixin
@@ -54,6 +56,7 @@ class TkPlotCanvas(
     LegendMixin,
     CartoucheMixin,
     ColorbarMixin,
+    SurfaceAxesMixin,
     ViewPersistenceMixin,
 ):
     """A Tkinter frame that embeds a Matplotlib figure.
@@ -129,6 +132,7 @@ class TkPlotCanvas(
         self.colorbar: Optional[Any] = None
         self.colorbar_style: dict[str, Any] = dict(COLORBAR_STYLE_DEFAULT)
         self.hidden_colorbar_label: Optional[tuple[str, dict[str, Any]]] = None
+        self.surface_axes_style: dict[str, Any] = dict(SURFACE_AXES_STYLE_DEFAULT)
         self.lines: list[Any] = []
         self.line_labels: list[Optional[dict]] = []
         self.xarray_variables = {"x": "", "y": "", "z": ""}

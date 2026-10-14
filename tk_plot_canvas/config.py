@@ -70,6 +70,16 @@ COLORBAR_STYLE_DEFAULT = {
     "outline_width": 0.8,
 }
 
+# --- 3D plot axes ------------------------------------------------------------
+KEY_SURFACE_AXES_STYLE = "axes_style"
+# "aspect": None keeps the Matplotlib/cartopy default, else "equal", "auto" or a
+# positive number (y/x scale ratio).
+SURFACE_AXES_STYLE_DEFAULT = {
+    "aspect": None,
+    "grid": False,
+}
+ASPECT_CHOICES = {"par défaut": None, "égal": "equal", "libre": "auto"}
+
 # --- Layout ------------------------------------------------------------------
 CARTOUCHE_HEIGHT = 100
 SETTINGS_WINDOW_SIZE = "1000x550"
@@ -134,6 +144,9 @@ KEY_LEVELS_AUTO = CLASS_MODE_AUTO
 KEY_LEVELS_MANUAL = CLASS_MODE_MANUAL
 KEY_VALUE_RANGE = "value_range"
 VALUE_RANGE_DEFAULT = "valeur par défaut"
+# Figure margins and spacing edited with the toolbar "Configure subplots" dialog.
+KEY_SUBPLOT_PARAMS = "subplot_params"
+SUBPLOT_PARAM_NAMES = ("left", "bottom", "right", "top", "wspace", "hspace")
 
 # --- Demo --------------------------------------------------------------------
 DEMO_WINDOW_TITLE = "Tkinter + Matplotlib Plot Demo"

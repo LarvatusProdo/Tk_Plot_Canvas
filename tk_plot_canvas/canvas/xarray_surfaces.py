@@ -67,9 +67,10 @@ class XarraySurfacePlotMixin:
         self._finish_surface_plot()
 
     def _finish_surface_plot(self) -> None:
-        """Apply the loaded view, show both axes and redraw."""
+        """Apply the loaded view and the axes settings, show both axes and redraw."""
         if self.view_parameters != {} and self.view_parameters is not None:
             self.load_parameters(parameters_to_load=self.view_parameters)
+        self.apply_surface_axes_style()
         self.axes.xaxis.set_visible(True)
         self.axes.yaxis.set_visible(True)
         self.figure_canvas.draw()

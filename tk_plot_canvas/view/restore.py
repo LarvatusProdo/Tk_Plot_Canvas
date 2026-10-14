@@ -10,11 +10,13 @@ from ..config import (
     KEY_CURVE_TYPE,
     KEY_CURVES,
     KEY_PLOT_TYPE,
+    KEY_SUBPLOT_PARAMS,
     KEY_XARRAY_3D,
     PLOT_TYPE_2D,
     PLOT_TYPE_3D,
     STYLE_CARTOUCHE_CELL,
     STYLE_CARTOUCHE_HEADER,
+    SUBPLOT_PARAM_NAMES,
 )
 from ..fonts import safe_tk_font_spec
 
@@ -84,6 +86,7 @@ def apply_view_parameters(canvas: "TkPlotCanvas", parameters: Parameters) -> Non
     plot_type = effective_plot_type(canvas, parameters)
     _apply_background(canvas, parameters, plot_type)
     _apply_plot_type_and_window(canvas, parameters, plot_type)
+    _apply_subplot_parameters(canvas, parameters.get(KEY_SUBPLOT_PARAMS))
     if "X_axis" in parameters:
         apply_axis_parameters(canvas, "x", parameters["X_axis"])
     if "Y_axis" in parameters:
@@ -118,6 +121,30 @@ def _apply_background(canvas: "TkPlotCanvas", parameters: Parameters, plot_type:
             line.set_color(color)
     canvas.figure_canvas.get_tk_widget().configure(background=color)
     canvas.figure_canvas.draw()
+
+
+def _apply_subplot_parameters(canvas: "TkPlotCanvas", saved: Optional[Parameters]) -> None:
+    """Restore the figure margins and spacing ("Configure subplots" dialog).
+
+    Invalid entries are ignored; inconsistent values (e.g. left >= right)
+    leave the layout unchanged.
+
+    Args:
+        canvas: Canvas to update.
+        saved: "subplot_params" entry of the view parameters, if any.
+    """
+    if not saved:
+        return
+    values = {}
+    for name in SUBPLOT_PARAM_NAMES:
+        try:
+            values[name] = float(saved[name])
+        except (KeyError, TypeError, ValueError):
+            continue
+    try:
+        canvas.figure.subplots_adjust(**values)
+    except ValueError:
+        pass
 
 
 def _apply_plot_type_and_window(

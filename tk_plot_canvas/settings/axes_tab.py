@@ -10,6 +10,7 @@ import numpy as np
 
 from ..config import (
     FONT_TARGET_TITLE,
+    PLOT_TYPE_3D,
     STYLE_BUTTON,
     STYLE_ENTRY,
     STYLE_LABEL,
@@ -20,6 +21,7 @@ from ..config import (
 from .axis_frame import FRAME_PADDING, PADDING, AxisControls, AxisFrame
 from .base_tab import SettingsTab
 from .font_dialogs import AxisFontDialog
+from .surface_axes_frame import SurfaceAxesFrame
 
 AXIS_NAMES = ("x", "y")
 AXIS_TITLES = {"x": "Abscisse", "y": "Ordonnée"}
@@ -86,6 +88,8 @@ class AxesTab(SettingsTab):
         for column, axis_name in enumerate(AXIS_NAMES):
             axis_frame = AxisFrame(self, axis_name, AXIS_TITLES[axis_name], 2 * column, variables)
             self.axis_controls[axis_name] = axis_frame.controls
+        if self.canvas.plot_type == PLOT_TYPE_3D:
+            SurfaceAxesFrame(self, row=2, column=2 * len(AXIS_NAMES))
         ttk.Button(
             self.frame,
             text="Appliquer les changements",

@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any, Optional
 
 from matplotlib.axes import Axes
 from matplotlib.axis import Axis
+from matplotlib.figure import Figure
 from matplotlib.text import Text
 
 from ..config import (
@@ -16,11 +17,14 @@ from ..config import (
     CURVE_TYPE_CONTOUR,
     CURVE_TYPE_LINE,
     KEY_COLORBAR_STYLE,
+    KEY_SUBPLOT_PARAMS,
+    KEY_SURFACE_AXES_STYLE,
     KEY_VALUE_RANGE,
     KEY_XARRAY_3D,
     PLOT_TYPE_3D,
     STYLE_CARTOUCHE_CELL,
     STYLE_CARTOUCHE_HEADER,
+    SUBPLOT_PARAM_NAMES,
 )
 
 if TYPE_CHECKING:
@@ -53,8 +57,21 @@ def capture_view_parameters(canvas: "TkPlotCanvas") -> dict[str, Any]:
         "cartouche": _capture_cartouche(canvas),
         "legend": _capture_legend(canvas),
         "xarray_data": dict(canvas.xarray_variables),
+        KEY_SUBPLOT_PARAMS: _capture_subplot_parameters(canvas.figure),
     }
     return add_3d_parameters(canvas, parameters)
+
+
+def _capture_subplot_parameters(figure: Figure) -> dict[str, float]:
+    """Capture the figure margins and spacing ("Configure subplots" dialog).
+
+    Args:
+        figure: Matplotlib figure.
+
+    Returns:
+        "left", "bottom", "right", "top", "wspace" and "hspace" values.
+    """
+    return {name: float(getattr(figure.subplotpars, name)) for name in SUBPLOT_PARAM_NAMES}
 
 
 def _capture_axis(axes: Axes, axis_name: str) -> dict[str, Any]:
@@ -212,6 +229,7 @@ def _capture_surface(canvas: "TkPlotCanvas") -> dict[str, Any]:
         KEY_VALUE_RANGE: canvas.get_value_range_parameter(),
         "affichage_map": canvas.show_map,
         KEY_COLORBAR_STYLE: canvas.get_colorbar_style_parameter(),
+        KEY_SURFACE_AXES_STYLE: canvas.get_surface_axes_style_parameter(),
     }
 
 

@@ -16,6 +16,7 @@ from ..config import (
     KEY_COLORBAR_STYLE,
     KEY_LEVELS_AUTO,
     KEY_LEVELS_MANUAL,
+    KEY_SURFACE_AXES_STYLE,
     KEY_VALUE_RANGE,
     VALUE_RANGE_DEFAULT,
 )
@@ -330,6 +331,7 @@ class ColorbarMixin:
             None if value_range == VALUE_RANGE_DEFAULT else tuple(float(v) for v in value_range)
         )
         self._apply_levels(parameters.get("levels"))
+        self.load_surface_axes_style(parameters.get(KEY_SURFACE_AXES_STYLE))
 
     def _apply_colorbar_parameters(self, parameters: dict[str, Any]) -> None:
         """Show or hide the colorbar and restore its orientation and font.
