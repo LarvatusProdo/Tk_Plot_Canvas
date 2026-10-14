@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any
 
 from ..config import CLASS_MODE_AUTO, STYLE_LABELFRAME, VALUE_RANGE_DIALOG_SIZE
 from ..widgets import ClassSelectionFrame
-from .window_placement import place_window
+from .window_placement import setup_dialog
 
 if TYPE_CHECKING:
     from ..canvas.plot_canvas import TkPlotCanvas
@@ -28,7 +28,7 @@ class ValueRangeDialog(tk.Toplevel):
         """
         super().__init__(parent)
         self.title("Paramètres de la plage de valeurs")
-        place_window(self, parent, VALUE_RANGE_DIALOG_SIZE)
+        setup_dialog(self, parent, VALUE_RANGE_DIALOG_SIZE)
         self.canvas = canvas
         self.surface = surface
         self.index = index

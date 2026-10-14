@@ -9,7 +9,12 @@ Example:
     >>> canvas.plot([0, 1, 2], [0, 1, 4], label={"curve": "square"})
 """
 
-from .canvas.plot_canvas import TkPlotCanvas
-from .widgets import ClassSelectionFrame, VerticalScrolledFrame
+from .dpi import enable_high_dpi
 
-__all__ = ["ClassSelectionFrame", "TkPlotCanvas", "VerticalScrolledFrame"]
+# Before any Tk window exists, so that the application is sharp on scaled screens.
+enable_high_dpi()
+
+from .canvas.plot_canvas import TkPlotCanvas  # noqa: E402
+from .widgets import ClassSelectionFrame, VerticalScrolledFrame  # noqa: E402
+
+__all__ = ["ClassSelectionFrame", "TkPlotCanvas", "VerticalScrolledFrame", "enable_high_dpi"]

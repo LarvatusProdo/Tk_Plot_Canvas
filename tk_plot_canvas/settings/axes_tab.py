@@ -126,7 +126,10 @@ class AxesTab(SettingsTab):
             target: "Graphique title", "xlabel" or "ylabel".
             label_text: Returns the text to redraw with the new font.
         """
-        AxisFontDialog(self.window, self.canvas, target, label_text)
+        self.canvas.dialogs.show(
+            f"font:{target}",
+            partial(AxisFontDialog, self.window, self.canvas, target, label_text),
+        )
 
     def _xarray_variable_choices(self) -> list[str]:
         """List the dimensions and variables of the first xarray dataset.

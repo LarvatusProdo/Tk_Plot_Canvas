@@ -111,14 +111,15 @@ class XarrayCurvePlotMixin:
 
         Args:
             ds: Dataset with a single dimension.
-            title: Plot title (applied only when a view has been loaded).
+            title: Plot title (with the font of the loaded view, if any).
             grid: Whether to show a grid.
             clear: Unused (clearing is done by :meth:`plot_xarray`).
-            legend: Whether to show a legend.
+            legend: Whether to show a legend (by default with the first metadata key).
             label: Curve metadata.
             replot: True when re-plotting an already registered dataset.
             **plot_kwargs: Passed to ``Axes.plot``.
         """
+        self._apply_default_metadata_keys(label, legend)
         legend_label = self._legend_label_for(label)
         line_kwargs = self._curve_kwargs_from_view(plot_kwargs)
         dimension, variable = self._select_curve_variables(ds)
@@ -128,8 +129,10 @@ class XarrayCurvePlotMixin:
         self._register_plot(line, label)
         self._update_cartouche_for_new_plot(label, replot)
         self.axes.grid(grid)
-        if self.view_parameters != {}:
-            self._apply_view_to_curve(ds, title, dimension, variable)
+        self._apply_curve_texts(ds, title, dimension, variable)
+        if self.view_parameters:
+            apply_axis_parameters(self, "x", self.view_parameters.get("X_axis"))
+            apply_axis_parameters(self, "y", self.view_parameters.get("Y_axis"))
         self._show_legend_if_requested(legend, legend_label)
         self.figure_canvas.draw()
 
@@ -155,10 +158,10 @@ class XarrayCurvePlotMixin:
         selection["y"] = variable
         return dimension, variable
 
-    def _apply_view_to_curve(
+    def _apply_curve_texts(
         self, ds: xr.Dataset, title: Optional[str], dimension: str, variable: str
     ) -> None:
-        """Apply the loaded view's axes, title and label fonts to a curve.
+        """Set the title (when given) and both axis labels, with their units.
 
         Args:
             ds: Plotted dataset.
@@ -166,17 +169,7 @@ class XarrayCurvePlotMixin:
             dimension: Name plotted along x.
             variable: Name plotted along y.
         """
-        view = self.view_parameters
-        apply_axis_parameters(self, "x", view.get("X_axis"))
-        apply_axis_parameters(self, "y", view.get("Y_axis"))
-        if title is not None and "title" in view:
-            self.axes.set_title(title, view["title"])
-            self.title_var.set(title)
-        if "xlabel" in view:
-            x_label = label_with_units(ds, dimension)
-            self.axes.set_xlabel(x_label, view["xlabel"])
-            self.xlabel_var.set(x_label)
-        if "ylabel" in view:
-            y_label = label_with_units(ds, variable)
-            self.axes.set_ylabel(y_label, view["ylabel"])
-            self.ylabel_var.set(y_label)
+        if title is not None:
+            self._set_axes_text("title", title)
+        self._set_axes_text("xlabel", label_with_units(ds, dimension))
+        self._set_axes_text("ylabel", label_with_units(ds, variable))

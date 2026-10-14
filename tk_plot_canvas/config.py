@@ -27,7 +27,7 @@ FALLBACK_FONT_SIZE = "12"
 FALLBACK_FONT_WEIGHT = "normal"
 UI_FONT_SIZE = 10
 FONT_STYLES = ["normal", "italic", "oblique"]
-FONT_SIZE_RANGE = (0, 20)
+FONT_SIZE_RANGE = (1, 72)
 DEFAULT_FONT_SIZE = 10
 DEFAULT_FONT_COLOR = "#000000"
 CARTOUCHE_LINE_SYMBOL_FONT = ("Helvetica", 15, "bold")
@@ -81,7 +81,8 @@ SURFACE_AXES_STYLE_DEFAULT = {
 ASPECT_CHOICES = {"par défaut": None, "égal": "equal", "libre": "auto"}
 
 # --- Layout ------------------------------------------------------------------
-CARTOUCHE_HEIGHT = 100
+# Tk distance in points ("75p" = 100 pixels at 100 %), so it follows the screen scale.
+CARTOUCHE_HEIGHT = "75p"
 SETTINGS_WINDOW_SIZE = "1000x550"
 SETTINGS_WINDOW_OFFSET = (600, 50)
 DIALOG_SIZE = "400x450"

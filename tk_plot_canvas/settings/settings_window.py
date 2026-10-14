@@ -25,7 +25,7 @@ from .cartouche_tab import CartoucheTab
 from .curves_tab import CurvesTab
 from .legend_tab import LegendTab
 from .surface_tab import SurfaceTab
-from .window_placement import place_window
+from .window_placement import place_window, setup_secondary_window
 
 if TYPE_CHECKING:
     from ..canvas.plot_canvas import TkPlotCanvas
@@ -40,23 +40,39 @@ class SettingsWindow(tk.Toplevel):
         tabs: Tabs indexed by their title.
     """
 
-    def __init__(self, canvas: "TkPlotCanvas", initial_tab: str = "") -> None:
+    def __init__(
+        self, canvas: "TkPlotCanvas", initial_tab: str = "", geometry: Optional[str] = None
+    ) -> None:
         """Create the window and its tabs.
 
         Args:
             canvas: The plot canvas to edit.
             initial_tab: Title of the tab selected on opening.
+            geometry: Tk geometry to reuse (e.g. of a replaced window); by
+                default the window is placed next to the main window.
         """
         super().__init__(canvas)
         self.canvas = canvas
         self.title("Menu de modification de la courbe")
-        place_window(self, canvas.master, SETTINGS_WINDOW_SIZE, SETTINGS_WINDOW_OFFSET)
+        self._place(geometry)
         self._build_buttons()
         self.notebook = ttk.Notebook(self, style=STYLE_NOTEBOOK)
         self.notebook.pack(side="bottom", fill="both", expand=True)
         self.tabs: dict[str, SettingsTab] = {}
         self._build_tabs()
         self.select_tab(initial_tab)
+
+    def _place(self, geometry: Optional[str]) -> None:
+        """Size and place the window, keep it above the main window, close it with Escape.
+
+        Args:
+            geometry: Tk geometry to reuse, or None to place it next to the main window.
+        """
+        if geometry:
+            self.geometry(geometry)
+        else:
+            place_window(self, self.canvas.master, SETTINGS_WINDOW_SIZE, SETTINGS_WINDOW_OFFSET)
+        setup_secondary_window(self, self.canvas)
 
     def _build_buttons(self) -> None:
         """Create the "save" and "load" view buttons."""

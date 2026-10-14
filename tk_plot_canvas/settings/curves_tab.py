@@ -28,6 +28,9 @@ COLUMN_TITLES = (
 )
 CELL_PADDING = 5
 LINE_SYMBOL_WIDTH = 3
+SPINBOX_RANGES = {"linewidth": LINE_WIDTH_RANGE, "markersize": MARKER_SIZE_RANGE}
+# Typed values are applied when pressing Enter or leaving the field.
+SPINBOX_TYPING_EVENTS = ("<Return>", "<FocusOut>")
 
 
 @dataclass
@@ -79,32 +82,31 @@ class CurvesTab(SettingsTab):
             command=partial(self._choose_color, index),
         )
         color_button.grid(row=row, column=0, padx=CELL_PADDING, pady=CELL_PADDING)
-        linewidth = self._add_spinbox(row, 1, LINE_WIDTH_RANGE, "linewidth", index)
+        linewidth = self._add_spinbox(row, 1, "linewidth", index)
         linewidth.set(line.get_linewidth())
         linestyle = self._add_combobox(
             row, 2, LINE_STYLES, line.get_linestyle(), "linestyle", index
         )
         marker = self._add_combobox(row, 3, MARKERS, line.get_marker(), "marker", index)
-        markersize = self._add_spinbox(row, 4, MARKER_SIZE_RANGE, "markersize", index)
+        markersize = self._add_spinbox(row, 4, "markersize", index)
         markersize.set(line.get_markersize())
         return CurveWidgets(color_button, linewidth, linestyle, marker, markersize)
 
     def _add_spinbox(
-        self, row: int, column: int, value_range: tuple, property_name: str, index: int
+        self, row: int, column: int, property_name: str, index: int
     ) -> ttk.Spinbox:
-        """Create a numeric spinbox updating a line property.
+        """Create a numeric spinbox updating a line property (arrows or typed value).
 
         Args:
             row: Grid row.
             column: Grid column.
-            value_range: ``(minimum, maximum, increment)``.
             property_name: "linewidth" or "markersize".
             index: Curve index.
 
         Returns:
             The created spinbox.
         """
-        minimum, maximum, increment = value_range
+        minimum, maximum, increment = SPINBOX_RANGES[property_name]
         spinbox = ttk.Spinbox(
             self.frame,
             from_=minimum,
@@ -114,7 +116,30 @@ class CurvesTab(SettingsTab):
             command=partial(self._update_line_property, property_name, index),
         )
         spinbox.grid(row=row, column=column, padx=CELL_PADDING, pady=CELL_PADDING)
+        for sequence in SPINBOX_TYPING_EVENTS:
+            spinbox.bind(sequence, partial(self._on_value_typed, spinbox, property_name, index))
         return spinbox
+
+    def _on_value_typed(
+        self, spinbox: ttk.Spinbox, property_name: str, index: int, _event: tk.Event
+    ) -> None:
+        """Apply a typed width or size, clamped to its range; restore it when invalid.
+
+        Args:
+            spinbox: Spinbox holding the typed value.
+            property_name: "linewidth" or "markersize".
+            index: Curve index.
+            _event: Key or focus event (unused).
+        """
+        minimum, maximum, _increment = SPINBOX_RANGES[property_name]
+        try:
+            value = float(spinbox.get().strip().replace(",", "."))
+        except ValueError:
+            spinbox.set(getattr(self.canvas.lines[index], f"get_{property_name}")())
+            spinbox.bell()
+            return
+        spinbox.set(min(max(value, minimum), maximum))
+        self._update_line_property(property_name, index)
 
     def _add_combobox(
         self,

@@ -28,26 +28,29 @@ class StandardPlotMixin:
         Args:
             x: X data values.
             y: Y data values.
-            title: Plot title (applied only when a view has been loaded).
-            xlabel: X-axis label (applied only when a view has been loaded).
-            ylabel: Y-axis label (applied only when a view has been loaded).
+            title: Plot title (with the font of the loaded view, if any).
+            xlabel: X-axis label (with the font of the loaded view, if any).
+            ylabel: Y-axis label (with the font of the loaded view, if any).
             grid: Whether to show a grid.
             clear: Whether to clear the previous plot first.
-            legend: Whether to show a legend (when labels are provided).
+            legend: Whether to show a legend (when labels are provided). Without
+                a view defining it, the legend shows the first metadata key.
             label: Curve metadata shown in the legend and the cartouche,
-                e.g. ``{"name": "curve", "value": 42}``.
+                e.g. ``{"name": "curve", "value": 42}``. Without a view defining
+                them, the cartouche shows every key.
             **plot_kwargs: Passed to ``Axes.plot``.
         """
         if clear:
             self._reset_plot_data()
         self.plot_type = PLOT_TYPE_2D
+        self._apply_default_metadata_keys(label, legend)
         legend_label = self._legend_label_for(label)
         line_kwargs = self._curve_kwargs_from_view(plot_kwargs)
         self._detect_date_axis(x, "x")
         (line,) = self.axes.plot(x, y, label=legend_label, **line_kwargs)
         self._register_plot(line, label)
         self._update_cartouche_for_new_plot(label, replot=False)
-        self._apply_view_texts(title, xlabel, ylabel)
+        self._apply_texts(title, xlabel, ylabel)
         self.axes.grid(grid)
         if self.view_parameters != {}:
             apply_axis_parameters(self, "x", self.view_parameters.get("X_axis"))
@@ -55,25 +58,16 @@ class StandardPlotMixin:
         self._show_legend_if_requested(legend, legend_label)
         self.figure_canvas.draw()
 
-    def _apply_view_texts(
+    def _apply_texts(
         self, title: Optional[str], xlabel: Optional[str], ylabel: Optional[str]
     ) -> None:
-        """Set title and axis labels using the fonts of the loaded view.
-
-        A text is only applied when it is given and the loaded view defines
-        its font.
+        """Set the given title and axis labels (None leaves a text unchanged).
 
         Args:
             title: Plot title.
             xlabel: X-axis label.
             ylabel: Y-axis label.
         """
-        targets = (
-            ("title", title, self.axes.set_title, self.title_var),
-            ("xlabel", xlabel, self.axes.set_xlabel, self.xlabel_var),
-            ("ylabel", ylabel, self.axes.set_ylabel, self.ylabel_var),
-        )
-        for key, text, setter, text_var in targets:
-            if text is not None and key in self.view_parameters:
-                setter(text, self.view_parameters[key])
-                text_var.set(text)
+        for key, text in (("title", title), ("xlabel", xlabel), ("ylabel", ylabel)):
+            if text is not None:
+                self._set_axes_text(key, text)

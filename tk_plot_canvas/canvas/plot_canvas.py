@@ -33,7 +33,8 @@ from ..config import (
     TAB_AXES,
 )
 from ..fonts import default_font_name
-from ..settings import SettingsWindow
+from ..settings import DialogManager, SettingsWindow
+from ..settings.dialog_manager import is_window_open
 from ..widgets import VerticalScrolledFrame
 from .cartouche import CartoucheMixin
 from .colorbar import ColorbarMixin
@@ -139,6 +140,7 @@ class TkPlotCanvas(
         self.datasets: list[Any] = []
         self.view_parameters: dict[str, Any] = {}
         self.settings_window: Optional[SettingsWindow] = None
+        self.dialogs = DialogManager()
 
     def _build_layout(self) -> None:
         """Create the resizable plot area and cartouche area."""
@@ -218,17 +220,16 @@ class TkPlotCanvas(
         self.context_menu.tk_popup(event.x_root, event.y_root)
 
     def open_settings_window(self, tab_name: str = "") -> None:
-        """Open the settings window, closing any previous one.
+        """Open the settings window, replacing any previous one at the same place.
 
         Args:
             tab_name: Title of the tab to select (e.g. "Axes et titre").
         """
-        if self.settings_window is not None:
-            try:
-                self.settings_window.destroy()
-            except tk.TclError:
-                pass
-        self.settings_window = SettingsWindow(self, initial_tab=tab_name)
+        geometry = None
+        if self._is_settings_window_open():
+            geometry = self.settings_window.geometry()
+            self.settings_window.destroy()
+        self.settings_window = SettingsWindow(self, initial_tab=tab_name, geometry=geometry)
 
     def _is_settings_window_open(self) -> bool:
         """Tell whether the settings window is currently displayed.
@@ -237,7 +238,7 @@ class TkPlotCanvas(
             True when the window exists and has not been closed.
         """
         window = self.settings_window
-        return window is not None and bool(window.winfo_exists())
+        return window is not None and is_window_open(window)
 
     def _dialog_parent(self) -> tk.Misc:
         """Return the widget file dialogs should be attached to.

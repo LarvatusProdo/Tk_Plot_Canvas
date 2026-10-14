@@ -23,7 +23,7 @@ from ..config import (
 )
 from ..fonts import parse_tk_font_spec
 from .font_controls import FontChoice, FontControls
-from .window_placement import place_window
+from .window_placement import setup_dialog
 
 if TYPE_CHECKING:
     from ..canvas.plot_canvas import TkPlotCanvas
@@ -67,7 +67,7 @@ class FontDialog(tk.Toplevel):
         """
         super().__init__(parent)
         self.title(f"Modification du {target}")
-        place_window(self, parent, DIALOG_SIZE)
+        setup_dialog(self, parent, DIALOG_SIZE)
         self.canvas = canvas
         self.target = target
         self.font_families = font_families

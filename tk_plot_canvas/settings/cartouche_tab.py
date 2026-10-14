@@ -58,8 +58,14 @@ class CartoucheTab(SettingsTab):
             self.frame,
             text="Paramètres du cartouche:",
             style=STYLE_BUTTON,
-            command=partial(CartoucheFontDialog, self.window, self.canvas),
+            command=self._open_font_dialog,
         ).grid(row=0, column=4, sticky="w", padx=5, pady=10, columnspan=2)
+
+    def _open_font_dialog(self) -> None:
+        """Open the dialog editing the cartouche fonts (or bring it back to the front)."""
+        self.canvas.dialogs.show(
+            "font:cartouche", partial(CartoucheFontDialog, self.window, self.canvas)
+        )
 
     def _label_of(self, index: int) -> dict:
         """Return the metadata of a curve ({} when it has none).

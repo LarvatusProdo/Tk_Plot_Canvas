@@ -5,7 +5,13 @@ from dataclasses import dataclass
 from functools import partial
 from tkinter import colorchooser, ttk
 
-from ..config import FONT_SIZE_RANGE, FONT_STYLES, STYLE_CHECKBUTTON, STYLE_LABEL
+from ..config import (
+    DEFAULT_FONT_SIZE,
+    FONT_SIZE_RANGE,
+    FONT_STYLES,
+    STYLE_CHECKBUTTON,
+    STYLE_LABEL,
+)
 
 LABEL_PADDING = (5, 5)
 FIELD_PADDING = 5
@@ -153,6 +159,19 @@ class FontControls:
         """
         self.color_button.configure(bg=color)
 
+    def _typed_size(self) -> str:
+        """Return the typed font size, clamped to the allowed range.
+
+        Returns:
+            The whole size as text (the default size when the entry is not a number).
+        """
+        minimum, maximum = FONT_SIZE_RANGE
+        try:
+            size = float(self.size_spinbox.get().strip().replace(",", "."))
+        except ValueError:
+            return str(DEFAULT_FONT_SIZE)
+        return str(round(min(max(size, minimum), maximum)))
+
     def read(self) -> FontChoice:
         """Return the font currently selected in the widgets.
 
@@ -161,7 +180,7 @@ class FontControls:
         """
         return FontChoice(
             family=self.family_combobox.get(),
-            size=self.size_spinbox.get(),
+            size=self._typed_size(),
             style=self.style_combobox.get(),
             weight="bold" if self.bold_var.get() else "normal",
             color=self.color_button.cget("bg"),

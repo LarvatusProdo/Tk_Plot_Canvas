@@ -49,6 +49,13 @@ plot_canvas.plot(x, np.cos(x), label={"curve": "Cosine wave", "comment": ""}, cl
 root.mainloop()
 ```
 
+Sans vue chargée, le titre et les libellés passés à `plot()` sont affichés, le cartouche
+montre toutes les métadonnées et `legend=True` affiche la légende avec la première clé.
+Une vue JSON, si elle en définit, impose ses propres choix (polices, clés, visibilité).
+
+Sous Windows, l'import de `tk_plot_canvas` rend l'application nette sur les écrans mis à
+l'échelle (125 %, 150 %...) : importez le package **avant** de créer `tk.Tk()`.
+
 L'ancien import `from class_TkPlotCanvas import TkPlotCanvas` reste valide.
 
 ![Exemple avec le fichier "vue.json"](https://github.com/LarvatusProdo/Tk_Plot_Canvas/blob/main/image/Exemple_la_vue_json.jpg)
@@ -80,6 +87,7 @@ tk_plot_canvas/                 Package principal
 ├── config.py                   Constantes (tailles, styles, noms d'onglets, clés JSON...)
 ├── compat.py                   Compatibilité Matplotlib/Tk (couleurs, colormaps)
 ├── fonts.py                    Analyse et sécurisation des polices Tk
+├── dpi.py                      Netteté sur écrans mis à l'échelle (Windows)
 ├── demos.py                    Démonstrations interactives
 ├── canvas/                     Le widget TkPlotCanvas
 │   ├── plot_canvas.py          Classe TkPlotCanvas (mise en page, menu, fenêtre de réglages)
@@ -107,7 +115,8 @@ tk_plot_canvas/                 Package principal
 │   ├── font_controls.py, font_dialogs.py   Dialogues de police
 │   ├── colorbar_dialog.py      Dialogue colorbar
 │   ├── value_range_dialog.py   Dialogue plage de valeurs / classes
-│   └── window_placement.py     Positionnement des fenêtres
+│   ├── dialog_manager.py       Un seul dialogue ouvert par élément édité
+│   └── window_placement.py     Positionnement et comportement des fenêtres
 └── widgets/                    Widgets réutilisables
     ├── scrolled_frame.py       VerticalScrolledFrame
     ├── class_selection.py      ClassSelectionFrame (classes Auto/Manuel/Aucune)

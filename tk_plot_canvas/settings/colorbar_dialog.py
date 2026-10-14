@@ -14,7 +14,7 @@ from ..config import (
     STYLE_LABELFRAME,
 )
 from .font_dialogs import ColorbarFontDialog
-from .window_placement import place_window
+from .window_placement import setup_dialog
 
 if TYPE_CHECKING:
     from ..canvas.plot_canvas import TkPlotCanvas
@@ -49,7 +49,7 @@ class ColorbarDialog(tk.Toplevel):
         """
         super().__init__(parent)
         self.title("Paramètres de la colorbar")
-        place_window(self, parent, DIALOG_SIZE_COLORBAR)
+        setup_dialog(self, parent, DIALOG_SIZE_COLORBAR)
         self.canvas = canvas
         self.colorbar = colorbar
         self.index = index
@@ -99,7 +99,11 @@ class ColorbarDialog(tk.Toplevel):
             frame,
             text="Modifier la police",
             style=STYLE_BUTTON,
-            command=partial(ColorbarFontDialog, parent, self.canvas),
+            command=partial(
+                self.canvas.dialogs.show,
+                "font:colorbar",
+                partial(ColorbarFontDialog, parent, self.canvas),
+            ),
         ).grid(row=10, column=0, columnspan=3, sticky="we", padx=PADDING, pady=PADDING)
 
     def _build_orientation_controls(self, frame: ttk.LabelFrame) -> None:

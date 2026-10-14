@@ -61,6 +61,7 @@ class XarraySurfacePlotMixin:
         self._detect_date_axis(y_values, "y")
         surface = self.axes.contourf(x_values, y_values, z_values, antialiased=False)
         self._replace_colorbar(surface, label_with_units(ds, z_name))
+        self._apply_default_metadata_keys(label, legend=False)
         self._register_plot(surface, label)
         self._update_cartouche_for_new_plot(label, replot)
         self._apply_surface_texts(title, x_name.capitalize(), y_name.capitalize())

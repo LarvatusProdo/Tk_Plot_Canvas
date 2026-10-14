@@ -12,7 +12,8 @@ class PlotHelpersMixin:
     """Common steps of every plotting method.
 
     Requires the host canvas attributes ``axes``, ``lines``, ``line_labels``,
-    ``view_parameters``, ``cartouche_keys`` and ``show_legend``.
+    ``view_parameters``, ``cartouche_keys``, ``legend_keys``, ``show_legend``,
+    ``title_var``, ``xlabel_var`` and ``ylabel_var``.
     """
 
     def _reset_plot_data(self) -> None:
@@ -20,6 +21,41 @@ class PlotHelpersMixin:
         self.axes.cla()
         self.lines.clear()
         self.line_labels.clear()
+
+    def _apply_default_metadata_keys(self, label: Optional[dict], legend: bool) -> None:
+        """Choose the displayed metadata keys when no view defines them.
+
+        The cartouche then shows every key of the metadata, and a requested
+        legend is displayed with the first key.
+
+        Args:
+            label: Metadata of the new plot.
+            legend: Whether the caller asked for a legend.
+        """
+        view = self.view_parameters or {}
+        if not label:
+            return
+        if not self.cartouche_keys and "cartouche" not in view:
+            self.cartouche_keys = list(label)
+        if legend and not self.legend_keys and "legend" not in view:
+            self.legend_keys = list(label)[:1]
+            self.show_legend = True
+
+    def _set_axes_text(self, key: str, text: str) -> None:
+        """Set the title or an axis label, with the font of the loaded view if any.
+
+        Args:
+            key: "title", "xlabel" or "ylabel".
+            text: Text to display.
+        """
+        targets = {
+            "title": (self.axes.set_title, self.title_var),
+            "xlabel": (self.axes.set_xlabel, self.xlabel_var),
+            "ylabel": (self.axes.set_ylabel, self.ylabel_var),
+        }
+        setter, text_var = targets[key]
+        setter(text, (self.view_parameters or {}).get(key))
+        text_var.set(text)
 
     def _legend_label_for(self, label: Optional[dict]) -> Optional[str]:
         """Build the legend text of a new curve.

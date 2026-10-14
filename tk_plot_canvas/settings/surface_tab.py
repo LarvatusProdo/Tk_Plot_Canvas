@@ -3,7 +3,7 @@
 import tkinter as tk
 from dataclasses import dataclass
 from functools import partial
-from tkinter import messagebox, ttk
+from tkinter import ttk
 from typing import Any, Optional
 
 from ..compat import colormap_names
@@ -30,7 +30,8 @@ COLUMN_TITLES = (
     ("Affichage colorbar", 40),
     ("Paramètre colorbar", 50),
 )
-ALPHA_EVENTS = ("<Return>", "<FocusOut>", "<KeyRelease>", "<MouseWheel>", "<ButtonRelease-1>")
+# Typing applies valid values silently; leaving the field restores an invalid one.
+ALPHA_CHECK_EVENTS = ("<Return>", "<FocusOut>")
 CELL_PADDING = (10, 10)
 
 
@@ -42,6 +43,7 @@ class SurfaceWidgets:
     colormap_combobox: ttk.Combobox
     alpha_var: tk.StringVar
     colorbar_var: tk.BooleanVar
+    colorbar_button: ttk.Button
 
 
 class SurfaceTab(SettingsTab):
@@ -92,10 +94,15 @@ class SurfaceTab(SettingsTab):
         colormap_combobox = self._add_colormap_combobox(row, index, surface.get_cmap().name)
         alpha_var = self._add_alpha_spinbox(row, index, surface.get_alpha())
         colorbar_var = self._add_colorbar_checkbutton(row, index)
-        self._add_button(row, 50, "Modifier colorbar", partial(self._open_colorbar_dialog, index))
-        return SurfaceWidgets(variable_combobox, colormap_combobox, alpha_var, colorbar_var)
+        colorbar_button = self._add_button(
+            row, 50, "Modifier colorbar", partial(self._open_colorbar_dialog, index)
+        )
+        self._update_colorbar_button(colorbar_button)
+        return SurfaceWidgets(
+            variable_combobox, colormap_combobox, alpha_var, colorbar_var, colorbar_button
+        )
 
-    def _add_button(self, row: int, column: int, text: str, command: Any) -> None:
+    def _add_button(self, row: int, column: int, text: str, command: Any) -> ttk.Button:
         """Add a button to a plot row.
 
         Args:
@@ -103,10 +110,21 @@ class SurfaceTab(SettingsTab):
             column: Grid column.
             text: Button text.
             command: Button callback.
+
+        Returns:
+            The created button.
         """
-        ttk.Button(self.frame, text=text, command=command, style=STYLE_BUTTON).grid(
-            row=row, column=column, sticky="w", padx=CELL_PADDING, pady=CELL_PADDING
-        )
+        button = ttk.Button(self.frame, text=text, command=command, style=STYLE_BUTTON)
+        button.grid(row=row, column=column, sticky="w", padx=CELL_PADDING, pady=CELL_PADDING)
+        return button
+
+    def _update_colorbar_button(self, button: ttk.Button) -> None:
+        """Enable the colorbar settings button only while a colorbar is displayed.
+
+        Args:
+            button: The "Modifier colorbar" button.
+        """
+        button.state(["!disabled"] if self.canvas.colorbar is not None else ["disabled"])
 
     def _add_variable_combobox(self, row: int, index: int) -> ttk.Combobox:
         """Create the combobox choosing the plotted variable.
@@ -173,12 +191,14 @@ class SurfaceTab(SettingsTab):
             width=5,
             style=STYLE_SPINBOX,
             textvariable=alpha_var,
+            command=partial(self._update_alpha, index),
         )
         spinbox.grid(
             row=row, column=30, columnspan=2, sticky="w", padx=CELL_PADDING, pady=CELL_PADDING
         )
-        for sequence in ALPHA_EVENTS:
-            spinbox.bind(sequence, lambda _event: self._update_alpha(index))
+        spinbox.bind("<KeyRelease>", lambda _event: self._update_alpha(index))
+        for sequence in ALPHA_CHECK_EVENTS:
+            spinbox.bind(sequence, lambda _event: self._validate_alpha(index))
         return alpha_var
 
     def _add_colorbar_checkbutton(self, row: int, index: int) -> tk.BooleanVar:
@@ -207,7 +227,10 @@ class SurfaceTab(SettingsTab):
             index: Plot index.
         """
         if self.canvas.colorbar is not None:
-            ColorbarDialog(self.window, self.canvas, self.canvas.colorbar, index)
+            self.canvas.dialogs.show(
+                "colorbar",
+                partial(ColorbarDialog, self.window, self.canvas, self.canvas.colorbar, index),
+            )
 
     def _open_value_range_dialog(self, index: int) -> None:
         """Open the dialog editing value limits and contour classes.
@@ -216,7 +239,11 @@ class SurfaceTab(SettingsTab):
             index: Plot index.
         """
         if index < len(self.canvas.lines):
-            ValueRangeDialog(self.window, self.canvas, self.canvas.lines[index], index)
+            surface = self.canvas.lines[index]
+            self.canvas.dialogs.show(
+                f"value_range:{index}",
+                partial(ValueRangeDialog, self.window, self.canvas, surface, index),
+            )
 
     def _toggle_colorbar(self, index: int) -> None:
         """Show or hide the colorbar (the variable still holds the old state).
@@ -229,6 +256,7 @@ class SurfaceTab(SettingsTab):
         else:
             self.canvas.show_colorbar(index)
         self.redraw()
+        self._update_colorbar_button(self.surface_widgets[index].colorbar_button)
 
     def _update_colormap(self, index: int) -> None:
         """Apply the selected colormap.
@@ -239,23 +267,48 @@ class SurfaceTab(SettingsTab):
         self.canvas.lines[index].set_cmap(self.surface_widgets[index].colormap_combobox.get())
         self.redraw()
 
+    def _typed_alpha(self, index: int) -> Optional[float]:
+        """Read the transparency typed in the spinbox.
+
+        Args:
+            index: Plot index.
+
+        Returns:
+            The transparency, or None when it is not a number between 0 and 1.
+        """
+        text = self.surface_widgets[index].alpha_var.get().strip().replace(",", ".")
+        try:
+            alpha = float(text)
+        except ValueError:
+            return None
+        return alpha if 0.0 <= alpha <= 1.0 else None
+
     def _update_alpha(self, index: int) -> None:
-        """Apply the typed transparency (between 0 and 1).
+        """Apply the typed transparency when it is valid (the user may still be typing).
 
         Args:
             index: Plot index.
         """
-        try:
-            alpha = float(self.surface_widgets[index].alpha_var.get())
-            if not 0.0 <= alpha <= 1.0:
-                raise ValueError("Alpha must be between 0.0 and 1.0")
-            self.canvas.lines[index].set_alpha(alpha)
+        alpha = self._typed_alpha(index)
+        surface = self.canvas.lines[index]
+        if alpha is not None and alpha != surface.get_alpha():
+            surface.set_alpha(alpha)
             self.redraw()
-        except ValueError:
-            messagebox.showerror(
-                "Invalid input",
-                "Please enter a valid numeric value for alpha between 0.0 and 1.0.",
-            )
+
+    def _validate_alpha(self, index: int) -> None:
+        """Apply the typed transparency, or restore the current one when it is invalid.
+
+        Args:
+            index: Plot index.
+        """
+        if self._typed_alpha(index) is not None:
+            self._update_alpha(index)
+            return
+        current = self.canvas.lines[index].get_alpha()
+        self.surface_widgets[index].alpha_var.set(
+            str(current) if current is not None else DEFAULT_ALPHA
+        )
+        self.frame.bell()
 
     def _update_z_variable(self, index: int) -> None:
         """Re-plot with the selected variable.
