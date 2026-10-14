@@ -162,7 +162,7 @@ class CurvesTab(SettingsTab):
         line = self.canvas.lines[index]
         line.set_color(color)
         if self.canvas.show_legend and line.get_label() != NO_LEGEND_LABEL:
-            self.canvas.axes.legend(draggable=True)
+            self.canvas.show_draggable_legend()
         self.redraw()
         color_button.configure(bg=color)
         self.canvas.cartouche_rows[index][0].configure(foreground=color)

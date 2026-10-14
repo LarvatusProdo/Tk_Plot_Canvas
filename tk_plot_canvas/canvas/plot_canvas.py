@@ -128,6 +128,7 @@ class TkPlotCanvas(
         self.contour_value_range: Optional[tuple[float, float]] = None
         self.colorbar: Optional[Any] = None
         self.colorbar_style: dict[str, Any] = dict(COLORBAR_STYLE_DEFAULT)
+        self.hidden_colorbar_label: Optional[tuple[str, dict[str, Any]]] = None
         self.lines: list[Any] = []
         self.line_labels: list[Optional[dict]] = []
         self.xarray_variables = {"x": "", "y": "", "z": ""}

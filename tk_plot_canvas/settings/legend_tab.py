@@ -174,5 +174,5 @@ class LegendTab(SettingsTab):
     def _reset_legend_position(self) -> None:
         """Move the legend back to its automatic position."""
         location = "best" if self.show_legend_var.get() else None
-        self.canvas.axes.legend(loc=location, draggable=True)
+        self.canvas.show_draggable_legend(location)
         self.redraw()

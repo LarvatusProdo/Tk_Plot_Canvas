@@ -9,7 +9,6 @@ from typing import Any, Optional
 from ..compat import colormap_names
 from ..config import (
     ALPHA_RANGE,
-    COLORBAR_VERTICAL,
     DEFAULT_ALPHA,
     STYLE_BUTTON,
     STYLE_CHECKBUTTON,
@@ -69,7 +68,6 @@ class SurfaceTab(SettingsTab):
             command=self._toggle_map,
         ).grid(row=0, column=20, padx=5, pady=5)
         self.surface_widgets: dict[int, SurfaceWidgets] = {}
-        self._last_colorbar_label: Optional[str] = None
         if len(self.canvas.datasets) == 0:
             return
         for index, surface in enumerate(self.canvas.lines):
@@ -226,16 +224,10 @@ class SurfaceTab(SettingsTab):
         Args:
             index: Plot index.
         """
-        was_shown = self.surface_widgets[index].colorbar_var.get()
-        canvas = self.canvas
-        if not was_shown:
-            canvas.colorbar = canvas.figure.colorbar(
-                canvas.lines[index], ax=canvas.axes, orientation=COLORBAR_VERTICAL
-            )
-            canvas.colorbar.set_label((self._last_colorbar_label or "").capitalize())
-        elif canvas.colorbar is not None:
-            self._last_colorbar_label = canvas.colorbar.ax.get_ylabel()
-            canvas.colorbar.remove()
+        if self.surface_widgets[index].colorbar_var.get():
+            self.canvas.hide_colorbar()
+        else:
+            self.canvas.show_colorbar(index)
         self.redraw()
 
     def _update_colormap(self, index: int) -> None:

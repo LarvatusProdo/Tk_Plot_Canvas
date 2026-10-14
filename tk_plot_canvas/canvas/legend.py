@@ -36,10 +36,26 @@ class LegendMixin:
             line.set_label(self.build_legend_label(label, show_keys=self.show_legend_key_names))
         if len(self.lines) > 0:
             if self.show_legend and len(self.legend_keys) > 0:
-                self.axes.legend(draggable=True)
+                self.show_draggable_legend()
             else:
                 self._remove_legend()
         self.figure_canvas.draw()
+
+    def show_draggable_legend(self, location: Optional[str] = None) -> None:
+        """Display a draggable legend, or remove it when no curve has a label.
+
+        Curves whose label is empty or starts with an underscore are ignored by
+        Matplotlib; calling ``legend()`` without any labeled curve would emit a
+        ``UserWarning``.
+
+        Args:
+            location: Matplotlib legend location (``None`` keeps the default).
+        """
+        _, labels = self.axes.get_legend_handles_labels()
+        if labels:
+            self.axes.legend(loc=location, draggable=True)
+        else:
+            self._remove_legend()
 
     def _remove_legend(self) -> None:
         """Remove the Matplotlib legend if one is displayed."""

@@ -41,7 +41,7 @@ class ColorbarMixin:
     """Manage the colorbar and the contour levels of the first 3D plot.
 
     Requires the host canvas attributes ``figure``, ``axes``, ``lines``,
-    ``colorbar``, ``datasets``, ``xarray_variables`` and
+    ``colorbar``, ``hidden_colorbar_label``, ``datasets``, ``xarray_variables`` and
     ``contour_class_mode`` and ``contour_value_range``.
     """
 
@@ -127,6 +127,32 @@ class ColorbarMixin:
         except Exception:  # noqa: BLE001 - Matplotlib raises various errors
             pass  # when the colorbar was already removed from the figure.
         self.colorbar = None
+
+    def hide_colorbar(self) -> None:
+        """Remove the colorbar, remembering its label text and font.
+
+        The geometry is already kept in ``colorbar_style``.
+        """
+        if self.colorbar is None:
+            return
+        self.hidden_colorbar_label = (
+            self._colorbar_state()[1],
+            self._colorbar_label_font(),
+        )
+        self.remove_colorbar()
+
+    def show_colorbar(self, index: int = 0) -> None:
+        """Display the colorbar with the stored style and the remembered label.
+
+        Args:
+            index: Index of the plot the colorbar describes.
+        """
+        if self.colorbar is not None:
+            return
+        self.create_colorbar(self.lines[index])
+        if self.hidden_colorbar_label is not None:
+            text, label_font = self.hidden_colorbar_label
+            self.colorbar.set_label(text, **label_font)
 
     def recreate_colorbar(
         self,

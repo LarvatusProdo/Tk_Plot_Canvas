@@ -107,4 +107,4 @@ class PlotHelpersMixin:
             legend_label: Legend text of the new curve.
         """
         if legend and legend_label is not None and self.show_legend:
-            self.axes.legend(draggable=True)
+            self.show_draggable_legend()
