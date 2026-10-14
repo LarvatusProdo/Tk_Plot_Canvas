@@ -77,18 +77,22 @@ class XarraySurfacePlotMixin:
     def _select_surface_variables(self, ds: xr.Dataset) -> tuple[str, str, str]:
         """Choose the x/y dimensions and the plotted variable, and remember them.
 
+        By default, x and y are the two dimensions of the plotted variable.
+
         Args:
-            ds: Dataset with two dimensions.
+            ds: Dataset holding a two-dimensional variable.
 
         Returns:
             ``(x_name, y_name, z_name)``.
         """
         known_names = list(ds.dims) + list(ds.data_vars)
-        dimensions = list(ds.dims)
         selection = self.xarray_variables
-        x_name = selection["x"] if selection["x"] in known_names else dimensions[0]
-        y_name = selection["y"] if selection["y"] in known_names else dimensions[1]
         z_name = selection["z"] if selection["z"] in known_names else list(ds.data_vars)[0]
+        dimensions = list(ds[z_name].dims) if z_name in ds.data_vars else list(ds.dims)
+        x_name = selection["x"] if selection["x"] in dimensions else dimensions[0]
+        y_name = selection["y"] if selection["y"] in dimensions else dimensions[1]
+        if x_name == y_name:
+            x_name, y_name = dimensions[0], dimensions[1]
         selection.update(x=x_name, y=y_name, z=z_name)
         return x_name, y_name, z_name
 

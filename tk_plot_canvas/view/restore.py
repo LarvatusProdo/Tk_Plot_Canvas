@@ -36,6 +36,26 @@ def plot_type_of(parameters: Parameters) -> str:
     return parameters.get(KEY_PLOT_TYPE, PLOT_TYPE_2D)
 
 
+def effective_plot_type(canvas: "TkPlotCanvas", parameters: Parameters) -> str:
+    """Return the plot type to use when applying a view.
+
+    Once data is plotted, the type comes from the data (set by the plotting
+    methods) and the ``plot_type`` of the view is ignored. Without data, the
+    view's type is used if it is valid.
+
+    Args:
+        canvas: Canvas the view is applied to.
+        parameters: View parameters.
+
+    Returns:
+        "2D" or "3D".
+    """
+    if canvas.lines or canvas.datasets:
+        return canvas.plot_type
+    stored_type = plot_type_of(parameters)
+    return stored_type if stored_type in (PLOT_TYPE_2D, PLOT_TYPE_3D) else canvas.plot_type
+
+
 def restore_xarray_selection(canvas: "TkPlotCanvas", parameters: Parameters) -> None:
     """Restore the settings that drive the next xarray plots.
 
@@ -47,8 +67,7 @@ def restore_xarray_selection(canvas: "TkPlotCanvas", parameters: Parameters) -> 
         selection = parameters["xarray_data"]
         for axis_name in ("x", "y", "z"):
             canvas.xarray_variables[axis_name] = selection.get(axis_name, "")
-    if KEY_PLOT_TYPE in parameters:
-        canvas.plot_type = parameters[KEY_PLOT_TYPE]
+    canvas.plot_type = effective_plot_type(canvas, parameters)
     if KEY_XARRAY_3D in parameters:
         canvas.show_map = parameters[KEY_XARRAY_3D].get("affichage_map", False)
 
@@ -59,33 +78,36 @@ def apply_view_parameters(canvas: "TkPlotCanvas", parameters: Parameters) -> Non
     Args:
         canvas: Canvas to update.
         parameters: View parameters; fonts unavailable on this system are
-            replaced in place by the default font.
+            replaced in place by the default font. Their ``plot_type`` is
+            ignored when it does not match the plotted data.
     """
-    _apply_background(canvas, parameters)
-    _apply_plot_type_and_window(canvas, parameters)
+    plot_type = effective_plot_type(canvas, parameters)
+    _apply_background(canvas, parameters, plot_type)
+    _apply_plot_type_and_window(canvas, parameters, plot_type)
     if "X_axis" in parameters:
         apply_axis_parameters(canvas, "x", parameters["X_axis"])
     if "Y_axis" in parameters:
         apply_axis_parameters(canvas, "y", parameters["Y_axis"])
     _apply_text_fonts(canvas, parameters)
-    if plot_type_of(parameters) == PLOT_TYPE_2D:
+    if plot_type == PLOT_TYPE_2D:
         _apply_curves(canvas, parameters.get(KEY_CURVES))
     if "cartouche" in parameters:
         _apply_cartouche(canvas, parameters["cartouche"])
     if "legend" in parameters:
         _apply_legend(canvas, parameters["legend"])
-    if KEY_XARRAY_3D in parameters and plot_type_of(parameters) == PLOT_TYPE_3D:
+    if KEY_XARRAY_3D in parameters and plot_type == PLOT_TYPE_3D:
         canvas.apply_3d_parameters(parameters[KEY_XARRAY_3D])
 
 
-def _apply_background(canvas: "TkPlotCanvas", parameters: Parameters) -> None:
+def _apply_background(canvas: "TkPlotCanvas", parameters: Parameters, plot_type: str) -> None:
     """Apply the background color (2D plots only).
 
     Args:
         canvas: Canvas to update.
         parameters: View parameters.
+        plot_type: Effective plot type ("2D" or "3D").
     """
-    if "background_color" not in parameters or plot_type_of(parameters) != PLOT_TYPE_2D:
+    if "background_color" not in parameters or plot_type != PLOT_TYPE_2D:
         return
     color = parameters["background_color"]
     canvas.graph_background_color = color
@@ -98,15 +120,17 @@ def _apply_background(canvas: "TkPlotCanvas", parameters: Parameters) -> None:
     canvas.figure_canvas.draw()
 
 
-def _apply_plot_type_and_window(canvas: "TkPlotCanvas", parameters: Parameters) -> None:
+def _apply_plot_type_and_window(
+    canvas: "TkPlotCanvas", parameters: Parameters, plot_type: str
+) -> None:
     """Apply the plot type and the size/position of the main window.
 
     Args:
         canvas: Canvas to update.
         parameters: View parameters.
+        plot_type: Effective plot type ("2D" or "3D").
     """
-    if KEY_PLOT_TYPE in parameters:
-        canvas.plot_type = parameters[KEY_PLOT_TYPE]
+    canvas.plot_type = plot_type
     if "window_size" in parameters:
         width, height = parameters["window_size"]
         canvas.master.geometry(f"{width}x{height}")

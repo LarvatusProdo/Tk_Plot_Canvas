@@ -5,7 +5,7 @@ from typing import Any, Optional, Sequence
 
 from numpy import datetime64
 
-from ..config import KEY_CURVE_TYPE, KEY_CURVES
+from ..config import CURVE_TYPE_LINE, KEY_CURVE_TYPE, KEY_CURVES
 
 
 class PlotHelpersMixin:
@@ -37,7 +37,8 @@ class PlotHelpersMixin:
     def _curve_kwargs_from_view(self, plot_kwargs: dict[str, Any]) -> dict[str, Any]:
         """Complete plot keyword arguments with the loaded view's curve style.
 
-        Arguments given explicitly by the caller always win.
+        Arguments given explicitly by the caller always win. Saved styles that
+        are not line styles (e.g. contours of a 3D view) are ignored.
 
         Args:
             plot_kwargs: Keyword arguments given by the caller.
@@ -46,9 +47,11 @@ class PlotHelpersMixin:
             Keyword arguments for ``Axes.plot``.
         """
         merged_kwargs = copy.copy(plot_kwargs)
-        if self.view_parameters != {}:
+        if self.view_parameters:
             curves = self.view_parameters.get(KEY_CURVES, {})
             saved_curve = curves.get(str(len(self.lines)), {})
+            if saved_curve.get(KEY_CURVE_TYPE, CURVE_TYPE_LINE) != CURVE_TYPE_LINE:
+                saved_curve = {}
             for key, value in saved_curve.items():
                 if key not in plot_kwargs:
                     merged_kwargs[key] = value
