@@ -207,6 +207,8 @@ class TkPlotCanvas(
         """
         geometry = None
         if self._is_settings_window_open():
+            # A window not yet mapped reports a "1x1" size: map it before reading it.
+            self.settings_window.update_idletasks()
             geometry = self.settings_window.geometry()
             self.settings_window.destroy()
         self.settings_window = SettingsWindow(self, initial_tab=tab_name, geometry=geometry)
