@@ -17,6 +17,33 @@ try:
 except Exception:  # cartopy may fail with errors other than ImportError
     CARTOPY_INSTALLED = False
 
+LONGITUDE, LATITUDE = GEOGRAPHIC_DIMENSIONS
+RECTILINEAR_AXES = "rectilinear"
+
+
+def surface_arrays(
+    ds: xr.Dataset, x_name: str, y_name: str, z_name: str
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Extract the coordinates and values of a surface, with ``z`` shaped as ``(y, x)``.
+
+    The orientation of ``z`` follows the dimension names, not the array shapes,
+    so that square grids (as many longitudes as latitudes) are not swapped.
+
+    Args:
+        ds: Dataset to plot.
+        x_name: Dimension plotted along x.
+        y_name: Dimension plotted along y.
+        z_name: Plotted variable, whose dimensions are exactly ``x_name`` and ``y_name``.
+
+    Returns:
+        ``(x, y, z)`` arrays.
+
+    Raises:
+        ValueError: If the dimensions of ``z_name`` are not ``x_name`` and ``y_name``.
+    """
+    z_values = ds[z_name].transpose(y_name, x_name).values
+    return ds[x_name].values, ds[y_name].values, z_values
+
 
 class XarraySurfacePlotMixin:
     """Plot 2D datasets (requires :class:`PlotHelpersMixin` and the colorbar mixin)."""
@@ -79,7 +106,9 @@ class XarraySurfacePlotMixin:
     def _select_surface_variables(self, ds: xr.Dataset) -> tuple[str, str, str]:
         """Choose the x/y dimensions and the plotted variable, and remember them.
 
-        By default, x and y are the two dimensions of the plotted variable.
+        By default, as in xarray, the last dimension of the plotted variable is
+        along x and the first one along y (e.g. longitude along x for data
+        stored as ``(latitude, longitude)``).
 
         Args:
             ds: Dataset holding a two-dimensional variable.
@@ -91,10 +120,10 @@ class XarraySurfacePlotMixin:
         selection = self.xarray_variables
         z_name = selection["z"] if selection["z"] in known_names else list(ds.data_vars)[0]
         dimensions = list(ds[z_name].dims) if z_name in ds.data_vars else list(ds.dims)
-        x_name = selection["x"] if selection["x"] in dimensions else dimensions[0]
-        y_name = selection["y"] if selection["y"] in dimensions else dimensions[1]
+        x_name = selection["x"] if selection["x"] in dimensions else dimensions[-1]
+        y_name = selection["y"] if selection["y"] in dimensions else dimensions[0]
         if x_name == y_name:
-            x_name, y_name = dimensions[0], dimensions[1]
+            x_name, y_name = dimensions[-1], dimensions[0]
         selection.update(x=x_name, y=y_name, z=z_name)
         return x_name, y_name, z_name
 
@@ -106,29 +135,43 @@ class XarraySurfacePlotMixin:
             y_name: Dimension plotted along y.
 
         Returns:
-            ``show_map`` for longitude/latitude data, False otherwise.
+            ``show_map`` when longitude is along x and latitude along y (the
+            PlateCarree layout), False otherwise.
         """
-        lower_names = [x_name.lower(), y_name.lower()]
-        is_geographic = all(name in lower_names for name in GEOGRAPHIC_DIMENSIONS)
+        is_geographic = x_name.lower() == LONGITUDE and y_name.lower() == LATITUDE
         return self.show_map if is_geographic else False
 
     def _setup_map_axes(self, is_map: bool) -> None:
-        """Replace the axes by a PlateCarree map when requested and possible.
+        """Use a PlateCarree map when requested and possible, plain axes otherwise.
 
         Args:
             is_map: Whether a map is requested.
         """
         if not (is_map and CARTOPY_INSTALLED):
             self.show_map = False
+            if self.axes.name != RECTILINEAR_AXES:
+                self._replace_axes()
             return
-        subplot_spec = self.axes.get_subplotspec()
-        self.axes.remove()
-        self.axes = self.figure.add_subplot(subplot_spec, projection=ccrs.PlateCarree())
+        self._replace_axes(projection=ccrs.PlateCarree())
         self.axes.add_feature(cfeature.COASTLINE, linewidth=COASTLINE_WIDTH)
         self.axes.add_feature(cfeature.BORDERS, linewidth=BORDER_WIDTH)
         self.axes.xaxis.set_visible(True)
         self.axes.yaxis.set_visible(True)
         self.show_map = True
+
+    def _replace_axes(self, projection: Optional[Any] = None) -> None:
+        """Replace the axes by new ones at the same place.
+
+        A map's axes keep their projection when cleared, so they must be
+        replaced to go back to plain axes.
+
+        Args:
+            projection: Projection of the new axes (None for plain axes).
+        """
+        subplot_spec = self.axes.get_subplotspec()
+        self.axes.remove()
+        self.axes = self.figure.add_subplot(subplot_spec, projection=projection)
+        self.axes.set_facecolor(self.graph_background_color)
 
     def _surface_values(
         self, ds: xr.Dataset, x_name: str, y_name: str, z_name: str
@@ -143,22 +186,18 @@ class XarraySurfacePlotMixin:
 
         Returns:
             ``(x, y, z)`` arrays, or None (after an error dialog) when the
-            shapes are inconsistent.
+            dimensions of ``z_name`` are not ``x_name`` and ``y_name``.
         """
-        x_values = ds[x_name].values
-        y_values = ds[y_name].values
-        z_values = ds[z_name].values
-        if (len(y_values), len(x_values)) == z_values.shape:
-            return x_values, y_values, z_values
-        if (len(x_values), len(y_values)) == z_values.shape:
-            return x_values, y_values, z_values.T
-        messagebox.showerror(
-            "Erreur",
-            "Les dimensions de x, y et z ne correspondent pas : surface impossible à tracer.\n"
-            f"x : {len(x_values)}, y : {len(y_values)}, z : {z_values.shape}",
-            parent=self,
-        )
-        return None
+        try:
+            return surface_arrays(ds, x_name, y_name, z_name)
+        except ValueError:
+            messagebox.showerror(
+                "Erreur",
+                "Les dimensions de x, y et z ne correspondent pas : surface impossible à tracer.\n"
+                f"x : {x_name}, y : {y_name}, z : {z_name} {tuple(ds[z_name].dims)}",
+                parent=self,
+            )
+            return None
 
     def _replace_colorbar(self, surface: Any, label: str) -> None:
         """Replace the current colorbar by one attached to ``surface``.

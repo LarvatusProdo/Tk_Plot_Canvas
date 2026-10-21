@@ -1,7 +1,8 @@
 """Label frame editing one axis: label, limits, scale, inversion, variable.
 
 Changes are applied immediately: the label while typing, the limits when
-pressing Enter or leaving the field, the other choices when selected.
+pressing Enter or leaving the field, the other choices when selected. The
+xarray variable is applied with the "update plot" button of the axes tab.
 """
 
 import tkinter as tk
@@ -250,7 +251,10 @@ class AxisFrame:
         ).grid(row=9, column=1, columnspan=2, padx=(0, 4), pady=PADDING, sticky="w")
 
     def _add_variable_selector(self, variables: list[str]) -> None:
-        """Create the combobox choosing the xarray variable of the axis (applied on selection).
+        """Create the combobox choosing the xarray variable of the axis.
+
+        The choice is applied with the "update plot" button of the axes tab, so
+        that both axes can be changed (e.g. swapped) before re-plotting.
 
         Args:
             variables: Selectable dimensions and variables.
@@ -262,7 +266,6 @@ class AxisFrame:
         combobox.grid(row=2, column=1, columnspan=2, padx=5, pady=5, sticky="we")
         current = self._tab.canvas.xarray_variables[self._axis_name]
         combobox.current(variables.index(current) if current in variables else 0)
-        combobox.bind("<<ComboboxSelected>>", lambda _event: self._tab.apply_variable_selection())
         self.controls.variable_combobox = combobox
 
     def _on_label_typed(self, *_trace_args: Any) -> None:

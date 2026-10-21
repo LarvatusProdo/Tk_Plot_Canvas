@@ -20,6 +20,7 @@ from ..config import (
     KEY_VALUE_RANGE,
     VALUE_RANGE_DEFAULT,
 )
+from .xarray_surfaces import surface_arrays
 
 LOGGER = logging.getLogger(__name__)
 
@@ -319,15 +320,10 @@ class ColorbarMixin:
             index: Index of the dataset.
 
         Returns:
-            ``(x, y, z)`` with ``z`` transposed when stored as ``(x, y)``.
+            ``(x, y, z)`` with ``z`` shaped as ``(y, x)``.
         """
-        dataset = self.datasets[index]
-        x_values = dataset[self.xarray_variables["x"]].values
-        y_values = dataset[self.xarray_variables["y"]].values
-        z_values = dataset[self.xarray_variables["z"]].values
-        if (len(x_values), len(y_values)) == z_values.shape:
-            z_values = z_values.T
-        return x_values, y_values, z_values
+        selection = self.xarray_variables
+        return surface_arrays(self.datasets[index], selection["x"], selection["y"], selection["z"])
 
     def apply_3d_parameters(self, parameters: dict[str, Any]) -> None:
         """Apply persisted colorbar, colormap and contour settings.

@@ -1,12 +1,13 @@
 """Settings tab "Axes et titre": title, axis labels, limits, scales, variables.
 
 Every change is applied immediately: texts while typing, limits when pressing
-Enter or leaving the field, choices as soon as they are selected.
+Enter or leaving the field, choices as soon as they are selected. The xarray
+variables of the axes are applied with the "update plot" button.
 """
 
 import tkinter as tk
 from functools import partial
-from tkinter import ttk
+from tkinter import messagebox, ttk
 from typing import Any, Callable, Optional
 
 import matplotlib.dates as mdates
@@ -30,6 +31,7 @@ from .surface_axes_frame import SurfaceAxesFrame
 
 AXIS_NAMES = ("x", "y")
 LIMIT_KEYWORDS = {"x": ("left", "right"), "y": ("bottom", "top")}
+AXIS_PARAMETER_KEYS = {"x": "X_axis", "y": "Y_axis"}
 
 
 def parse_limit(variable: tk.StringVar, is_date: bool = False) -> Optional[float]:
@@ -91,6 +93,8 @@ class AxesTab(SettingsTab):
             self.axis_controls[axis_name] = axis_frame.controls
         if self.canvas.plot_type == PLOT_TYPE_3D:
             SurfaceAxesFrame(self, row=2, column=2 * len(AXIS_NAMES))
+        if len(variables) > 0:
+            self._build_update_button()
 
     def _build_title_frame(self) -> None:
         """Create the title entry (applied while typing) and its font button."""
@@ -230,19 +234,55 @@ class AxesTab(SettingsTab):
             return None
         return parse_limit(variable, controls.is_date)
 
+    def _build_update_button(self) -> None:
+        """Create the button re-plotting with the variables chosen for both axes."""
+        ttk.Button(
+            self.frame,
+            text="Mettre à jour le graphique",
+            style=STYLE_BUTTON,
+            command=self.apply_variable_selection,
+        ).grid(row=3, column=0, columnspan=4, padx=PADDING, pady=PADDING, sticky="e")
+
     def apply_variable_selection(self) -> None:
-        """Re-plot the xarray datasets when another x or y variable is chosen."""
+        """Re-plot the xarray datasets with the x and y variables chosen in the comboboxes.
+
+        The limits and inversion of an axis whose variable changed are reset, so
+        that the new data is shown entirely.
+        """
         if len(self.canvas.datasets) == 0:
             return
-        dataset = self.canvas.datasets[0]
-        known_names = list(dataset.data_vars) + list(dataset.dims)
+        chosen = {name: self.axis_controls[name].variable_combobox.get() for name in AXIS_NAMES}
         selection = self.canvas.xarray_variables
-        is_modified = False
-        for name in AXIS_NAMES:
-            selected = self.axis_controls[name].variable_combobox.get()
-            if selected != selection[name] and selected in known_names:
-                selection[name] = selected
-                is_modified = True
-        if is_modified:
-            self.canvas.view_parameters = self.canvas.get_current_parameters()
-            self.canvas.update_plot()
+        changed = [name for name in AXIS_NAMES if chosen[name] != selection[name]]
+        if not changed or not self._is_valid_variable_choice(chosen):
+            return
+        selection.update(chosen)
+        parameters = self.canvas.get_current_parameters()
+        for name in changed:
+            parameters[AXIS_PARAMETER_KEYS[name]].update(autoscale=True, inversion_axis=False)
+        self.canvas.view_parameters = parameters
+        self.canvas.update_plot()
+
+    def _is_valid_variable_choice(self, chosen: dict[str, str]) -> bool:
+        """Check the chosen x and y variables, explaining the problem when invalid.
+
+        Args:
+            chosen: Variable chosen for "x" and "y".
+
+        Returns:
+            True when both axes show different names of the dataset (dimensions
+            of the plotted variable for a 3D plot).
+        """
+        dataset = self.canvas.datasets[0]
+        if self.canvas.plot_type == PLOT_TYPE_3D:
+            allowed = list(dataset[self.canvas.xarray_variables["z"]].dims)
+        else:
+            allowed = list(dataset.dims) + list(dataset.data_vars)
+        if chosen["x"] == chosen["y"]:
+            message = "Les axes X et Y doivent afficher des variables différentes."
+        elif not all(chosen[name] in allowed for name in AXIS_NAMES):
+            message = f"Choisissez les variables des axes X et Y parmi : {', '.join(allowed)}."
+        else:
+            return True
+        messagebox.showwarning("Variables des axes", message, parent=self.window)
+        return False
