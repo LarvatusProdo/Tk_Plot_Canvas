@@ -3,7 +3,7 @@
 import copy
 from typing import Any, Optional, Sequence
 
-from numpy import datetime64
+from numpy import asarray, datetime64, issubdtype
 
 from ..config import CURVE_TYPE_LINE, KEY_CURVE_TYPE, KEY_CURVES
 
@@ -95,20 +95,19 @@ class PlotHelpersMixin:
         return merged_kwargs
 
     def _detect_date_axis(self, values: Sequence[Any], axis_name: str) -> None:
-        """Switch an axis to date formatting when its values are dates.
+        """Remember whether an axis shows dates, and format it as dates if so.
+
+        The flag is reset for non-date values, so that the axis limits are
+        edited as numbers once another (non-date) variable is plotted.
 
         Args:
             values: Values plotted along the axis.
             axis_name: "x" or "y".
         """
-        if type(values[0]) is not datetime64:
-            return
-        if axis_name == "x":
-            self.is_date_on_x_axis = True
-            self.axes.xaxis_date()
-        else:
-            self.is_date_on_y_axis = True
-            self.axes.yaxis_date()
+        is_date = issubdtype(asarray(values).dtype, datetime64)
+        setattr(self, f"is_date_on_{axis_name}_axis", is_date)
+        if is_date:
+            getattr(self.axes, f"{axis_name}axis_date")()
 
     def _register_plot(self, artist: Any, label: Optional[dict]) -> None:
         """Remember a plotted artist and its metadata.

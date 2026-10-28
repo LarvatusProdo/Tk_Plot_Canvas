@@ -82,17 +82,22 @@ class XarrayCurvePlotMixin:
 
         The variable selected for z (surfaces) then for y (curves) is reused
         when it exists in ``ds``; otherwise the first data variable is used.
+        While a curve is displayed, y may also be a dimension (e.g. dates
+        along y, a data variable along x).
 
         Args:
             ds: Dataset to plot.
 
         Returns:
-            Name of the displayed data variable.
+            Name of the displayed variable or dimension.
         """
         data_variables = list(ds.data_vars)
-        for axis_name in ("z", "y"):
-            if self.xarray_variables[axis_name] in data_variables:
-                return self.xarray_variables[axis_name]
+        selection = self.xarray_variables
+        y_choices = data_variables + (list(ds.dims) if self.plot_type == PLOT_TYPE_2D else [])
+        if selection["z"] in data_variables:
+            return selection["z"]
+        if selection["y"] in y_choices:
+            return selection["y"]
         return data_variables[0]
 
     def _plot_xarray_curve(
@@ -124,8 +129,10 @@ class XarrayCurvePlotMixin:
         line_kwargs = self._curve_kwargs_from_view(plot_kwargs)
         dimension, variable = self._select_curve_variables(ds)
         x_values = ds[dimension].values
+        y_values = ds[variable].values
         self._detect_date_axis(x_values, "x")
-        (line,) = self.axes.plot(x_values, ds[variable].values, label=legend_label, **line_kwargs)
+        self._detect_date_axis(y_values, "y")
+        (line,) = self.axes.plot(x_values, y_values, label=legend_label, **line_kwargs)
         self._register_plot(line, label)
         self._update_cartouche_for_new_plot(label, replot)
         self.axes.grid(grid)

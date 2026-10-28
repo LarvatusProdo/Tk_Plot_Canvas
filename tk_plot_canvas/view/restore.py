@@ -183,7 +183,7 @@ def apply_axis_parameters(
         axis = axes.xaxis if axis_name == "x" else axes.yaxis
         _apply_tick_font(canvas, axis, parameters["ticks"])
     _apply_axis_limits(canvas, axis_name, parameters)
-    is_date_axis = axis_name == "x" and canvas.is_date_on_x_axis
+    is_date_axis = getattr(canvas, f"is_date_on_{axis_name}_axis")
     if "scale" in parameters and not is_date_axis:
         getattr(axes, f"set_{axis_name}scale")(parameters["scale"])
     if parameters.get("inversion_axis"):
