@@ -1,11 +1,12 @@
-"""Settings tab "Graphique 3D": variable, colormap, alpha and colorbar of maps."""
+"""Settings tab "Graphique 3D": variable, plot kind, colormap, alpha and colorbar of maps."""
 
 import tkinter as tk
 from dataclasses import dataclass
 from functools import partial
 from tkinter import ttk
-from typing import Any, Optional
+from typing import Any
 
+from ..canvas.surface_kinds import set_surface_colormap
 from ..compat import colormap_names
 from ..config import (
     ALPHA_RANGE,
@@ -14,41 +15,48 @@ from ..config import (
     STYLE_CHECKBUTTON,
     STYLE_COLUMN_HEADER,
     STYLE_COMBOBOX,
-    STYLE_SPINBOX,
+    SURFACE_SIZE_RANGES,
 )
-from ..widgets import ToolTip
+from ..widgets import CheckedSpinbox, ToolTip
 from .base_tab import SettingsTab
 from .colorbar_dialog import ColorbarDialog
+from .surface_kind_combobox import SurfaceKindCombobox
 from .value_range_dialog import ValueRangeDialog
 
 COLUMN_TITLES = (
     ("N°", 1),
     ("Variable", 5),
+    ("Type", 8),
     ("Classes", 10),
     ("Palette", 20),
     ("Opacité", 30),
+    ("Taille", 35),
     ("Colorbar", 40),
 )
 OPACITY_HELP = "Opacité de la surface : 0 = transparente, 1 = opaque."
 MAP_HELP = "Dessiner les côtes et les frontières (données longitude/latitude, cartopy)."
-# Typing applies valid values silently; leaving the field restores an invalid one.
-ALPHA_CHECK_EVENTS = ("<Return>", "<FocusOut>")
+SIZE_HELP = (
+    "Épaisseur des isolignes (points) ou taille des points du nuage (points²).\n"
+    "Sans effet pour les autres types."
+)
 CELL_PADDING = (10, 10)
 
 
 @dataclass
 class SurfaceWidgets:
-    """Widgets editing one filled-contour plot."""
+    """Widgets editing one surface plot."""
 
     variable_combobox: ttk.Combobox
+    kind_combobox: SurfaceKindCombobox
     colormap_combobox: ttk.Combobox
-    alpha_var: tk.StringVar
+    alpha_spinbox: CheckedSpinbox
+    size_spinbox: CheckedSpinbox
     colorbar_var: tk.BooleanVar
     colorbar_button: ttk.Button
 
 
 class SurfaceTab(SettingsTab):
-    """Edit the filled-contour plots of 2D xarray datasets.
+    """Edit the surface plots of 2D xarray datasets.
 
     Attributes:
         surface_widgets: Widgets of each plot, indexed by plot index.
@@ -79,7 +87,7 @@ class SurfaceTab(SettingsTab):
         """Create the widgets of one plot.
 
         Args:
-            surface: Filled-contour set.
+            surface: Surface plot.
             index: Plot index.
 
         Returns:
@@ -90,16 +98,30 @@ class SurfaceTab(SettingsTab):
             row=row, column=1, sticky="w", padx=CELL_PADDING, pady=CELL_PADDING
         )
         variable_combobox = self._add_variable_combobox(row, index)
+        kind_combobox = SurfaceKindCombobox(
+            self.frame, self.canvas.surface_kind, partial(self._update_surface_kind, index)
+        )
+        kind_combobox.grid(row=row, column=8, sticky="w", padx=CELL_PADDING, pady=CELL_PADDING)
         self._add_button(row, 10, "Classes…", partial(self._open_value_range_dialog, index))
         colormap_combobox = self._add_colormap_combobox(row, index, surface.get_cmap().name)
-        alpha_var = self._add_alpha_spinbox(row, index, surface.get_alpha())
+        alpha = surface.get_alpha()
+        alpha_spinbox = self._add_spinbox(row, 30, OPACITY_HELP, partial(self._update_alpha, index))
+        alpha_spinbox.set_range(ALPHA_RANGE, float(DEFAULT_ALPHA) if alpha is None else alpha)
+        size_spinbox = self._add_spinbox(row, 35, SIZE_HELP, partial(self._update_size, index))
+        self._sync_size_spinbox(size_spinbox)
         colorbar_var = self._add_colorbar_checkbutton(row, index)
         colorbar_button = self._add_button(
             row, 50, "Réglages…", partial(self._open_colorbar_dialog, index)
         )
         self._update_colorbar_button(colorbar_button)
         return SurfaceWidgets(
-            variable_combobox, colormap_combobox, alpha_var, colorbar_var, colorbar_button
+            variable_combobox,
+            kind_combobox,
+            colormap_combobox,
+            alpha_spinbox,
+            size_spinbox,
+            colorbar_var,
+            colorbar_button,
         )
 
     def _add_button(self, row: int, column: int, text: str, command: Any) -> ttk.Button:
@@ -170,37 +192,26 @@ class SurfaceTab(SettingsTab):
         combobox.bind("<<ComboboxSelected>>", lambda _event: self._update_colormap(index))
         return combobox
 
-    def _add_alpha_spinbox(self, row: int, index: int, alpha: Optional[float]) -> tk.StringVar:
-        """Create the transparency spinbox.
+    def _add_spinbox(
+        self, row: int, column: int, help_text: str, on_change: Any
+    ) -> CheckedSpinbox:
+        """Create a numeric spinbox (its range is set by the caller).
 
         Args:
             row: Grid row.
-            index: Plot index.
-            alpha: Current transparency (None = opaque).
+            column: Grid column.
+            help_text: Tooltip text.
+            on_change: Called with each new valid value.
 
         Returns:
-            The variable bound to the spinbox.
+            The created spinbox.
         """
-        alpha_var = tk.StringVar(value=str(alpha) if alpha is not None else DEFAULT_ALPHA)
-        minimum, maximum, increment = ALPHA_RANGE
-        spinbox = ttk.Spinbox(
-            self.frame,
-            from_=minimum,
-            to=maximum,
-            increment=increment,
-            width=5,
-            style=STYLE_SPINBOX,
-            textvariable=alpha_var,
-            command=partial(self._update_alpha, index),
-        )
+        spinbox = CheckedSpinbox(self.frame, on_change)
         spinbox.grid(
-            row=row, column=30, columnspan=2, sticky="w", padx=CELL_PADDING, pady=CELL_PADDING
+            row=row, column=column, columnspan=2, sticky="w", padx=CELL_PADDING, pady=CELL_PADDING
         )
-        spinbox.bind("<KeyRelease>", lambda _event: self._update_alpha(index))
-        ToolTip(spinbox, OPACITY_HELP)
-        for sequence in ALPHA_CHECK_EVENTS:
-            spinbox.bind(sequence, lambda _event: self._validate_alpha(index))
-        return alpha_var
+        ToolTip(spinbox, help_text)
+        return spinbox
 
     def _add_colorbar_checkbutton(self, row: int, index: int) -> tk.BooleanVar:
         """Create the checkbutton showing or hiding the colorbar.
@@ -265,51 +276,55 @@ class SurfaceTab(SettingsTab):
         Args:
             index: Plot index.
         """
-        self.canvas.lines[index].set_cmap(self.surface_widgets[index].colormap_combobox.get())
+        colormap = self.surface_widgets[index].colormap_combobox.get()
+        set_surface_colormap(self.canvas.lines[index], colormap)
         self.redraw()
 
-    def _typed_alpha(self, index: int) -> Optional[float]:
-        """Read the transparency typed in the spinbox.
-
-        Args:
-            index: Plot index.
-
-        Returns:
-            The transparency, or None when it is not a number between 0 and 1.
-        """
-        text = self.surface_widgets[index].alpha_var.get().strip().replace(",", ".")
-        try:
-            alpha = float(text)
-        except ValueError:
-            return None
-        return alpha if 0.0 <= alpha <= 1.0 else None
-
-    def _update_alpha(self, index: int) -> None:
-        """Apply the typed transparency when it is valid (the user may still be typing).
+    def _update_surface_kind(self, index: int) -> None:
+        """Redraw the plot with the selected kind.
 
         Args:
             index: Plot index.
         """
-        alpha = self._typed_alpha(index)
-        surface = self.canvas.lines[index]
-        if alpha is not None and alpha != surface.get_alpha():
-            surface.set_alpha(alpha)
+        kind = self.surface_widgets[index].kind_combobox.kind
+        if kind != self.canvas.surface_kind:
+            self.canvas.set_surface_kind(kind, index)
+            self._sync_size_spinbox(self.surface_widgets[index].size_spinbox)
             self.redraw()
 
-    def _validate_alpha(self, index: int) -> None:
-        """Apply the typed transparency, or restore the current one when it is invalid.
+    def _sync_size_spinbox(self, spinbox: CheckedSpinbox) -> None:
+        """Show the size of the current kind, or disable the spinbox when it has none.
+
+        Args:
+            spinbox: The "Taille" spinbox.
+        """
+        kind = self.canvas.surface_kind
+        if kind not in SURFACE_SIZE_RANGES:
+            spinbox.state(["disabled"])
+            spinbox.variable.set("")
+            return
+        spinbox.state(["!disabled"])
+        spinbox.set_range(SURFACE_SIZE_RANGES[kind], self.canvas.surface_sizes[kind])
+
+    def _update_size(self, index: int, size: float) -> None:
+        """Apply a line width or marker area.
 
         Args:
             index: Plot index.
+            size: New size.
         """
-        if self._typed_alpha(index) is not None:
-            self._update_alpha(index)
-            return
-        current = self.canvas.lines[index].get_alpha()
-        self.surface_widgets[index].alpha_var.set(
-            str(current) if current is not None else DEFAULT_ALPHA
-        )
-        self.frame.bell()
+        self.canvas.set_surface_size(size, index)
+        self.redraw()
+
+    def _update_alpha(self, index: int, alpha: float) -> None:
+        """Apply a transparency.
+
+        Args:
+            index: Plot index.
+            alpha: New transparency (0 = transparent, 1 = opaque).
+        """
+        self.canvas.lines[index].set_alpha(alpha)
+        self.redraw()
 
     def _update_z_variable(self, index: int) -> None:
         """Re-plot with the selected variable.

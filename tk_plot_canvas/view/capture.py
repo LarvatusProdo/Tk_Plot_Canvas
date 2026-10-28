@@ -19,6 +19,8 @@ from ..config import (
     KEY_COLORBAR_STYLE,
     KEY_SUBPLOT_PARAMS,
     KEY_SURFACE_AXES_STYLE,
+    KEY_SURFACE_KIND,
+    KEY_SURFACE_SIZES,
     KEY_VALUE_RANGE,
     KEY_XARRAY_3D,
     PLOT_TYPE_3D,
@@ -210,13 +212,13 @@ def add_3d_parameters(canvas: "TkPlotCanvas", parameters: dict[str, Any]) -> dic
 
 
 def _capture_surface(canvas: "TkPlotCanvas") -> dict[str, Any]:
-    """Capture the appearance of the first filled-contour plot.
+    """Capture the appearance of the first surface plot.
 
     Args:
         canvas: Canvas to inspect.
 
     Returns:
-        Colorbar presence/orientation, colormap, alpha and levels.
+        Colorbar presence/orientation, colormap, alpha, levels, plot kind and sizes.
     """
     surface = canvas.lines[0]
     colorbar = canvas.colorbar
@@ -225,7 +227,9 @@ def _capture_surface(canvas: "TkPlotCanvas") -> dict[str, Any]:
         "colorbar_orientation": getattr(colorbar, "orientation", None),
         "cmap": surface.get_cmap().name if hasattr(surface, "get_cmap") else None,
         "alpha": surface.get_alpha() if hasattr(surface, "get_alpha") else None,
-        "levels": canvas.get_current_levels(index=0) if hasattr(surface, "levels") else None,
+        "levels": canvas.get_current_levels(index=0),
+        KEY_SURFACE_KIND: canvas.surface_kind,
+        KEY_SURFACE_SIZES: dict(canvas.surface_sizes),
         KEY_VALUE_RANGE: canvas.get_value_range_parameter(),
         "affichage_map": canvas.show_map,
         KEY_COLORBAR_STYLE: canvas.get_colorbar_style_parameter(),

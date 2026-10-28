@@ -7,16 +7,21 @@ from ..compat import get_colormap
 from ..config import (
     CURVE_TYPE_CONTOUR,
     CURVE_TYPE_LINE,
+    DEFAULT_SURFACE_KIND,
     KEY_CURVE_TYPE,
     KEY_CURVES,
     KEY_PLOT_TYPE,
     KEY_SUBPLOT_PARAMS,
+    KEY_SURFACE_KIND,
+    KEY_SURFACE_SIZES,
     KEY_XARRAY_3D,
     PLOT_TYPE_2D,
     PLOT_TYPE_3D,
     STYLE_CARTOUCHE_CELL,
     STYLE_CARTOUCHE_HEADER,
     SUBPLOT_PARAM_NAMES,
+    SURFACE_KINDS,
+    SURFACE_SIZE_DEFAULTS,
 )
 from ..fonts import safe_tk_font_spec
 
@@ -72,6 +77,31 @@ def restore_xarray_selection(canvas: "TkPlotCanvas", parameters: Parameters) -> 
     canvas.plot_type = effective_plot_type(canvas, parameters)
     if KEY_XARRAY_3D in parameters:
         canvas.show_map = parameters[KEY_XARRAY_3D].get("affichage_map", False)
+        kind = parameters[KEY_XARRAY_3D].get(KEY_SURFACE_KIND, DEFAULT_SURFACE_KIND)
+        canvas.surface_kind = kind if kind in SURFACE_KINDS else DEFAULT_SURFACE_KIND
+        canvas.surface_sizes = _surface_sizes(parameters[KEY_XARRAY_3D].get(KEY_SURFACE_SIZES))
+
+
+def _surface_sizes(saved: Any) -> dict[str, float]:
+    """Read the persisted sizes of the surface kinds, ignoring invalid entries.
+
+    Args:
+        saved: "surface_sizes" entry of the view parameters (may be missing).
+
+    Returns:
+        The size of each kind that has one (defaults for invalid entries).
+    """
+    sizes = dict(SURFACE_SIZE_DEFAULTS)
+    if not isinstance(saved, dict):
+        return sizes
+    for kind in sizes:
+        try:
+            size = float(saved[kind])
+        except (KeyError, TypeError, ValueError):
+            continue
+        if size > 0:
+            sizes[kind] = size
+    return sizes
 
 
 def apply_view_parameters(canvas: "TkPlotCanvas", parameters: Parameters) -> None:

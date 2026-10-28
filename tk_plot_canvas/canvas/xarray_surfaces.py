@@ -1,4 +1,4 @@
-"""Plotting of two-dimensional xarray datasets as filled contours (maps)."""
+"""Plotting of two-dimensional xarray datasets as surfaces (maps)."""
 
 from tkinter import messagebox
 from typing import Any, Optional
@@ -7,6 +7,7 @@ import numpy as np
 import xarray as xr
 
 from ..config import BORDER_WIDTH, COASTLINE_WIDTH, GEOGRAPHIC_DIMENSIONS
+from .surface_kinds import draw_surface
 from .xarray_curves import label_with_units
 
 try:
@@ -61,14 +62,14 @@ class XarraySurfacePlotMixin:
         is_map: Optional[bool] = None,
         **plot_kwargs: Any,
     ) -> None:
-        """Plot a two-dimensional dataset as filled contours with a colorbar.
+        """Plot a two-dimensional dataset as a surface (``surface_kind``) with a colorbar.
 
         Args:
             ds: Dataset with two dimensions.
             title: Plot title.
-            grid: Unused for filled contours.
+            grid: Unused for surfaces.
             clear: Whether to clear the previous plot and colorbar first.
-            legend: Unused for filled contours.
+            legend: Unused for surfaces.
             label: Plot metadata shown in the cartouche.
             replot: True when re-plotting an already registered dataset.
             is_map: Accepted for compatibility; the map mode is driven by
@@ -83,10 +84,11 @@ class XarraySurfacePlotMixin:
         values = self._surface_values(ds, x_name, y_name, z_name)
         if values is None:
             return
-        x_values, y_values, z_values = values
-        self._detect_date_axis(x_values, "x")
-        self._detect_date_axis(y_values, "y")
-        surface = self.axes.contourf(x_values, y_values, z_values, antialiased=False)
+        self._detect_date_axis(values[0], "x")
+        self._detect_date_axis(values[1], "y")
+        surface = draw_surface(
+            self.axes, self.surface_kind, values, size=self.surface_sizes.get(self.surface_kind)
+        )
         self._replace_colorbar(surface, label_with_units(ds, z_name))
         self._apply_default_metadata_keys(label, legend=False)
         self._register_plot(surface, label)
@@ -203,7 +205,7 @@ class XarraySurfacePlotMixin:
         """Replace the current colorbar by one attached to ``surface``.
 
         Args:
-            surface: Filled-contour set.
+            surface: Plotted surface.
             label: Colorbar label.
         """
         self.remove_colorbar()

@@ -1,7 +1,8 @@
-"""Reusable Tkinter widgets (scrollable frame, contour class selection, tooltip)."""
+"""Reusable Tkinter widgets (scrollable frame, class selection, spinbox, tooltip)."""
 
+from .checked_spinbox import CheckedSpinbox
 from .class_selection import ClassSelectionFrame
 from .scrolled_frame import VerticalScrolledFrame
 from .tooltip import ToolTip
 
-__all__ = ["ClassSelectionFrame", "ToolTip", "VerticalScrolledFrame"]
+__all__ = ["CheckedSpinbox", "ClassSelectionFrame", "ToolTip", "VerticalScrolledFrame"]

@@ -20,6 +20,7 @@ from ..config import (
     KEY_VALUE_RANGE,
     VALUE_RANGE_DEFAULT,
 )
+from .surface_kinds import set_surface_colormap, surface_levels
 from .xarray_surfaces import surface_arrays
 
 LOGGER = logging.getLogger(__name__)
@@ -240,43 +241,14 @@ class ColorbarMixin:
             ``{"Auto": level_count}`` or ``{"Manuel": levels}`` depending on
             ``contour_class_mode``; None when the plot has no levels.
         """
-        if index >= len(self.lines) or not hasattr(self.lines[index], "levels"):
+        if index >= len(self.lines):
             return None
-        levels = self.lines[index].levels
+        levels = surface_levels(self.lines[index])
         if levels is None:
             return None
         if self.contour_class_mode == CLASS_MODE_AUTO:
             return {KEY_LEVELS_AUTO: len(levels)}
         return {KEY_LEVELS_MANUAL: levels.tolist()}
-
-    def replace_contour_levels(self, classes: Any, index: int = 0) -> None:
-        """Redraw a filled-contour plot with new levels.
-
-        Matplotlib contour levels are immutable, so the contour set (and its
-        colorbar) is recreated.
-
-        Args:
-            classes: New level bounds (list or array, sorted in place).
-            index: Index of the plot.
-        """
-        classes.sort()
-        old_surface = self.lines[index]
-        orientation, colorbar_label = self._colorbar_state()
-        label_font = self._colorbar_label_font()
-        new_surface = self.axes.contourf(
-            *self._contour_data(index),
-            levels=classes,
-            cmap=old_surface.get_cmap(),
-            alpha=old_surface.get_alpha(),
-            antialiased=False,
-        )
-        new_surface.set_label(old_surface.get_label())
-        had_colorbar = self._try_remove_colorbar()
-        old_surface.remove()
-        self.lines[index] = new_surface
-        if had_colorbar:
-            self.create_colorbar(new_surface, orientation)
-            self.colorbar.set_label(colorbar_label, **label_font)
 
     def _colorbar_state(self) -> tuple[str, str]:
         """Return the orientation and label of the current colorbar.
@@ -418,7 +390,7 @@ class ColorbarMixin:
         cmap_name = parameters.get("cmap")
         if cmap_name and hasattr(surface, "set_cmap"):
             try:
-                surface.set_cmap(get_colormap(cmap_name))
+                set_surface_colormap(surface, get_colormap(cmap_name))
             except (KeyError, ValueError):
                 pass
         alpha = parameters.get("alpha")
@@ -435,7 +407,7 @@ class ColorbarMixin:
             return
         if levels.keys() == {KEY_LEVELS_AUTO}:
             self.contour_class_mode = KEY_LEVELS_AUTO
-            if hasattr(self.lines[0], "levels"):
+            if surface_levels(self.lines[0]) is not None:
                 v_min, v_max = self.contour_value_range or self.get_data_range(index=0)
                 bounds = np.linspace(v_min, v_max, levels[KEY_LEVELS_AUTO])
                 self.replace_contour_levels(bounds, index=0)

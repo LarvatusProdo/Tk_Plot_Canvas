@@ -24,11 +24,13 @@ from ..config import (
     DEFAULT_BACKGROUND_COLOR,
     DEFAULT_DPI,
     DEFAULT_FIGSIZE,
+    DEFAULT_SURFACE_KIND,
     MATPLOTLIB_BACKEND,
     PLOT_TYPE_2D,
     STYLE_CARTOUCHE_FRAME,
     STYLE_FRAME,
     SURFACE_AXES_STYLE_DEFAULT,
+    SURFACE_SIZE_DEFAULTS,
 )
 from ..fonts import default_font_name
 from ..settings import DialogManager, SettingsWindow
@@ -44,6 +46,7 @@ from .plot_helpers import PlotHelpersMixin
 from .standard_plotting import StandardPlotMixin
 from .styles import configure_canvas_styles
 from .surface_axes import SurfaceAxesMixin
+from .surface_redraw import SurfaceRedrawMixin
 from .view_persistence import ViewPersistenceMixin
 from .xarray_curves import XarrayCurvePlotMixin
 from .xarray_surfaces import XarraySurfacePlotMixin
@@ -58,6 +61,7 @@ class TkPlotCanvas(
     LegendMixin,
     CartoucheMixin,
     ColorbarMixin,
+    SurfaceRedrawMixin,
     SurfaceAxesMixin,
     ViewPersistenceMixin,
     ContextMenuMixin,
@@ -135,6 +139,8 @@ class TkPlotCanvas(
         self.plot_type = PLOT_TYPE_2D
         self.contour_class_mode = CLASS_MODE_AUTO
         self.contour_value_range: Optional[tuple[float, float]] = None
+        self.surface_kind = DEFAULT_SURFACE_KIND
+        self.surface_sizes: dict[str, float] = dict(SURFACE_SIZE_DEFAULTS)
         self.colorbar: Optional[Any] = None
         self.colorbar_style: dict[str, Any] = dict(COLORBAR_STYLE_DEFAULT)
         self.hidden_colorbar_label: Optional[tuple[str, dict[str, Any]]] = None

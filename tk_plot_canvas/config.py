@@ -92,6 +92,32 @@ COLORBAR_STYLE_DEFAULT = {
     "outline_width": 0.8,
 }
 
+# --- 3D plot kinds -----------------------------------------------------------
+# Persisted kind -> name displayed in the "Graphique 3D" tab.
+SURFACE_KIND_FILLED_CONTOURS = "contourf"
+SURFACE_KIND_CONTOUR_LINES = "contour"
+SURFACE_KIND_MESH = "pcolormesh"
+SURFACE_KIND_SCATTER = "scatter"
+SURFACE_KIND_NAMES = {
+    SURFACE_KIND_FILLED_CONTOURS: "Contours remplis",
+    SURFACE_KIND_CONTOUR_LINES: "Isolignes",
+    SURFACE_KIND_MESH: "Maillage (pixels)",
+    SURFACE_KIND_SCATTER: "Nuage de points",
+}
+SURFACE_KINDS = list(SURFACE_KIND_NAMES)
+DEFAULT_SURFACE_KIND = SURFACE_KIND_FILLED_CONTOURS
+KEY_SURFACE_KIND = "surface_kind"
+# Number of classes Matplotlib aims at for filled contours (used by every kind).
+DEFAULT_CLASS_COUNT = 7
+# Size edited for the kinds that have one: line width of the contour lines
+# (points), area of the scatter markers (points²). Ranges: (min, max, increment).
+SURFACE_SIZE_DEFAULTS = {SURFACE_KIND_CONTOUR_LINES: 1.0, SURFACE_KIND_SCATTER: 10.0}
+SURFACE_SIZE_RANGES = {
+    SURFACE_KIND_CONTOUR_LINES: (0.1, 10.0, 0.1),
+    SURFACE_KIND_SCATTER: (1.0, 500.0, 1.0),
+}
+KEY_SURFACE_SIZES = "surface_sizes"
+
 # --- 3D plot axes ------------------------------------------------------------
 KEY_SURFACE_AXES_STYLE = "axes_style"
 # "aspect": None keeps the Matplotlib/cartopy default, else "equal", "auto" or a

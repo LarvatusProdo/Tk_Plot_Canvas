@@ -10,6 +10,7 @@ import tkinter as tk
 from tkinter import ttk
 from typing import TYPE_CHECKING, Any
 
+from ..canvas.surface_kinds import surface_levels
 from ..config import CLASS_MODE_AUTO, STYLE_BUTTON, STYLE_LABELFRAME, VALUE_RANGE_DIALOG_SIZE
 from ..widgets import ClassSelectionFrame
 from .window_placement import setup_dialog
@@ -22,7 +23,7 @@ BUTTON_SPACING = 10
 
 
 class ValueRangeDialog(tk.Toplevel):
-    """Edit the contour classes of a filled-contour plot."""
+    """Edit the classes of a surface plot."""
 
     def __init__(self, parent: tk.Misc, canvas: "TkPlotCanvas", surface: Any, index: int) -> None:
         """Create the dialog.
@@ -30,7 +31,7 @@ class ValueRangeDialog(tk.Toplevel):
         Args:
             parent: Window the dialog is positioned against.
             canvas: The plot canvas being edited.
-            surface: Filled-contour set to edit.
+            surface: Surface plot to edit.
             index: Index of the plot.
         """
         super().__init__(parent)
@@ -42,7 +43,7 @@ class ValueRangeDialog(tk.Toplevel):
         self._initial_state = (
             canvas.contour_class_mode,
             canvas.contour_value_range,
-            [float(level) for level in surface.levels],
+            [float(level) for level in surface_levels(surface)],
         )
         self._is_applied = False
         self._build_buttons()
@@ -67,7 +68,7 @@ class ValueRangeDialog(tk.Toplevel):
             self, text="Classes", padding=FRAME_PADDING, style=STYLE_LABELFRAME
         )
         frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10, side=tk.TOP)
-        levels = [float(level) for level in self.surface.levels]
+        levels = [float(level) for level in surface_levels(self.surface)]
         default_range = self.canvas.get_data_range(self.index)
         saved_range = self.canvas.contour_value_range
         v_min, v_max = saved_range or (min(levels), max(levels))
