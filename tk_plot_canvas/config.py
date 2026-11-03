@@ -128,6 +128,11 @@ SURFACE_AXES_STYLE_DEFAULT = {
 }
 ASPECT_CHOICES = {"par défaut": None, "égal": "equal", "libre": "auto"}
 
+# --- Slices of variables with more than two dimensions -----------------------
+SLICE_VALUE_DECIMALS = 4
+SLICE_PLAYER_DELAY_MS = 500
+SLICE_SCALE_LENGTH = 200
+
 # --- Layout ------------------------------------------------------------------
 # Tk distance in points ("75p" = 100 pixels at 100 %), so it follows the screen scale.
 CARTOUCHE_HEIGHT = "75p"

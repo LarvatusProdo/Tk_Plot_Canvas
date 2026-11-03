@@ -47,6 +47,7 @@ from .standard_plotting import StandardPlotMixin
 from .styles import configure_canvas_styles
 from .surface_axes import SurfaceAxesMixin
 from .surface_redraw import SurfaceRedrawMixin
+from .surface_slices import SurfaceSlicesMixin
 from .view_persistence import ViewPersistenceMixin
 from .xarray_curves import XarrayCurvePlotMixin
 from .xarray_surfaces import XarraySurfacePlotMixin
@@ -62,6 +63,7 @@ class TkPlotCanvas(
     CartoucheMixin,
     ColorbarMixin,
     SurfaceRedrawMixin,
+    SurfaceSlicesMixin,
     SurfaceAxesMixin,
     ViewPersistenceMixin,
     ContextMenuMixin,
@@ -77,6 +79,7 @@ class TkPlotCanvas(
         lines: Plotted artists (``Line2D`` or contour sets).
         line_labels: Metadata dictionary of each plotted artist.
         datasets: xarray datasets plotted with :meth:`plot_xarray`.
+        slice_indices: Index shown along each dimension plotted along neither x nor y.
         view_parameters: Parameters of the loaded view ({} if none).
         settings_window: The open settings window, if any.
     """
@@ -148,6 +151,7 @@ class TkPlotCanvas(
         self.lines: list[Any] = []
         self.line_labels: list[Optional[dict]] = []
         self.xarray_variables = {"x": "", "y": "", "z": ""}
+        self.slice_indices: dict[str, int] = {}
         self.datasets: list[Any] = []
         self.view_parameters: dict[str, Any] = {}
         self.settings_window: Optional[SettingsWindow] = None

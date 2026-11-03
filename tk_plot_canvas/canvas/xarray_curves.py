@@ -38,10 +38,12 @@ class XarrayCurvePlotMixin:
         replot: bool = False,
         **plot_kwargs: Any,
     ) -> None:
-        """Plot an xarray Dataset: a curve (1 dimension) or a map (2 dimensions).
+        """Plot an xarray Dataset: a curve (1 dimension) or a map (2 dimensions or more).
 
         The plot type ("2D" or "3D") is defined by the number of dimensions of
-        the displayed variable, whatever the ``plot_type`` of a loaded view.
+        the displayed variable, whatever the ``plot_type`` of a loaded view. A
+        map of a variable with more than 2 dimensions shows one slice of it
+        (see :class:`SurfaceSlicesMixin`).
 
         Args:
             ds: Dataset to plot.
@@ -54,14 +56,12 @@ class XarrayCurvePlotMixin:
             **plot_kwargs: Passed to the underlying Matplotlib call.
 
         Raises:
-            ValueError: If the displayed variable has neither 1 nor 2 dimensions.
+            ValueError: If the displayed variable has no dimension.
         """
         variable = self._displayed_variable(ds)
         dimension_count = ds[variable].ndim
-        if dimension_count not in (1, 2):
-            raise ValueError(
-                "The displayed xarray variable must have either 1 or 2 dimensions for plotting."
-            )
+        if dimension_count < 1:
+            raise ValueError("The displayed xarray variable must have at least 1 dimension.")
         if clear:
             self._reset_plot_data()
         if not replot:

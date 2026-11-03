@@ -55,24 +55,22 @@ def aspect_text(aspect: Aspect) -> str:
 class SurfaceAxesFrame:
     """Edit the aspect ratio and grid of a 3D plot (applied live)."""
 
-    def __init__(self, tab: "AxesTab", row: int, column: int) -> None:
-        """Create the label frame in the tab.
+    def __init__(self, tab: "AxesTab", parent: tk.Misc, row: int) -> None:
+        """Create the label frame in a column of the tab.
 
         Args:
             tab: The "Axes et titre" tab.
-            row: Grid row of the label frame.
-            column: First grid column of the label frame.
+            parent: Frame of the tab holding the label frame.
+            row: Grid row of the label frame in ``parent``.
         """
         self._canvas = tab.canvas
         self._frame = ttk.LabelFrame(
-            tab.frame,
+            parent,
             text="Surface",
             padding=FRAME_PADDING,
             style=STYLE_LABELFRAME,
         )
-        self._frame.grid(
-            row=row, column=column, columnspan=2, sticky="nwe", padx=PADDING, pady=PADDING
-        )
+        self._frame.grid(row=row, column=0, sticky="nwe", padx=PADDING, pady=PADDING)
         style = self._canvas.surface_axes_style
         self.aspect_var = tk.StringVar(value=aspect_text(style["aspect"]))
         self.grid_var = tk.BooleanVar(value=style["grid"])

@@ -5,8 +5,8 @@
         700
     ],
     "window_position": [
-        2078,
-        119
+        110,
+        253
     ],
     "X_axis": {
         "lim": [
@@ -92,6 +92,14 @@
         "y": "latitude",
         "z": "temperature"
     },
+    "subplot_params": {
+        "left": 0.125,
+        "bottom": 0.11,
+        "right": 0.9,
+        "top": 0.88,
+        "wspace": 0.2,
+        "hspace": 0.2
+    },
     "xarray_3D": {
         "has_colorbar": true,
         "colorbar_orientation": "vertical",
@@ -99,6 +107,11 @@
         "alpha": null,
         "levels": {
             "Auto": 7
+        },
+        "surface_kind": "scatter",
+        "surface_sizes": {
+            "contour": 1.0,
+            "scatter": 1.0
         },
         "value_range": "valeur par d\u00e9faut",
         "affichage_map": true,
@@ -110,6 +123,10 @@
             "fraction": 0.12,
             "tick_labelsize": 10.0,
             "outline_width": 0.9
+        },
+        "axes_style": {
+            "aspect": null,
+            "grid": false
         },
         "colorbar_font": {
             "fontname": "DejaVu Sans",

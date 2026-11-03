@@ -286,7 +286,7 @@ class ColorbarMixin:
         return True
 
     def _contour_data(self, index: int) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-        """Return the x, y and z arrays of a registered dataset.
+        """Return the x, y and z arrays of a registered dataset (at the selected slice).
 
         Args:
             index: Index of the dataset.
@@ -295,7 +295,13 @@ class ColorbarMixin:
             ``(x, y, z)`` with ``z`` shaped as ``(y, x)``.
         """
         selection = self.xarray_variables
-        return surface_arrays(self.datasets[index], selection["x"], selection["y"], selection["z"])
+        return surface_arrays(
+            self.datasets[index],
+            selection["x"],
+            selection["y"],
+            selection["z"],
+            self.slice_indices,
+        )
 
     def apply_3d_parameters(self, parameters: dict[str, Any]) -> None:
         """Apply persisted colorbar, colormap and contour settings.

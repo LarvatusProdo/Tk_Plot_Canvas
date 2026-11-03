@@ -19,6 +19,7 @@ from ..config import (
     PLOT_TYPE_3D,
     STYLE_BUTTON,
     STYLE_ENTRY,
+    STYLE_FRAME,
     STYLE_LABEL,
     STYLE_LABELFRAME,
     VARIABLE_SEPARATOR,
@@ -27,6 +28,7 @@ from .axis_frame import FRAME_PADDING, PADDING, AxisControls, AxisFrame, format_
 from .base_tab import SettingsTab
 from .choices import value_of
 from .font_dialogs import AxisFontDialog
+from .slice_players_frame import SlicePlayersFrame
 from .surface_axes_frame import SurfaceAxesFrame
 
 AXIS_NAMES = ("x", "y")
@@ -84,7 +86,7 @@ class AxesTab(SettingsTab):
     """
 
     def build(self) -> None:
-        """Create the title frame and both axis frames."""
+        """Create the title frame, both axis frames and, for 3D plots, the surface frames."""
         self._build_title_frame()
         variables = self._xarray_variable_choices()
         self.axis_controls: dict[str, AxisControls] = {}
@@ -92,9 +94,21 @@ class AxesTab(SettingsTab):
             axis_frame = AxisFrame(self, axis_name, 2 * column, variables)
             self.axis_controls[axis_name] = axis_frame.controls
         if self.canvas.plot_type == PLOT_TYPE_3D:
-            SurfaceAxesFrame(self, row=2, column=2 * len(AXIS_NAMES))
+            self._build_surface_column(2 * len(AXIS_NAMES))
         if len(variables) > 0:
             self._build_update_button()
+
+    def _build_surface_column(self, column: int) -> None:
+        """Stack the "Surface" frame and, below it, the players of the other dimensions.
+
+        Args:
+            column: Grid column of the stack, right of the axis frames.
+        """
+        surface_column = ttk.Frame(self.frame, style=STYLE_FRAME)
+        surface_column.grid(row=2, column=column, columnspan=2, sticky="nwe")
+        surface_column.columnconfigure(0, weight=1)
+        SurfaceAxesFrame(self, surface_column, row=0)
+        SlicePlayersFrame(self, surface_column, row=1)
 
     def _build_title_frame(self) -> None:
         """Create the title entry (applied while typing) and its font button."""

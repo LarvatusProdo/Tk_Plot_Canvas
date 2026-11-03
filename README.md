@@ -14,7 +14,9 @@ cartes 3D (contours remplis, colorbar, classes) et sauvegarde/chargement de vues
 - **Légende** : affichage/masquage, choix des métadonnées affichées, position automatique.
 - **Cartouche** : tableau des métadonnées de chaque courbe, colonnes et polices configurables.
 - **Données xarray** : courbes (1 dimension) et cartes en contours remplis (2 dimensions),
-  avec côtes et frontières si `cartopy` est installé.
+  avec côtes et frontières si `cartopy` est installé. Une variable à plus de 2 dimensions
+  est affichée à la première valeur des autres dimensions ; un lecteur par dimension
+  (onglet « Axes et titre », cadre « Autres dimensions ») permet d'en changer.
 - **Vues** : enregistrement/chargement des réglages dans des fichiers JSON.
 - **Menu contextuel** (clic droit sur la figure) : vues, accès direct à chaque onglet de
   réglages, affichage de la légende / du cartouche / de la colorbar, réinitialisation du zoom,

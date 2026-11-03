@@ -1,4 +1,4 @@
-"""Plotting of two-dimensional xarray datasets as surfaces (maps)."""
+"""Plotting of xarray datasets with two dimensions or more as surfaces (maps)."""
 
 from tkinter import messagebox
 from typing import Any, Optional
@@ -22,27 +22,67 @@ LONGITUDE, LATITUDE = GEOGRAPHIC_DIMENSIONS
 RECTILINEAR_AXES = "rectilinear"
 
 
+def slice_dimensions(data_array: xr.DataArray, x_name: str, y_name: str) -> list[str]:
+    """List the dimensions of a variable that are plotted along neither x nor y.
+
+    Args:
+        data_array: Plotted variable.
+        x_name: Dimension plotted along x.
+        y_name: Dimension plotted along y.
+
+    Returns:
+        The other dimensions, in the variable's order.
+    """
+    return [str(name) for name in data_array.dims if name not in (x_name, y_name)]
+
+
+def clamped_index(index: int, size: int) -> int:
+    """Bring an index back into ``[0, size - 1]`` (0 when out of range).
+
+    Args:
+        index: Requested index.
+        size: Length of the dimension.
+
+    Returns:
+        ``index`` when valid, 0 otherwise.
+    """
+    return index if 0 <= index < size else 0
+
+
 def surface_arrays(
-    ds: xr.Dataset, x_name: str, y_name: str, z_name: str
+    ds: xr.Dataset,
+    x_name: str,
+    y_name: str,
+    z_name: str,
+    slice_indices: Optional[dict[str, int]] = None,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Extract the coordinates and values of a surface, with ``z`` shaped as ``(y, x)``.
 
     The orientation of ``z`` follows the dimension names, not the array shapes,
     so that square grids (as many longitudes as latitudes) are not swapped.
+    The other dimensions of ``z_name`` are reduced to the index given in
+    ``slice_indices`` (the first value by default).
 
     Args:
         ds: Dataset to plot.
         x_name: Dimension plotted along x.
         y_name: Dimension plotted along y.
-        z_name: Plotted variable, whose dimensions are exactly ``x_name`` and ``y_name``.
+        z_name: Plotted variable, having the dimensions ``x_name`` and ``y_name``.
+        slice_indices: Index selected along each other dimension.
 
     Returns:
         ``(x, y, z)`` arrays.
 
     Raises:
-        ValueError: If the dimensions of ``z_name`` are not ``x_name`` and ``y_name``.
+        ValueError: If ``x_name`` or ``y_name`` is not a dimension of ``z_name``.
     """
-    z_values = ds[z_name].transpose(y_name, x_name).values
+    data_array = ds[z_name]
+    indices = slice_indices or {}
+    indexers = {
+        name: clamped_index(indices.get(name, 0), data_array.sizes[name])
+        for name in slice_dimensions(data_array, x_name, y_name)
+    }
+    z_values = data_array.isel(indexers).transpose(y_name, x_name).values
     return ds[x_name].values, ds[y_name].values, z_values
 
 
@@ -65,7 +105,7 @@ class XarraySurfacePlotMixin:
         """Plot a two-dimensional dataset as a surface (``surface_kind``) with a colorbar.
 
         Args:
-            ds: Dataset with two dimensions.
+            ds: Dataset whose plotted variable has two dimensions or more.
             title: Plot title.
             grid: Unused for surfaces.
             clear: Whether to clear the previous plot and colorbar first.
@@ -191,7 +231,7 @@ class XarraySurfacePlotMixin:
             dimensions of ``z_name`` are not ``x_name`` and ``y_name``.
         """
         try:
-            return surface_arrays(ds, x_name, y_name, z_name)
+            return surface_arrays(ds, x_name, y_name, z_name, self.slice_indices)
         except ValueError:
             messagebox.showerror(
                 "Erreur",
