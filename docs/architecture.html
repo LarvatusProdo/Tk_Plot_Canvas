@@ -1,0 +1,475 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Architecture TkPlotCanvas</title>
+<style>
+:root {
+  --bg: #f7f6f3; --surface: #ffffff; --surface-2: #f0eee9; --border: #dedad2;
+  --text: #22201c; --muted: #6b665d; --accent: #2f6fd6; --accent-soft: #e3ecfb;
+  --in: #c2611f; --in-soft: #fbeadf;
+  --g-entry: #7a5cc7; --g-canvas: #2f6fd6; --g-settings: #1f8a70;
+  --g-view: #c2611f; --g-widgets: #b23a6b; --g-core: #6b665d;
+  --edge: rgba(60, 55, 45, .13);
+  --mono: ui-monospace, "Cascadia Code", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #17181b; --surface: #1f2125; --surface-2: #272a2f; --border: #363a41;
+    --text: #e8e6e1; --muted: #9a978f; --accent: #6ea1ff; --accent-soft: #1f2d48;
+    --in: #f0995a; --in-soft: #3d2a1c;
+    --g-entry: #a68cf0; --g-canvas: #6ea1ff; --g-settings: #4cc3a1;
+    --g-view: #f0995a; --g-widgets: #e57aa6; --g-core: #a5a29a;
+    --edge: rgba(230, 225, 215, .10);
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #17181b; --surface: #1f2125; --surface-2: #272a2f; --border: #363a41;
+  --text: #e8e6e1; --muted: #9a978f; --accent: #6ea1ff; --accent-soft: #1f2d48;
+  --in: #f0995a; --in-soft: #3d2a1c;
+  --g-entry: #a68cf0; --g-canvas: #6ea1ff; --g-settings: #4cc3a1;
+  --g-view: #f0995a; --g-widgets: #e57aa6; --g-core: #a5a29a;
+  --edge: rgba(230, 225, 215, .10);
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--text);
+  font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+.wrap { max-width: 1240px; margin: 0 auto; padding: 32px 16px 64px; }
+header h1 { margin: 0 0 4px; font-size: 28px; letter-spacing: -.01em; }
+header p { margin: 0; color: var(--muted); max-width: 760px; }
+h2 { font-size: 19px; margin: 44px 0 6px; }
+h2 + .lead { margin: 0 0 16px; color: var(--muted); max-width: 820px; }
+code, .mono { font-family: var(--mono); font-size: .9em; }
+.stats { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 20px; }
+.stat {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+  padding: 10px 16px; min-width: 120px;
+}
+.stat b { display: block; font-size: 22px; font-variant-numeric: tabular-nums; }
+.stat span { color: var(--muted); font-size: 13px; }
+.card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px;
+}
+/* Layers */
+.layers { display: grid; gap: 10px; }
+.layer {
+  display: grid; grid-template-columns: 200px 1fr; gap: 14px; align-items: start;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+  padding: 14px 16px; border-left: 4px solid var(--c);
+}
+.layer h3 { margin: 0; font-size: 15px; color: var(--c); }
+.layer h3 small { display: block; color: var(--muted); font-weight: 400; font-size: 13px; }
+.layer .desc { margin: 0 0 8px; color: var(--muted); font-size: 14px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+  font: 12.5px var(--mono); border: 1px solid var(--border); background: var(--surface-2);
+  color: var(--text); border-radius: 6px; padding: 2px 8px; cursor: pointer;
+}
+.chip:hover, .chip:focus-visible { border-color: var(--c, var(--accent)); outline: none; }
+.chip small { color: var(--muted); }
+.arrow { text-align: center; color: var(--muted); font-size: 13px; }
+@media (max-width: 720px) { .layer { grid-template-columns: 1fr; } }
+/* Composition */
+.compo { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 12px; }
+.compo .card h3 { margin: 0 0 8px; font-size: 14px; }
+.compo .core-card { grid-column: 1 / -1; border-color: var(--g-canvas); }
+.mixin {
+  display: block; width: 100%; text-align: left; background: var(--surface-2);
+  border: 1px solid var(--border); border-radius: 8px; padding: 7px 10px; margin-top: 6px;
+  color: var(--text); cursor: pointer; font: inherit;
+}
+.mixin:hover { border-color: var(--g-canvas); }
+.mixin b { font-family: var(--mono); font-size: 13px; font-weight: 600; }
+.mixin span { display: block; color: var(--muted); font-size: 13px; }
+/* Settings tree */
+.tree ul { list-style: none; margin: 0; padding-left: 22px; border-left: 1px dashed var(--border); }
+.tree > ul { padding-left: 0; border: 0; }
+.tree li { margin: 6px 0; }
+.tree .node { display: inline-flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.tree .node .chip { --c: var(--g-settings); }
+.tree .node span { color: var(--muted); font-size: 13px; }
+/* Graph */
+.graph-box { overflow-x: auto; }
+.graph-box svg { display: block; min-width: 980px; width: 100%; height: auto; }
+.gnode rect { fill: var(--surface-2); stroke: var(--border); cursor: pointer; }
+.gnode text { font: 11.5px var(--mono); fill: var(--text); pointer-events: none; }
+.gnode .bar { stroke: none; }
+.gnode.sel rect.box { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 1.5; }
+.gnode.out rect.box { stroke: var(--accent); }
+.gnode.in rect.box { stroke: var(--in); fill: var(--in-soft); }
+.gnode.dim { opacity: .3; }
+.edge { fill: none; stroke: var(--edge); stroke-width: 1; }
+.edge.out { stroke: var(--accent); stroke-width: 1.6; opacity: .9; }
+.edge.in { stroke: var(--in); stroke-width: 1.6; opacity: .9; }
+.edge.dim { opacity: .25; }
+.colhead { font: 600 12px system-ui, sans-serif; letter-spacing: .04em; text-transform: uppercase; }
+.legend { display: flex; flex-wrap: wrap; gap: 16px; color: var(--muted); font-size: 13px; margin-top: 10px; }
+.legend i { display: inline-block; width: 18px; height: 3px; vertical-align: middle; margin-right: 6px; border-radius: 2px; }
+/* Explorer */
+.explorer { display: grid; grid-template-columns: 300px 1fr; gap: 14px; align-items: start; }
+@media (max-width: 820px) { .explorer { grid-template-columns: 1fr; } }
+.side { max-height: 640px; overflow: auto; padding: 10px; }
+.side input {
+  width: 100%; padding: 7px 10px; border-radius: 8px; border: 1px solid var(--border);
+  background: var(--surface-2); color: var(--text); font: inherit; margin-bottom: 8px;
+}
+.side h4 { margin: 12px 4px 4px; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; }
+.side button {
+  display: flex; justify-content: space-between; width: 100%; gap: 8px; border: 0; background: none;
+  color: var(--text); text-align: left; padding: 4px 8px; border-radius: 6px; cursor: pointer;
+  font: 13px var(--mono);
+}
+.side button:hover { background: var(--surface-2); }
+.side button.sel { background: var(--accent-soft); color: var(--accent); }
+.side button small { color: var(--muted); font-variant-numeric: tabular-nums; }
+.detail { min-height: 300px; }
+.detail h3 { margin: 0; font: 600 17px var(--mono); word-break: break-all; }
+.detail .path { color: var(--muted); font: 13px var(--mono); }
+.detail .doc { margin: 10px 0 4px; }
+.detail h4 { margin: 18px 0 6px; font-size: 13px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+.cls { border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; margin-bottom: 8px; background: var(--surface-2); }
+.cls b { font-family: var(--mono); }
+.cls .bases { color: var(--muted); font: 12.5px var(--mono); }
+.cls p { margin: 2px 0 6px; font-size: 14px; }
+.methods { font: 12px var(--mono); color: var(--muted); }
+.fn { font-size: 14px; margin: 3px 0; }
+.fn code { color: var(--accent); }
+.deps { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+@media (max-width: 600px) { .deps { grid-template-columns: 1fr; } }
+.badge { display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 99px; background: var(--surface-2); color: var(--muted); margin-left: 8px; vertical-align: middle; }
+.badge.warn { background: var(--in-soft); color: var(--in); }
+.note { font-size: 13px; color: var(--muted); }
+.theme-btn {
+  float: right; border: 1px solid var(--border); background: var(--surface); color: var(--text);
+  border-radius: 8px; padding: 4px 10px; cursor: pointer; font: inherit; font-size: 13px;
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <button class="theme-btn" id="theme" type="button">Thème</button>
+    <h1>Architecture de TkPlotCanvas</h1>
+    <p>Figures Matplotlib intégrées dans Tkinter, avec réglages interactifs. Cette page décrit
+      les paquets, la composition de la classe principale et les dépendances entre modules.
+      Cliquez sur n'importe quel module pour voir son contenu.</p>
+    <div class="stats" id="stats"></div>
+  </header>
+
+  <h2>Couches du projet</h2>
+  <p class="lead">Le code est découpé en paquets à responsabilité unique. Les points d'entrée
+    créent un <code>TkPlotCanvas</code> ; celui-ci ouvre la fenêtre de réglages et délègue la
+    persistance des vues au paquet <code>view</code>. Tous s'appuient sur les widgets génériques
+    et le socle (constantes, compatibilité, polices).</p>
+  <div class="layers" id="layers"></div>
+
+  <h2>Composition de <code>TkPlotCanvas</code></h2>
+  <p class="lead"><code>TkPlotCanvas</code> (<code>canvas/plot_canvas.py</code>) hérite de
+    <code>ttk.Frame</code> et de 14 mixins : chaque mixin ajoute une famille de méthodes
+    (tracé, habillage, 3D, interactions) dans son propre module.</p>
+  <div class="compo" id="compo"></div>
+
+  <h2>Fenêtre de réglages</h2>
+  <p class="lead"><code>SettingsWindow</code> est un notebook : un onglet par groupe de réglages,
+    chaque onglet hérite de <code>SettingsTab</code> et ouvre ses cadres ou dialogues.</p>
+  <div class="card tree" id="tree"></div>
+
+  <h2>Graphe des dépendances</h2>
+  <p class="lead">Chaque trait est un import interne. Cliquez sur un module pour mettre en
+    évidence ce qu'il importe et ce qui l'importe.</p>
+  <div class="card graph-box"><svg id="graph" role="img" aria-label="Graphe des imports entre modules"></svg></div>
+  <div class="legend">
+    <span><i style="background:var(--accent)"></i>importé par le module sélectionné</span>
+    <span><i style="background:var(--in)"></i>importe le module sélectionné</span>
+  </div>
+
+  <h2>Explorateur de modules</h2>
+  <p class="lead">Docstring, classes (avec bases et méthodes), fonctions de niveau module et
+    dépendances de chaque fichier.</p>
+  <div class="explorer">
+    <div class="card side">
+      <input id="search" type="search" placeholder="Filtrer (module, classe, fonction)…" aria-label="Filtrer">
+      <div id="list"></div>
+    </div>
+    <div class="card detail" id="detail"></div>
+  </div>
+  <p class="note" style="margin-top:28px">Données extraites automatiquement du code source
+    (analyse <code>ast</code>) le 03/11/2026.</p>
+</div>
+
+<script>
+const DATA = {"__init__": {"path": "__init__.py", "lines": 5, "doc": "Project root package: re-exports the public widgets of :mod:`tk_plot_canvas`.", "classes": [], "functions": [], "imports": ["tk_plot_canvas"]}, "class_TkPlotCanvas": {"path": "class_TkPlotCanvas.py", "lines": 9, "doc": "Backward-compatible import path for existing scripts.", "classes": [], "functions": [], "imports": ["tk_plot_canvas"]}, "examples": {"path": "examples/__init__.py", "lines": 1, "doc": "Runnable usage examples of TkPlotCanvas (run them from the project root).", "classes": [], "functions": [], "imports": []}, "examples.config": {"path": "examples/config.py", "lines": 15, "doc": "Paths shared by the examples.", "classes": [], "functions": [], "imports": []}, "examples.example_numpy_curves": {"path": "examples/example_numpy_curves.py", "lines": 32, "doc": "Example: plot NumPy arrays with TkPlotCanvas.", "classes": [], "functions": [{"name": "main", "doc": "Plot a sine and a cosine wave in the same canvas."}], "imports": ["tk_plot_canvas"]}, "examples.example_xarray_map": {"path": "examples/example_xarray_map.py", "lines": 34, "doc": "Example: plot a two-dimensional xarray dataset as a map with a saved view.", "classes": [], "functions": [{"name": "main", "doc": "Plot the 2024 2 m temperature map, plus a derived test variable."}], "imports": ["examples.config", "tk_plot_canvas"]}, "examples.example_xarray_slices": {"path": "examples/example_xarray_slices.py", "lines": 36, "doc": "Example: browse a three-dimensional xarray variable (monthly maps) with the slice players.", "classes": [], "functions": [{"name": "main", "doc": "Plot the 2024 monthly 2 m temperature maps and open the slice players."}], "imports": ["examples.config", "tk_plot_canvas"]}, "examples.example_xarray_timeseries": {"path": "examples/example_xarray_timeseries.py", "lines": 33, "doc": "Example: plot a one-dimensional xarray dataset (time series) with a saved view.", "classes": [], "functions": [{"name": "main", "doc": "Plot the 2024 mean 2 m temperature time series."}], "imports": ["examples.config", "tk_plot_canvas"]}, "tk_plot_canvas": {"path": "tk_plot_canvas/__init__.py", "lines": 20, "doc": "TkPlotCanvas: Matplotlib figures embedded in Tkinter, with interactive settings.", "classes": [], "functions": [], "imports": ["tk_plot_canvas.canvas.plot_canvas", "tk_plot_canvas.dpi", "tk_plot_canvas.widgets"]}, "tk_plot_canvas.__main__": {"path": "tk_plot_canvas/__main__.py", "lines": 45, "doc": "Command-line entry point: ``python -m tk_plot_canvas [demo]``.", "classes": [], "functions": [{"name": "parse_arguments", "doc": "Parse the command-line arguments."}, {"name": "main", "doc": "Run the requested demo."}], "imports": ["tk_plot_canvas.demos"]}, "tk_plot_canvas.canvas": {"path": "tk_plot_canvas/canvas/__init__.py", "lines": 5, "doc": "Plot canvas implementation and its plotting/persistence mixins.", "classes": [], "functions": [], "imports": []}, "tk_plot_canvas.canvas.cartouche": {"path": "tk_plot_canvas/canvas/cartouche.py", "lines": 152, "doc": "Cartouche: a table under the plot showing the metadata of each curve.", "classes": [{"name": "CartoucheMixin", "bases": [], "methods": ["fill_cartouche_row", "set_cartouche_visible", "refresh_cartouche", "_reset_cartouche_row", "_create_cartouche_headers", "_add_line_symbol", "_add_cartouche_cell"], "doc": "Fill the cartouche grid."}], "functions": [{"name": "line_symbol", "doc": "Return the text drawn in the cartouche to represent a curve."}], "imports": ["tk_plot_canvas.compat", "tk_plot_canvas.config"]}, "tk_plot_canvas.canvas.colorbar": {"path": "tk_plot_canvas/canvas/colorbar.py", "lines": 424, "doc": "Colorbar and contour-level operations for filled-contour plots.", "classes": [{"name": "ColorbarMixin", "bases": [], "methods": ["get_data_range", "get_value_range_parameter", "create_colorbar", "set_colorbar_style", "get_colorbar_style_parameter", "remove_colorbar", "hide_colorbar", "set_colorbar_visible", "show_colorbar", "recreate_colorbar", "apply_font_to_colorbar", "get_current_levels", "_colorbar_state", "_colorbar_label_font", "_try_remove_colorbar", "_contour_data", "apply_3d_parameters", "_apply_colorbar_parameters", "_valid_colorbar_style", "_try_create_colorbar", "_apply_surface_appearance", "_apply_levels"], "doc": "Manage the colorbar and the contour levels of the first 3D plot."}], "functions": [{"name": "colorbar_label_axis", "doc": "Return the colorbar axis carrying its label."}], "imports": ["tk_plot_canvas.canvas.surface_kinds", "tk_plot_canvas.canvas.xarray_surfaces", "tk_plot_canvas.compat", "tk_plot_canvas.config"]}, "tk_plot_canvas.canvas.context_menu": {"path": "tk_plot_canvas/canvas/context_menu.py", "lines": 180, "doc": "Right-click menu of the figure and keyboard shortcuts.", "classes": [{"name": "ContextMenuMixin", "bases": [], "methods": ["_build_context_menu", "bind_view_shortcuts", "load_view_file", "_show_context_menu", "_add_view_entries", "_add_settings_entries", "_add_display_entries", "_add_check_entry", "_after_display_toggle", "_add_image_entries"], "doc": "Build the context menu and bind the keyboard shortcuts."}], "functions": [{"name": "bind_sequences", "doc": "Bind several Tk sequences (e.g. lower and upper case shortcuts) to one command."}], "imports": ["tk_plot_canvas.clipboard", "tk_plot_canvas.config"]}, "tk_plot_canvas.canvas.double_click": {"path": "tk_plot_canvas/canvas/double_click.py", "lines": 102, "doc": "Double-click shortcuts on the figure.", "classes": [{"name": "DoubleClickMixin", "bases": [], "methods": ["_connect_double_click", "_on_figure_click", "_editable_texts", "_commit_text", "_tab_under"], "doc": "React to double clicks on the figure."}], "functions": [], "imports": ["tk_plot_canvas.canvas.colorbar", "tk_plot_canvas.config", "tk_plot_canvas.widgets.inline_text_editor"]}, "tk_plot_canvas.canvas.figure_export": {"path": "tk_plot_canvas/canvas/figure_export.py", "lines": 61, "doc": "Export of the figure to an image file and copy to the clipboard.", "classes": [{"name": "FigureExportMixin", "bases": [], "methods": ["export_image", "copy_image"], "doc": "Save the figure as an image, or copy it to the clipboard."}], "functions": [], "imports": ["tk_plot_canvas.clipboard", "tk_plot_canvas.config"]}, "tk_plot_canvas.canvas.legend": {"path": "tk_plot_canvas/canvas/legend.py", "lines": 76, "doc": "Legend management: legend texts are built from curve metadata.", "classes": [{"name": "LegendMixin", "bases": [], "methods": ["build_legend_label", "set_legend_visible", "refresh_legend", "show_draggable_legend", "_remove_legend"], "doc": "Build legend texts and keep the Matplotlib legend in sync."}], "functions": [], "imports": []}, "tk_plot_canvas.canvas.plot_canvas": {"path": "tk_plot_canvas/canvas/plot_canvas.py", "lines": 290, "doc": "TkPlotCanvas: a Tkinter frame embedding a customizable Matplotlib figure.", "classes": [{"name": "TkPlotCanvas", "bases": ["ttk.Frame", "StandardPlotMixin", "XarrayCurvePlotMixin", "XarraySurfacePlotMixin", "PlotHelpersMixin", "LegendMixin", "CartoucheMixin", "ColorbarMixin", "SurfaceRedrawMixin", "SurfaceSlicesMixin", "SurfaceAxesMixin", "ViewPersistenceMixin", "ContextMenuMixin", "DoubleClickMixin", "FigureExportMixin"], "methods": ["__init__", "_setup_styles", "_init_state", "_build_layout", "_build_figure", "_load_initial_view", "open_settings_window", "_is_settings_window_open", "_dialog_parent", "_selected_settings_tab", "_reopen_settings_window", "update_plot", "clear_plot"], "doc": "A Tkinter frame that embeds a Matplotlib figure."}], "functions": [], "imports": ["tk_plot_canvas.canvas.cartouche", "tk_plot_canvas.canvas.colorbar", "tk_plot_canvas.canvas.context_menu", "tk_plot_canvas.canvas.double_click", "tk_plot_canvas.canvas.figure_export", "tk_plot_canvas.canvas.legend", "tk_plot_canvas.canvas.plot_helpers", "tk_plot_canvas.canvas.standard_plotting", "tk_plot_canvas.canvas.styles", "tk_plot_canvas.canvas.surface_axes", "tk_plot_canvas.canvas.surface_redraw", "tk_plot_canvas.canvas.surface_slices", "tk_plot_canvas.canvas.view_persistence", "tk_plot_canvas.canvas.xarray_curves", "tk_plot_canvas.canvas.xarray_surfaces", "tk_plot_canvas.config", "tk_plot_canvas.fonts", "tk_plot_canvas.settings", "tk_plot_canvas.settings.dialog_manager", "tk_plot_canvas.widgets"]}, "tk_plot_canvas.canvas.plot_helpers": {"path": "tk_plot_canvas/canvas/plot_helpers.py", "lines": 145, "doc": "Helpers shared by the standard and xarray plotting mixins.", "classes": [{"name": "PlotHelpersMixin", "bases": [], "methods": ["_reset_plot_data", "_apply_default_metadata_keys", "_set_axes_text", "_legend_label_for", "_curve_kwargs_from_view", "_detect_date_axis", "_register_plot", "_update_cartouche_for_new_plot", "_show_legend_if_requested"], "doc": "Common steps of every plotting method."}], "functions": [], "imports": ["tk_plot_canvas.config"]}, "tk_plot_canvas.canvas.standard_plotting": {"path": "tk_plot_canvas/canvas/standard_plotting.py", "lines": 73, "doc": "Plotting of ordinary x/y sequences.", "classes": [{"name": "StandardPlotMixin", "bases": [], "methods": ["plot", "_apply_texts"], "doc": "Plot x/y sequences on the canvas (requires :class:`PlotHelpersMixin`)."}], "functions": [], "imports": ["tk_plot_canvas.config", "tk_plot_canvas.view"]}, "tk_plot_canvas.canvas.styles": {"path": "tk_plot_canvas/canvas/styles.py", "lines": 78, "doc": "ttk styles used by the plot canvas, its cartouche and its dialogs.", "classes": [], "functions": [{"name": "configure_canvas_styles", "doc": "Configure every ttk style used by the package."}, {"name": "_configure_cartouche_styles", "doc": "Configure the cartouche header, cell and frame styles."}], "imports": ["tk_plot_canvas.config"]}, "tk_plot_canvas.canvas.surface_axes": {"path": "tk_plot_canvas/canvas/surface_axes.py", "lines": 89, "doc": "Axes settings of 3D plots: aspect ratio and grid.", "classes": [{"name": "SurfaceAxesMixin", "bases": [], "methods": ["set_surface_axes_style", "apply_surface_axes_style", "get_surface_axes_style_parameter", "load_surface_axes_style", "_valid_surface_axes_style"], "doc": "Keep the axes settings of 3D plots and re-apply them after each replot."}], "functions": [{"name": "parse_aspect", "doc": "Validate an aspect value."}], "imports": ["tk_plot_canvas.config"]}, "tk_plot_canvas.canvas.surface_kinds": {"path": "tk_plot_canvas/canvas/surface_kinds.py", "lines": 156, "doc": "Drawing of a surface (2D dataset) with one of the available plot kinds.", "classes": [], "functions": [{"name": "draw_surface", "doc": "Draw a surface with the requested kind."}, {"name": "_draw_scatter", "doc": "Draw one colored point per grid node."}, {"name": "default_levels", "doc": "Choose class bounds as Matplotlib does for filled contours."}, {"name": "surface_levels", "doc": "Return the class bounds of a surface."}, {"name": "set_surface_colormap", "doc": "Change the colormap of a surface, keeping its classes."}, {"name": "set_surface_size", "doc": "Change the line width of contour lines or the marker area of a scatter plot."}], "imports": ["tk_plot_canvas.config"]}, "tk_plot_canvas.canvas.surface_redraw": {"path": "tk_plot_canvas/canvas/surface_redraw.py", "lines": 74, "doc": "Redrawing of a surface plot with new classes or another plot kind.", "classes": [{"name": "SurfaceRedrawMixin", "bases": [], "methods": ["replace_contour_levels", "set_surface_kind", "set_surface_size", "_redraw_surface"], "doc": "Recreate the surface plots (requires the colorbar mixin)."}], "functions": [], "imports": ["tk_plot_canvas.canvas.surface_kinds"]}, "tk_plot_canvas.canvas.surface_slices": {"path": "tk_plot_canvas/canvas/surface_slices.py", "lines": 113, "doc": "Selection of the slice shown for variables having more than two dimensions.", "classes": [{"name": "SurfaceSlicesMixin", "bases": [], "methods": ["_sliced_variable", "slice_dimensions", "slice_size", "slice_index", "slice_value_text", "set_slice_index"], "doc": "Choose the index shown along the dimensions plotted along neither x nor y."}], "functions": [{"name": "coordinate_text", "doc": "Format the value of a coordinate for display."}], "imports": ["tk_plot_canvas.canvas.surface_kinds", "tk_plot_canvas.canvas.xarray_surfaces", "tk_plot_canvas.config"]}, "tk_plot_canvas.canvas.view_persistence": {"path": "tk_plot_canvas/canvas/view_persistence.py", "lines": 138, "doc": "Saving and loading of plot views (JSON files) from the canvas.", "classes": [{"name": "ViewPersistenceMixin", "bases": [], "methods": ["save_parameters", "_ask_save_path", "get_current_parameters", "restore_xarray_selection", "load_parameters", "_read_view_file"], "doc": "Save the current view to JSON and restore views from JSON."}], "functions": [], "imports": ["tk_plot_canvas.config", "tk_plot_canvas.view"]}, "tk_plot_canvas.canvas.xarray_curves": {"path": "tk_plot_canvas/canvas/xarray_curves.py", "lines": 182, "doc": "Plotting of xarray datasets: dispatcher and one-dimensional curves.", "classes": [{"name": "XarrayCurvePlotMixin", "bases": [], "methods": ["plot_xarray", "_displayed_variable", "_plot_xarray_curve", "_select_curve_variables", "_apply_curve_texts"], "doc": "Plot xarray datasets (requires :class:`PlotHelpersMixin`)."}], "functions": [{"name": "label_with_units", "doc": "Build an axis label such as \"Temperature (°C)\"."}], "imports": ["tk_plot_canvas.config", "tk_plot_canvas.view"]}, "tk_plot_canvas.canvas.xarray_surfaces": {"path": "tk_plot_canvas/canvas/xarray_surfaces.py", "lines": 269, "doc": "Plotting of xarray datasets with two dimensions or more as surfaces (maps).", "classes": [{"name": "XarraySurfacePlotMixin", "bases": [], "methods": ["_plot_xarray_surface", "_finish_surface_plot", "_select_surface_variables", "_is_map_requested", "_setup_map_axes", "_replace_axes", "_surface_values", "_replace_colorbar", "_apply_surface_texts"], "doc": "Plot 2D datasets (requires :class:`PlotHelpersMixin` and the colorbar mixin)."}], "functions": [{"name": "slice_dimensions", "doc": "List the dimensions of a variable that are plotted along neither x nor y."}, {"name": "clamped_index", "doc": "Bring an index back into ``[0, size - 1]`` (0 when out of range)."}, {"name": "surface_arrays", "doc": "Extract the coordinates and values of a surface, with ``z`` shaped as ``(y, x)``."}], "imports": ["tk_plot_canvas.canvas.surface_kinds", "tk_plot_canvas.canvas.xarray_curves", "tk_plot_canvas.config"]}, "tk_plot_canvas.clipboard": {"path": "tk_plot_canvas/clipboard.py", "lines": 121, "doc": "Copy of an image to the Windows clipboard, as a device-independent bitmap (DIB).", "classes": [], "functions": [{"name": "is_image_copy_supported", "doc": "Tell whether images can be copied to the clipboard on this system."}, {"name": "rgba_to_dib", "doc": "Encode an RGBA image as a bottom-up 32-bit DIB."}, {"name": "_windows_libraries", "doc": "Load kernel32 and user32 with the signatures used here."}, {"name": "_global_memory", "doc": "Copy bytes into movable global memory, as the clipboard requires."}, {"name": "copy_image_to_clipboard", "doc": "Put an RGBA image in the Windows clipboard."}], "imports": []}, "tk_plot_canvas.compat": {"path": "tk_plot_canvas/compat.py", "lines": 45, "doc": "Compatibility helpers between Matplotlib versions and Tkinter.", "classes": [], "functions": [{"name": "to_tk_color", "doc": "Convert a Matplotlib color into a value accepted by Tk widgets."}, {"name": "get_colormap", "doc": "Return a registered Matplotlib colormap by name."}, {"name": "colormap_names", "doc": "List the non-reversed colormaps, sorted case-insensitively."}], "imports": []}, "tk_plot_canvas.config": {"path": "tk_plot_canvas/config.py", "lines": 229, "doc": "Application-wide constants for the TkPlotCanvas package.", "classes": [], "functions": [], "imports": []}, "tk_plot_canvas.demos": {"path": "tk_plot_canvas/demos.py", "lines": 165, "doc": "Interactive demonstrations of the package widgets.", "classes": [], "functions": [{"name": "_weather_attributes", "doc": "Build the metadata of a demo dataset."}, {"name": "_power_dataset", "doc": "Build a dataset where temperature = time ** exponent."}, {"name": "_create_demo_canvas", "doc": "Create the demo main window and its plot canvas."}, {"name": "demo_standard", "doc": "Plot two curves with :meth:`TkPlotCanvas.plot`."}, {"name": "_monthly_dataset", "doc": "Build a monthly demo dataset with two variables."}, {"name": "demo_xarray", "doc": "Plot three monthly xarray datasets with :meth:`TkPlotCanvas.plot_xarray`."}, {"name": "demo_class_selection", "doc": "Show the contour class selection frame."}, {"name": "demo_scrolled_frame", "doc": "Show a scrollable frame filled with labels and entries."}], "imports": ["tk_plot_canvas.canvas.plot_canvas", "tk_plot_canvas.config", "tk_plot_canvas.widgets"]}, "tk_plot_canvas.dpi": {"path": "tk_plot_canvas/dpi.py", "lines": 45, "doc": "High-DPI support: sharp text and figures on scaled Windows screens.", "classes": [], "functions": [{"name": "enable_high_dpi", "doc": "Make the process DPI aware on Windows (does nothing elsewhere)."}, {"name": "ui_scale", "doc": "Return the screen scale factor seen by Tk (1.0 at 96 DPI)."}], "imports": []}, "tk_plot_canvas.fonts": {"path": "tk_plot_canvas/fonts.py", "lines": 111, "doc": "Font helpers shared by the canvas and the font dialogs.", "classes": [], "functions": [{"name": "is_linux", "doc": "Tell whether the current operating system is Linux."}, {"name": "default_font_name", "doc": "Return the default UI font family for the current operating system."}, {"name": "split_tk_font_spec", "doc": "Split a Tk font specification into its parts."}, {"name": "parse_tk_font_spec", "doc": "Parse a Tk font specification, falling back to safe defaults."}, {"name": "safe_tk_font_spec", "doc": "Return a font specification whose family exists on this system."}, {"name": "_has_integer_size", "doc": "Tell whether the second part of a split font spec is an integer size."}], "imports": ["tk_plot_canvas.config"]}, "tk_plot_canvas.settings": {"path": "tk_plot_canvas/settings/__init__.py", "lines": 6, "doc": "Settings window of the plot canvas, its tabs and its dialogs.", "classes": [], "functions": [], "imports": ["tk_plot_canvas.settings.dialog_manager", "tk_plot_canvas.settings.settings_window"]}, "tk_plot_canvas.settings.axes_tab": {"path": "tk_plot_canvas/settings/axes_tab.py", "lines": 302, "doc": "Settings tab \"Axes et titre\": title, axis labels, limits, scales, variables.", "classes": [{"name": "AxesTab", "bases": ["SettingsTab"], "methods": ["build", "_build_surface_column", "_build_title_frame", "_on_title_typed", "set_axis_label", "open_font_dialog", "_xarray_variable_choices", "autoscale_axis", "apply_scale", "apply_limits", "_typed_limit", "_build_update_button", "apply_variable_selection", "_is_valid_variable_choice"], "doc": "Edit the title and both axes."}], "functions": [{"name": "parse_limit", "doc": "Read an axis limit typed by the user."}, {"name": "set_limits", "doc": "Apply the given limits of an axis (missing ones are left unchanged)."}], "imports": ["tk_plot_canvas.config", "tk_plot_canvas.settings.axis_frame", "tk_plot_canvas.settings.base_tab", "tk_plot_canvas.settings.choices", "tk_plot_canvas.settings.font_dialogs", "tk_plot_canvas.settings.slice_players_frame", "tk_plot_canvas.settings.surface_axes_frame"]}, "tk_plot_canvas.settings.axis_frame": {"path": "tk_plot_canvas/settings/axis_frame.py", "lines": 282, "doc": "Label frame editing one axis: label, limits, scale, inversion, variable.", "classes": [{"name": "AxisControls", "bases": [], "methods": ["show_limits"], "doc": "Tk variables and widgets editing one axis."}, {"name": "AxisFrame", "bases": [], "methods": ["__init__", "_build", "_add_field_label", "_add_separator", "_add_limit_entries", "_on_limit_typed", "_add_scale_controls", "_add_autoscale_control", "_add_inversion_control", "_add_variable_selector", "_on_label_typed", "_invert_axis"], "doc": "Widgets editing one axis, laid out in a label frame of the axes tab."}], "functions": [{"name": "format_limit", "doc": "Format an axis limit for its entry."}, {"name": "create_axis_controls", "doc": "Create the Tk variables of an axis from its current state."}], "imports": ["tk_plot_canvas.config", "tk_plot_canvas.settings.axes_tab", "tk_plot_canvas.settings.choices", "tk_plot_canvas.widgets"]}, "tk_plot_canvas.settings.base_tab": {"path": "tk_plot_canvas/settings/base_tab.py", "lines": 49, "doc": "Base class of the tabs of the settings window.", "classes": [{"name": "SettingsTab", "bases": [], "methods": ["__init__", "build", "redraw", "redraw_idle"], "doc": "A scrollable notebook tab bound to a plot canvas."}], "functions": [], "imports": ["tk_plot_canvas.canvas.plot_canvas", "tk_plot_canvas.config", "tk_plot_canvas.settings.settings_window", "tk_plot_canvas.widgets"]}, "tk_plot_canvas.settings.cartouche_tab": {"path": "tk_plot_canvas/settings/cartouche_tab.py", "lines": 211, "doc": "Settings tab \"Cartouche\": visibility, displayed columns and their values.", "classes": [{"name": "CartoucheTab", "bases": ["SettingsTab"], "methods": ["build", "_build_header", "_open_font_dialog", "_label_of", "_build_key_selectors", "_build_value_row", "_on_value_edited", "_replace_cell", "_on_key_selected", "_replace_header", "_toggle_cartouche"], "doc": "Choose the metadata columns of the cartouche and edit their values."}], "functions": [], "imports": ["tk_plot_canvas.config", "tk_plot_canvas.settings.base_tab", "tk_plot_canvas.settings.font_dialogs"]}, "tk_plot_canvas.settings.choices": {"path": "tk_plot_canvas/settings/choices.py", "lines": 41, "doc": "Conversion between Matplotlib/Tk values and the French names shown in combo boxes.", "classes": [], "functions": [{"name": "displayed_names", "doc": "Return the names to put in a combo box."}, {"name": "name_of", "doc": "Return the displayed name of a value."}, {"name": "value_of", "doc": "Return the value of a displayed name."}], "imports": []}, "tk_plot_canvas.settings.colorbar_dialog": {"path": "tk_plot_canvas/settings/colorbar_dialog.py", "lines": 267, "doc": "Dialog editing the colorbar label, its font, its position and its geometry.", "classes": [{"name": "ColorbarDialog", "bases": ["tk.Toplevel"], "methods": ["__init__", "_label_text", "_current_label", "_add_label", "_build_label_controls", "_build_geometry_controls", "_add_spinbox", "_build_buttons", "_typed_style", "apply_geometry", "cancel", "_on_label_changed"], "doc": "Edit the label, font, position and geometry of the colorbar (applied live)."}], "functions": [], "imports": ["tk_plot_canvas.canvas.colorbar", "tk_plot_canvas.canvas.plot_canvas", "tk_plot_canvas.config", "tk_plot_canvas.settings.choices", "tk_plot_canvas.settings.font_dialogs", "tk_plot_canvas.settings.window_placement", "tk_plot_canvas.widgets"]}, "tk_plot_canvas.settings.curves_tab": {"path": "tk_plot_canvas/settings/curves_tab.py", "lines": 224, "doc": "Settings tab \"Courbes\": color, width, style and markers of 2D curves.", "classes": [{"name": "CurveWidgets", "bases": [], "methods": [], "doc": "Widgets editing one curve."}, {"name": "CurvesTab", "bases": ["SettingsTab"], "methods": ["build", "_build_curve_row", "_add_spinbox", "_on_value_typed", "_add_combobox", "_choose_color", "_update_line_property"], "doc": "Edit the appearance of every plotted line."}], "functions": [], "imports": ["tk_plot_canvas.canvas.cartouche", "tk_plot_canvas.compat", "tk_plot_canvas.config", "tk_plot_canvas.settings.base_tab", "tk_plot_canvas.settings.choices"]}, "tk_plot_canvas.settings.dialog_manager": {"path": "tk_plot_canvas/settings/dialog_manager.py", "lines": 47, "doc": "Registry keeping at most one open dialog per edited element.", "classes": [{"name": "DialogManager", "bases": [], "methods": ["__init__", "show"], "doc": "Open dialogs by key, bringing back an already open one instead of duplicating it."}], "functions": [{"name": "is_window_open", "doc": "Tell whether a window still exists."}], "imports": []}, "tk_plot_canvas.settings.font_controls": {"path": "tk_plot_canvas/settings/font_controls.py", "lines": 209, "doc": "Group of widgets editing one font: family, size, style, bold and color.", "classes": [{"name": "FontChoice", "bases": [], "methods": [], "doc": "Font selected by the user."}, {"name": "FontControls", "bases": [], "methods": ["__init__", "_build_family_and_size_rows", "_build_size_row", "_add_label", "_build_style_row", "_choose_color", "set_family", "set_size", "set_style", "set_bold", "set_color", "_typed_size", "read"], "doc": "Font editing widgets laid out in a label frame; every change calls ``on_change``."}], "functions": [], "imports": ["tk_plot_canvas.config", "tk_plot_canvas.settings.choices"]}, "tk_plot_canvas.settings.font_dialogs": {"path": "tk_plot_canvas/settings/font_dialogs.py", "lines": 475, "doc": "Dialogs editing the fonts of the title, axes, cartouche and colorbar.", "classes": [{"name": "FontDialog", "bases": ["tk.Toplevel"], "methods": ["__init__", "_build_buttons", "add_section", "cancel", "build_sections", "apply", "capture_state", "restore_state"], "doc": "Base dialog: font sections previewed live, then \"Annuler\" and \"Fermer\"."}, {"name": "AxisFontDialog", "bases": ["FontDialog"], "methods": ["__init__", "_target_text", "_target_axis", "build_sections", "_tick_font", "_load_tick_font", "apply", "_apply_tick_font", "capture_state", "restore_state"], "doc": "Edit the font of the title, or of an axis label and its ticks."}, {"name": "CartoucheFontDialog", "bases": ["FontDialog"], "methods": ["__init__", "build_sections", "_load_style", "apply", "capture_state", "restore_state"], "doc": "Edit the fonts of the cartouche column titles and values."}, {"name": "ColorbarFontDialog", "bases": ["FontDialog"], "methods": ["__init__", "_label", "build_sections", "apply", "capture_state", "restore_state"], "doc": "Edit the font of the colorbar label."}], "functions": [{"name": "usable_tk_font_families", "doc": "List the font families Tk can actually instantiate."}, {"name": "capture_text_font", "doc": "Remember the font and color of a Matplotlib text."}, {"name": "restore_text_font", "doc": "Give back to a Matplotlib text a font remembered by :func:`capture_text_font`."}, {"name": "load_text_font", "doc": "Show the font of a Matplotlib text in font controls."}, {"name": "text_font_kwargs", "doc": "Convert a font choice into Matplotlib text keyword arguments."}], "imports": ["tk_plot_canvas.canvas.colorbar", "tk_plot_canvas.canvas.plot_canvas", "tk_plot_canvas.config", "tk_plot_canvas.fonts", "tk_plot_canvas.settings.font_controls", "tk_plot_canvas.settings.window_placement"]}, "tk_plot_canvas.settings.legend_tab": {"path": "tk_plot_canvas/settings/legend_tab.py", "lines": 175, "doc": "Settings tab \"Légende\": legend visibility, displayed keys and values.", "classes": [{"name": "LegendTab", "bases": ["SettingsTab"], "methods": ["build", "_build_header", "_add_checkbutton", "_build_key_selectors", "_build_value_row", "_on_key_selected", "apply_legend_settings", "selected_keys", "_on_value_edited", "_reset_legend_position"], "doc": "Choose which metadata keys form the legend and edit their values."}], "functions": [], "imports": ["tk_plot_canvas.config", "tk_plot_canvas.settings.base_tab"]}, "tk_plot_canvas.settings.settings_window": {"path": "tk_plot_canvas/settings/settings_window.py", "lines": 128, "doc": "Settings window: a notebook with one tab per group of plot settings.", "classes": [{"name": "SettingsWindow", "bases": ["tk.Toplevel"], "methods": ["__init__", "_place", "_build_buttons", "_build_tabs", "select_tab", "selected_tab_name", "title_text"], "doc": "Window editing axes, cartouche, curves, legend and 3D settings."}], "functions": [], "imports": ["tk_plot_canvas.canvas.plot_canvas", "tk_plot_canvas.config", "tk_plot_canvas.settings.axes_tab", "tk_plot_canvas.settings.base_tab", "tk_plot_canvas.settings.cartouche_tab", "tk_plot_canvas.settings.curves_tab", "tk_plot_canvas.settings.legend_tab", "tk_plot_canvas.settings.surface_tab", "tk_plot_canvas.settings.window_placement"]}, "tk_plot_canvas.settings.slice_players_frame": {"path": "tk_plot_canvas/settings/slice_players_frame.py", "lines": 233, "doc": "Label frame of the \"Axes et titre\" tab browsing the other dimensions of a 3D plot.", "classes": [{"name": "SlicePlayer", "bases": [], "methods": ["__init__", "_build", "_add_scale", "_add_button", "_add_step_button", "_disable_if_single_value", "_on_scale_moved", "show_index", "step", "toggle_play", "_play_next", "stop", "_show_value"], "doc": "Widgets choosing the index shown along one dimension, on two grid rows."}, {"name": "SlicePlayersFrame", "bases": [], "methods": ["__init__"], "doc": "Label frame holding one :class:`SlicePlayer` per sliced dimension."}], "functions": [], "imports": ["tk_plot_canvas.canvas.plot_canvas", "tk_plot_canvas.config", "tk_plot_canvas.settings.axes_tab", "tk_plot_canvas.settings.axis_frame", "tk_plot_canvas.widgets"]}, "tk_plot_canvas.settings.surface_axes_frame": {"path": "tk_plot_canvas/settings/surface_axes_frame.py", "lines": 121, "doc": "Label frame of the \"Axes et titre\" tab editing the axes settings of 3D plots.", "classes": [{"name": "SurfaceAxesFrame", "bases": [], "methods": ["__init__", "_build", "_add_grid_control", "_apply_aspect", "_apply_grid"], "doc": "Edit the aspect ratio and grid of a 3D plot (applied live)."}], "functions": [{"name": "choice_text", "doc": "Return the displayed name of a value."}, {"name": "aspect_text", "doc": "Return the combobox text of an aspect value."}], "imports": ["tk_plot_canvas.canvas.surface_axes", "tk_plot_canvas.config", "tk_plot_canvas.settings.axes_tab", "tk_plot_canvas.settings.axis_frame", "tk_plot_canvas.widgets"]}, "tk_plot_canvas.settings.surface_kind_combobox": {"path": "tk_plot_canvas/settings/surface_kind_combobox.py", "lines": 43, "doc": "Combobox choosing the kind of a surface plot (filled contours, lines...).", "classes": [{"name": "SurfaceKindCombobox", "bases": ["ttk.Combobox"], "methods": ["__init__", "kind"], "doc": "Read-only combobox showing the plot kinds by their displayed names."}], "functions": [], "imports": ["tk_plot_canvas.config", "tk_plot_canvas.widgets"]}, "tk_plot_canvas.settings.surface_tab": {"path": "tk_plot_canvas/settings/surface_tab.py", "lines": 344, "doc": "Settings tab \"Graphique 3D\": variable, plot kind, colormap, alpha and colorbar of maps.", "classes": [{"name": "SurfaceWidgets", "bases": [], "methods": [], "doc": "Widgets editing one surface plot."}, {"name": "SurfaceTab", "bases": ["SettingsTab"], "methods": ["build", "_build_surface_row", "_add_button", "_update_colorbar_button", "_add_variable_combobox", "_add_colormap_combobox", "_add_spinbox", "_add_colorbar_checkbutton", "_open_colorbar_dialog", "_open_value_range_dialog", "_toggle_colorbar", "_update_colormap", "_update_surface_kind", "_sync_size_spinbox", "_update_size", "_update_alpha", "_update_z_variable", "_toggle_map"], "doc": "Edit the surface plots of 2D xarray datasets."}], "functions": [], "imports": ["tk_plot_canvas.canvas.surface_kinds", "tk_plot_canvas.compat", "tk_plot_canvas.config", "tk_plot_canvas.settings.base_tab", "tk_plot_canvas.settings.colorbar_dialog", "tk_plot_canvas.settings.surface_kind_combobox", "tk_plot_canvas.settings.value_range_dialog", "tk_plot_canvas.widgets"]}, "tk_plot_canvas.settings.value_range_dialog": {"path": "tk_plot_canvas/settings/value_range_dialog.py", "lines": 118, "doc": "Dialog editing the contour classes (and their value range) of a surface plot.", "classes": [{"name": "ValueRangeDialog", "bases": ["tk.Toplevel"], "methods": ["__init__", "_build_buttons", "_build_class_selection", "apply_changes", "confirm", "cancel"], "doc": "Edit the classes of a surface plot."}], "functions": [], "imports": ["tk_plot_canvas.canvas.plot_canvas", "tk_plot_canvas.canvas.surface_kinds", "tk_plot_canvas.config", "tk_plot_canvas.settings.window_placement", "tk_plot_canvas.widgets"]}, "tk_plot_canvas.settings.window_placement": {"path": "tk_plot_canvas/settings/window_placement.py", "lines": 74, "doc": "Placement and common behavior of secondary windows.", "classes": [], "functions": [{"name": "scaled_size", "doc": "Scale a Tk size given for a 100 % screen to the current screen scale."}, {"name": "place_window", "doc": "Size a window and place it at an offset from a reference window."}, {"name": "setup_secondary_window", "doc": "Keep a window above its parent, close it with Escape and focus it."}, {"name": "setup_dialog", "doc": "Place a dialog near its parent and give it the secondary window behavior."}], "imports": ["tk_plot_canvas.config", "tk_plot_canvas.dpi"]}, "tk_plot_canvas.view": {"path": "tk_plot_canvas/view/__init__.py", "lines": 14, "doc": "Persistence of plot views: capture, JSON storage and restoration.", "classes": [], "functions": [], "imports": ["tk_plot_canvas.view.capture", "tk_plot_canvas.view.restore", "tk_plot_canvas.view.storage"]}, "tk_plot_canvas.view.capture": {"path": "tk_plot_canvas/view/capture.py", "lines": 279, "doc": "Capture the current state of a plot canvas in the persisted view format.", "classes": [], "functions": [{"name": "capture_view_parameters", "doc": "Capture every persisted setting of a canvas."}, {"name": "_capture_subplot_parameters", "doc": "Capture the figure margins and spacing (\"Configure subplots\" dialog)."}, {"name": "_capture_axis", "doc": "Capture limits, scale and tick font of one axis."}, {"name": "_capture_tick_font", "doc": "Capture the font of the first tick label of an axis."}, {"name": "_capture_text_font", "doc": "Capture the font of a title or axis label."}, {"name": "_capture_curve", "doc": "Capture the appearance of a plotted line or contour set."}, {"name": "_capture_cartouche", "doc": "Capture the cartouche columns, fonts and visibility."}, {"name": "_capture_legend", "doc": "Capture the legend keys and visibility flags."}, {"name": "add_3d_parameters", "doc": "Add the colorbar, colormap and contour settings of a 3D plot."}, {"name": "_capture_surface", "doc": "Capture the appearance of the first surface plot."}, {"name": "_capture_colorbar_font", "doc": "Capture the font and color of the colorbar label."}, {"name": "_colorbar_label", "doc": "Return the label artist of a colorbar according to its orientation."}], "imports": ["tk_plot_canvas.canvas.plot_canvas", "tk_plot_canvas.config"]}, "tk_plot_canvas.view.restore": {"path": "tk_plot_canvas/view/restore.py", "lines": 369, "doc": "Apply persisted view parameters to a plot canvas.", "classes": [], "functions": [{"name": "plot_type_of", "doc": "Return the plot type stored in view parameters."}, {"name": "effective_plot_type", "doc": "Return the plot type to use when applying a view."}, {"name": "restore_xarray_selection", "doc": "Restore the settings that drive the next xarray plots."}, {"name": "_surface_sizes", "doc": "Read the persisted sizes of the surface kinds, ignoring invalid entries."}, {"name": "apply_view_parameters", "doc": "Apply every view setting to the canvas (without redrawing)."}, {"name": "_apply_background", "doc": "Apply the background color (2D plots only)."}, {"name": "_apply_subplot_parameters", "doc": "Restore the figure margins and spacing (\"Configure subplots\" dialog)."}, {"name": "_apply_plot_type_and_window", "doc": "Apply the plot type and the size/position of the main window."}, {"name": "apply_axis_parameters", "doc": "Apply tick font, limits, scale and inversion to one axis."}, {"name": "_apply_tick_font", "doc": "Apply a font to every tick label of an axis."}, {"name": "_apply_axis_limits", "doc": "Apply automatic scaling or explicit limits to one axis."}, {"name": "_apply_text_fonts", "doc": "Apply the fonts of the title and of both axis labels."}, {"name": "_apply_curves", "doc": "Apply the saved appearance of each 2D curve."}, {"name": "_apply_line_style", "doc": "Apply color, width, style and markers to a line."}, {"name": "_apply_contour_style", "doc": "Apply the colormap to a contour set (errors ignored)."}, {"name": "_apply_cartouche", "doc": "Apply cartouche visibility, column titles and fonts."}, {"name": "_apply_legend", "doc": "Apply legend keys and visibility flags, then refresh the legend."}], "imports": ["tk_plot_canvas.canvas.plot_canvas", "tk_plot_canvas.compat", "tk_plot_canvas.config", "tk_plot_canvas.fonts"]}, "tk_plot_canvas.view.storage": {"path": "tk_plot_canvas/view/storage.py", "lines": 32, "doc": "Read and write view parameter files (JSON).", "classes": [], "functions": [{"name": "write_parameters", "doc": "Write view parameters to a JSON file."}, {"name": "read_parameters", "doc": "Read view parameters from a JSON file."}], "imports": []}, "tk_plot_canvas.widgets": {"path": "tk_plot_canvas/widgets/__init__.py", "lines": 8, "doc": "Reusable Tkinter widgets (scrollable frame, class selection, spinbox, tooltip).", "classes": [], "functions": [], "imports": ["tk_plot_canvas.widgets.checked_spinbox", "tk_plot_canvas.widgets.class_selection", "tk_plot_canvas.widgets.scrolled_frame", "tk_plot_canvas.widgets.tooltip"]}, "tk_plot_canvas.widgets.checked_spinbox": {"path": "tk_plot_canvas/widgets/checked_spinbox.py", "lines": 88, "doc": "Spinbox applying a typed number as soon as it is valid.", "classes": [{"name": "CheckedSpinbox", "bases": ["ttk.Spinbox"], "methods": ["__init__", "set_range", "typed_value", "_apply", "_validate"], "doc": "Numeric spinbox bounded to a range, reporting each new valid value."}], "functions": [], "imports": ["tk_plot_canvas.config"]}, "tk_plot_canvas.widgets.class_selection": {"path": "tk_plot_canvas/widgets/class_selection.py", "lines": 310, "doc": "Frame used to choose contour classes: automatic, manual or none.", "classes": [{"name": "ClassSelectionFrame", "bases": ["ttk.Frame"], "methods": ["__init__", "_build_mode_selector", "_fill_auto_frame", "_toggle_default_range", "get_value_range", "_add_auto_label", "_add_auto_entry", "_build_buttons", "show_mode_frame", "get_classes", "_automatic_classes", "_manual_classes"], "doc": "Let the user choose how contour classes are computed."}], "functions": [{"name": "configure_class_selection_styles", "doc": "Configure the hover styles used by the manual class rows."}, {"name": "parse_class_value", "doc": "Convert a class bound to float, reporting invalid input to the user."}], "imports": ["tk_plot_canvas.config", "tk_plot_canvas.widgets.manual_classes"]}, "tk_plot_canvas.widgets.inline_text_editor": {"path": "tk_plot_canvas/widgets/inline_text_editor.py", "lines": 67, "doc": "Entry placed over a Matplotlib figure to edit one of its texts in place.", "classes": [{"name": "InlineTextEditor", "bases": [], "methods": ["__init__", "_place_over", "_close"], "doc": "Edit a figure text in an entry drawn over it."}], "functions": [], "imports": []}, "tk_plot_canvas.widgets.manual_classes": {"path": "tk_plot_canvas/widgets/manual_classes.py", "lines": 277, "doc": "Editor of manual contour classes: one ``[left ; right]`` row per class.", "classes": [{"name": "ClassRow", "bases": ["NamedTuple"], "methods": [], "doc": "Widgets and variables of one manual class row."}, {"name": "ManualClassesEditor", "bases": ["ttk.Frame"], "methods": ["__init__", "_build", "append_row", "first_left_value", "_add_row", "_add_label", "_add_entry", "_add_remove_button", "_configure_row_states", "_make_link_callback", "_on_right_changed", "bind_hover", "_on_row_hover", "_is_pointer_inside", "_remove_row"], "doc": "Frame listing editable class intervals."}], "functions": [], "imports": ["tk_plot_canvas.config", "tk_plot_canvas.widgets.scrolled_frame"]}, "tk_plot_canvas.widgets.scrolled_frame": {"path": "tk_plot_canvas/widgets/scrolled_frame.py", "lines": 184, "doc": "Vertically (and optionally horizontally) scrollable frame widget.", "classes": [{"name": "VerticalScrolledFrame", "bases": [], "methods": ["__init__", "_build_inner_frame", "__getattr__", "__str__", "_build_scrollbars", "_connect_scrollbars", "_on_frame_configure", "_bind_mouse", "_unbind_mouse", "_on_mousewheel"], "doc": "A scrollable frame that can be used like any other Tk frame."}], "functions": [], "imports": ["tk_plot_canvas.config"]}, "tk_plot_canvas.widgets.tooltip": {"path": "tk_plot_canvas/widgets/tooltip.py", "lines": 76, "doc": "Tooltip: a short help text shown when the mouse rests on a widget.", "classes": [{"name": "ToolTip", "bases": [], "methods": ["__init__", "_schedule", "_cancel", "_show", "_hide"], "doc": "Show ``text`` near the mouse after it rests on ``widget``."}], "functions": [], "imports": []}, "tools.create_temporal_netcdf": {"path": "tools/create_temporal_netcdf.py", "lines": 48, "doc": "Build the time-series NetCDF file used by the xarray time-series example.", "classes": [], "functions": [{"name": "build_time_series", "doc": "Turn a gridded temperature dataset into a global mean time series."}, {"name": "main", "doc": "Read the source file and write the time-series file."}], "imports": []}};
+
+const GROUPS = [
+  { id: "entry", label: "Points d'entrée", sub: "démos, exemples, outils",
+    desc: "Scripts lançables et chemins d'import publics.", color: "--g-entry" },
+  { id: "canvas", label: "canvas", sub: "le widget de tracé",
+    desc: "TkPlotCanvas et ses mixins : tracés NumPy/xarray, légende, cartouche, colorbar, 3D, menus, export.",
+    color: "--g-canvas" },
+  { id: "settings", label: "settings", sub: "fenêtre et dialogues",
+    desc: "Fenêtre de réglages à onglets, dialogues de polices, de colorbar et de classes.",
+    color: "--g-settings" },
+  { id: "view", label: "view", sub: "vues JSON",
+    desc: "Capture de l'état du canevas, lecture/écriture JSON, restauration.", color: "--g-view" },
+  { id: "widgets", label: "widgets", sub: "composants réutilisables",
+    desc: "Cadre défilant, sélection de classes, spinbox validée, infobulle, éditeur en place.",
+    color: "--g-widgets" },
+  { id: "core", label: "Socle", sub: "modules transverses",
+    desc: "Constantes, compatibilité Matplotlib/Tk, polices, haute résolution, presse-papiers.",
+    color: "--g-core" },
+];
+
+function groupOf(name) {
+  for (const g of ["canvas", "settings", "view", "widgets"]) {
+    if (name === "tk_plot_canvas." + g || name.startsWith("tk_plot_canvas." + g + ".")) return g;
+  }
+  if (["config", "compat", "fonts", "dpi", "clipboard"].some(m => name === "tk_plot_canvas." + m)) return "core";
+  return "entry";
+}
+const shortName = n => n === "__init__" ? "__init__ (racine)" : n.replace(/^tk_plot_canvas\./, "");
+const names = Object.keys(DATA);
+const importedBy = {};
+names.forEach(n => importedBy[n] = []);
+names.forEach(n => DATA[n].imports.forEach(t => importedBy[t] && importedBy[t].push(n)));
+
+const el = (tag, attrs = {}, ...kids) => {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === "class") e.className = v; else if (k === "text") e.textContent = v;
+    else if (k.startsWith("on")) e.addEventListener(k.slice(2), v); else e.setAttribute(k, v);
+  }
+  kids.flat().forEach(c => c != null && e.append(c));
+  return e;
+};
+
+/* Stats */
+(function stats() {
+  const total = names.reduce((s, n) => s + DATA[n].lines, 0);
+  const classes = names.reduce((s, n) => s + DATA[n].classes.length, 0);
+  const funcs = names.reduce((s, n) => s + DATA[n].functions.length, 0);
+  const box = document.getElementById("stats");
+  [[names.length, "modules Python"], [total.toLocaleString("fr-FR"), "lignes"],
+   [classes, "classes"], [funcs, "fonctions de module"], [14, "mixins du canevas"]]
+    .forEach(([v, l]) => box.append(el("div", { class: "stat" }, el("b", { text: v }), el("span", { text: l }))));
+})();
+
+/* Layers */
+(function layers() {
+  const box = document.getElementById("layers");
+  GROUPS.forEach((g, i) => {
+    const mods = names.filter(n => groupOf(n) === g.id);
+    const chips = mods.map(n => el("button", { class: "chip", type: "button", onclick: () => select(n, true) },
+      shortName(n).replace(g.id + ".", ""), " ", el("small", { text: DATA[n].lines })));
+    const layer = el("div", { class: "layer", style: `--c: var(${g.color})` },
+      el("h3", {}, g.label, el("small", { text: g.sub })),
+      el("div", {}, el("p", { class: "desc", text: g.desc }), el("div", { class: "chips" }, chips)));
+    box.append(layer);
+    if (i === 0) box.append(el("div", { class: "arrow", text: "crée un TkPlotCanvas ↓" }));
+    if (i === 1) box.append(el("div", { class: "arrow", text: "ouvre les réglages ↕ (référence croisée canvas ⇄ settings)" }));
+    if (i === 2) box.append(el("div", { class: "arrow", text: "enregistre / restaure les vues ↓" }));
+    if (i === 3) box.append(el("div", { class: "arrow", text: "construits avec ↓" }));
+  });
+})();
+
+/* Composition of TkPlotCanvas */
+(function composition() {
+  const cls = {};
+  names.forEach(n => DATA[n].classes.forEach(c => cls[c.name] = { ...c, module: n }));
+  const families = [
+    ["Tracé", ["StandardPlotMixin", "XarrayCurvePlotMixin", "XarraySurfacePlotMixin", "PlotHelpersMixin"]],
+    ["Habillage", ["LegendMixin", "CartoucheMixin", "ColorbarMixin"]],
+    ["Graphiques 3D", ["SurfaceRedrawMixin", "SurfaceSlicesMixin", "SurfaceAxesMixin"]],
+    ["Vues et interactions", ["ViewPersistenceMixin", "ContextMenuMixin", "DoubleClickMixin", "FigureExportMixin"]],
+  ];
+  const box = document.getElementById("compo");
+  const main = cls.TkPlotCanvas;
+  box.append(el("div", { class: "card core-card" },
+    el("h3", {}, el("span", { class: "mono", text: "class TkPlotCanvas(ttk.Frame, …14 mixins)" })),
+    el("p", { style: "margin:0;color:var(--muted);font-size:14px", text: main.doc + " Méthodes propres : " + main.methods.join(", ") + "." })));
+  families.forEach(([title, list]) => {
+    box.append(el("div", { class: "card" }, el("h3", { text: title }),
+      list.map(name => {
+        const c = cls[name];
+        return el("button", { class: "mixin", type: "button", onclick: () => select(c.module, true) },
+          el("b", { text: name }), el("span", { text: `${c.doc} (${c.methods.length} méthodes)` }));
+      })));
+  });
+})();
+
+/* Settings tree */
+(function tree() {
+  const T = (mod, label, kids = []) => ({ mod: "tk_plot_canvas.settings." + mod, label, kids });
+  const root = T("settings_window", "SettingsWindow", [
+    T("base_tab", "SettingsTab (base des onglets)"),
+    T("axes_tab", "AxesTab — « Axes et titre »", [
+      T("axis_frame", "AxisFrame (un par axe)"),
+      T("surface_axes_frame", "SurfaceAxesFrame (aspect, grille 3D)"),
+      T("slice_players_frame", "SlicePlayersFrame (autres dimensions)"),
+      T("font_dialogs", "AxisFontDialog"),
+    ]),
+    T("curves_tab", "CurvesTab — « Courbes »"),
+    T("legend_tab", "LegendTab — « Légende »"),
+    T("cartouche_tab", "CartoucheTab — « Cartouche »", [T("font_dialogs", "CartoucheFontDialog")]),
+    T("surface_tab", "SurfaceTab — « Graphique 3D »", [
+      T("surface_kind_combobox", "SurfaceKindCombobox"),
+      T("colorbar_dialog", "ColorbarDialog", [T("font_dialogs", "ColorbarFontDialog")]),
+      T("value_range_dialog", "ValueRangeDialog (classes)"),
+    ]),
+  ]);
+  const render = node => el("li", {},
+    el("div", { class: "node" },
+      el("button", { class: "chip", type: "button", onclick: () => select(node.mod, true), text: node.label }),
+      el("span", { text: node.mod.split(".").pop() + ".py" })),
+    node.kids.length ? el("ul", {}, node.kids.map(render)) : null);
+  const box = document.getElementById("tree");
+  box.append(el("ul", {}, render(root)));
+  box.append(el("p", { class: "note", style: "margin:12px 0 0" },
+    "Transverses : ", el("code", { text: "dialog_manager" }), " (un seul dialogue ouvert par élément), ",
+    el("code", { text: "window_placement" }), " (placement des fenêtres), ",
+    el("code", { text: "font_controls" }), " et ", el("code", { text: "choices" }), " (libellés français des combobox)."));
+})();
+
+/* Dependency graph */
+const NS = "http://www.w3.org/2000/svg";
+const svgEl = (tag, attrs) => {
+  const e = document.createElementNS(NS, tag);
+  for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
+  return e;
+};
+const graph = { nodes: {}, edges: [] };
+(function buildGraph() {
+  const svg = document.getElementById("graph");
+  const colW = 196, nodeW = 162, nodeH = 22, gap = 5, top = 40, left = 12;
+  const cols = GROUPS.map(g => names.filter(n => groupOf(n) === g.id));
+  const height = top + Math.max(...cols.map(c => c.length)) * (nodeH + gap) + 12;
+  const width = left * 2 + GROUPS.length * colW - (colW - nodeW);
+  svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
+  const edgeLayer = svgEl("g", {}), nodeLayer = svgEl("g", {});
+  svg.append(edgeLayer, nodeLayer);
+  cols.forEach((col, ci) => {
+    const x = left + ci * colW;
+    const head = svgEl("text", { x, y: 22, class: "colhead", fill: `var(${GROUPS[ci].color})` });
+    head.textContent = GROUPS[ci].label;
+    nodeLayer.append(head);
+    col.forEach((n, ri) => {
+      const y = top + ri * (nodeH + gap);
+      const g = svgEl("g", { class: "gnode", tabindex: 0 });
+      g.append(svgEl("rect", { class: "box", x, y, width: nodeW, height: nodeH, rx: 5 }));
+      g.append(svgEl("rect", { class: "bar", x, y, width: 3, height: nodeH, fill: `var(${GROUPS[ci].color})` }));
+      const t = svgEl("text", { x: x + 9, y: y + 15 });
+      const label = shortName(n).replace(GROUPS[ci].id + ".", "");
+      t.textContent = label.length > 24 ? label.slice(0, 23) + "…" : label;
+      const title = svgEl("title", {}); title.textContent = n;
+      g.append(t, title);
+      g.addEventListener("click", () => select(n, false));
+      g.addEventListener("keydown", e => (e.key === "Enter" || e.key === " ") && select(n, false));
+      nodeLayer.append(g);
+      graph.nodes[n] = { g, x, y, ci };
+    });
+  });
+  names.forEach(src => DATA[src].imports.forEach(dst => {
+    const a = graph.nodes[src], b = graph.nodes[dst];
+    if (!a || !b) return;
+    let d;
+    const ay = a.y + nodeH / 2, by = b.y + nodeH / 2;
+    if (a.ci < b.ci) {
+      const x1 = a.x + nodeW, x2 = b.x, m = (x2 - x1) / 2;
+      d = `M${x1},${ay} C${x1 + m},${ay} ${x2 - m},${by} ${x2},${by}`;
+    } else if (a.ci > b.ci) {
+      const x1 = a.x, x2 = b.x + nodeW, m = (x1 - x2) / 2;
+      d = `M${x1},${ay} C${x1 - m},${ay} ${x2 + m},${by} ${x2},${by}`;
+    } else {
+      const x = a.x + nodeW, bulge = 14 + Math.min(Math.abs(by - ay) * 0.12, 26);
+      d = `M${x},${ay} C${x + bulge},${ay} ${x + bulge},${by} ${x},${by}`;
+    }
+    const p = svgEl("path", { d, class: "edge" });
+    edgeLayer.append(p);
+    graph.edges.push({ src, dst, p });
+  }));
+})();
+
+function highlightGraph(name) {
+  const outs = new Set(DATA[name].imports), ins = new Set(importedBy[name]);
+  for (const [n, node] of Object.entries(graph.nodes)) {
+    node.g.classList.toggle("sel", n === name);
+    node.g.classList.toggle("out", outs.has(n));
+    node.g.classList.toggle("in", ins.has(n) && !outs.has(n));
+    node.g.classList.toggle("dim", n !== name && !outs.has(n) && !ins.has(n));
+  }
+  graph.edges.forEach(({ src, dst, p }) => {
+    p.classList.toggle("out", src === name);
+    p.classList.toggle("in", dst === name);
+    p.classList.toggle("dim", src !== name && dst !== name);
+  });
+}
+
+/* Explorer */
+const listBox = document.getElementById("list"), detail = document.getElementById("detail");
+const buttons = {};
+function renderList(filter = "") {
+  listBox.textContent = "";
+  const f = filter.trim().toLowerCase();
+  const match = n => !f || n.toLowerCase().includes(f)
+    || DATA[n].classes.some(c => c.name.toLowerCase().includes(f) || c.methods.some(m => m.toLowerCase().includes(f)))
+    || DATA[n].functions.some(fn => fn.name.toLowerCase().includes(f));
+  GROUPS.forEach(g => {
+    const mods = names.filter(n => groupOf(n) === g.id && match(n));
+    if (!mods.length) return;
+    listBox.append(el("h4", { text: g.label, style: `color: var(${g.color})` }));
+    mods.forEach(n => {
+      const b = el("button", { type: "button", onclick: () => select(n, false) },
+        el("span", { text: shortName(n).replace(g.id + ".", "") || g.id }), el("small", { text: DATA[n].lines }));
+      if (n === current) b.classList.add("sel");
+      buttons[n] = b;
+      listBox.append(b);
+    });
+  });
+}
+const modLink = n => el("button", { class: "chip", type: "button", onclick: () => select(n, false), text: shortName(n) });
+let current = null;
+function select(name, scroll) {
+  current = name;
+  Object.entries(buttons).forEach(([n, b]) => b.classList.toggle("sel", n === name));
+  highlightGraph(name);
+  const m = DATA[name];
+  const g = GROUPS.find(x => x.id === groupOf(name));
+  detail.textContent = "";
+  const big = m.lines > 300;
+  detail.append(
+    el("h3", {}, name, el("span", { class: "badge", text: g.label }),
+      el("span", { class: "badge" + (big ? " warn" : ""), text: m.lines + " lignes" })),
+    el("div", { class: "path", text: m.path }),
+    el("p", { class: "doc", text: m.doc || "(pas de docstring de module)" }));
+  if (m.classes.length) {
+    detail.append(el("h4", { text: `Classes (${m.classes.length})` }));
+    m.classes.forEach(c => detail.append(el("div", { class: "cls" },
+      el("b", { text: c.name }), c.bases.length ? el("span", { class: "bases", text: `(${c.bases.join(", ")})` }) : null,
+      el("p", { text: c.doc }),
+      c.methods.length ? el("div", { class: "methods", text: c.methods.join(" · ") }) : null)));
+  }
+  if (m.functions.length) {
+    detail.append(el("h4", { text: `Fonctions (${m.functions.length})` }));
+    m.functions.forEach(f => detail.append(el("div", { class: "fn" }, el("code", { text: f.name + "()" }), " ", f.doc)));
+  }
+  const col = (title, list) => el("div", {}, el("h4", { text: `${title} (${list.length})` }),
+    list.length ? el("div", { class: "chips" }, list.map(modLink)) : el("span", { class: "note", text: "aucun" }));
+  detail.append(el("div", { class: "deps" }, col("Importe", m.imports), col("Importé par", importedBy[name])));
+  if (scroll) document.querySelector(".explorer").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+document.getElementById("search").addEventListener("input", e => renderList(e.target.value));
+renderList();
+select("tk_plot_canvas.canvas.plot_canvas", false);
+
+/* Theme toggle */
+document.getElementById("theme").addEventListener("click", () => {
+  const root = document.documentElement;
+  const dark = root.dataset.theme ? root.dataset.theme === "dark"
+    : matchMedia("(prefers-color-scheme: dark)").matches;
+  root.dataset.theme = dark ? "light" : "dark";
+});
+</script>
+</body>
+</html>
