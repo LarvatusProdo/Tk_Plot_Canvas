@@ -16,6 +16,7 @@ from ..config import (
     STYLE_BUTTON,
     STYLE_LABEL,
     STYLE_LABELFRAME,
+    STYLE_SECTION_TITLE,
 )
 from ..widgets import ToolTip
 from .axis_frame import FRAME_PADDING, PADDING
@@ -35,8 +36,8 @@ PLAY_HELP = "Faire défiler les valeurs de cette dimension (en boucle)."
 class SlicePlayer:
     """Widgets choosing the index shown along one dimension, on two grid rows.
 
-    The first row shows the dimension name and its displayed value, the second
-    one the previous, play and next buttons and the scale.
+    The first row shows the dimension name (in bold), the previous, play and
+    next buttons and the scale; the second one the displayed value.
     """
 
     def __init__(
@@ -60,34 +61,33 @@ class SlicePlayer:
         self._show_value()
 
     def _build(self, parent: ttk.LabelFrame, row: int) -> None:
-        """Create the name and value labels, the buttons and the scale.
+        """Create the name label, the buttons, the scale and the value label.
 
         Args:
             parent: Label frame receiving the widgets.
             row: First grid row of the player.
         """
-        ttk.Label(parent, text=f"{self._dimension} :", style=STYLE_LABEL).grid(
+        ttk.Label(parent, text=f"{self._dimension} :", style=STYLE_SECTION_TITLE).grid(
             row=row, column=0, sticky="e", padx=PADDING, pady=PADDING
         )
-        ttk.Label(parent, textvariable=self.value_var, style=STYLE_LABEL).grid(
-            row=row, column=1, columnspan=4, sticky="w", padx=PADDING, pady=PADDING
-        )
-        controls_row = row + 1
-        self._add_step_button(parent, controls_row, 1, "◀", -1)
-        self._play_button = self._add_button(parent, controls_row, 2, PLAY_TEXT, self.toggle_play)
+        self._add_step_button(parent, row, 1, "◀", -1)
+        self._play_button = self._add_button(parent, row, 2, PLAY_TEXT, self.toggle_play)
         self._play_button.configure(width=PLAY_BUTTON_WIDTH)
         ToolTip(self._play_button, PLAY_HELP)
-        self._add_step_button(parent, controls_row, 3, "▶", 1)
-        self._add_scale(parent, controls_row)
+        self._add_step_button(parent, row, 3, "▶", 1)
+        self._add_scale(parent, row)
+        ttk.Label(parent, textvariable=self.value_var, style=STYLE_LABEL).grid(
+            row=row + 1, column=1, columnspan=4, sticky="w", padx=PADDING, pady=(0, 5)
+        )
         self._play_button.bind("<Destroy>", lambda _event: self.stop())
-        self._disable_if_single_value(parent, controls_row)
+        self._disable_if_single_value(parent, row)
 
     def _add_scale(self, parent: ttk.LabelFrame, row: int) -> None:
         """Create the scale choosing the index along the dimension.
 
         Args:
             parent: Label frame receiving the scale.
-            row: Grid row of the controls.
+            row: Grid row of the player.
         """
         scale = ttk.Scale(
             parent,
@@ -139,7 +139,7 @@ class SlicePlayer:
 
         Args:
             parent: Label frame holding the player.
-            row: Grid row of the controls.
+            row: First grid row of the player.
         """
         if self._last_index > 0:
             return
