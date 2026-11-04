@@ -21,7 +21,7 @@ from ..config import (
     VALUE_RANGE_DEFAULT,
 )
 from .surface_kinds import set_surface_colormap, surface_levels
-from .xarray_surfaces import surface_arrays
+from .xarray_surfaces import surface_arrays, variable_range
 
 LOGGER = logging.getLogger(__name__)
 
@@ -49,16 +49,15 @@ class ColorbarMixin:
     """
 
     def get_data_range(self, index: int = 0) -> tuple[float, float]:
-        """Return the bounds of the z variable of a plot.
+        """Return the bounds of the z variable of a plot, whatever the displayed slice.
 
         Args:
             index: Index of the dataset.
 
         Returns:
-            ``(minimum, maximum)`` of the z values, ignoring NaN.
+            ``(minimum, maximum)`` of all the z values, ignoring NaN.
         """
-        z_values = self._contour_data(index)[2]
-        return float(np.nanmin(z_values)), float(np.nanmax(z_values))
+        return variable_range(self.datasets[index][self.xarray_variables["z"]])
 
     def get_value_range_parameter(self) -> Any:
         """Describe the chosen value range of the automatic classes for persistence.

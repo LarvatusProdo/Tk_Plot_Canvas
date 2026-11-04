@@ -7,7 +7,7 @@ import numpy as np
 import xarray as xr
 
 from ..config import BORDER_WIDTH, COASTLINE_WIDTH, GEOGRAPHIC_DIMENSIONS
-from .surface_kinds import draw_surface
+from .surface_kinds import default_levels, draw_surface
 from .xarray_curves import label_with_units
 
 try:
@@ -34,6 +34,37 @@ def slice_dimensions(data_array: xr.DataArray, x_name: str, y_name: str) -> list
         The other dimensions, in the variable's order.
     """
     return [str(name) for name in data_array.dims if name not in (x_name, y_name)]
+
+
+def variable_range(data_array: xr.DataArray) -> tuple[float, float]:
+    """Return the bounds of a whole variable, along all of its dimensions.
+
+    Args:
+        data_array: Plotted variable.
+
+    Returns:
+        ``(minimum, maximum)``, ignoring NaN.
+    """
+    return float(data_array.min()), float(data_array.max())
+
+
+def initial_levels(data_array: xr.DataArray, x_name: str, y_name: str) -> Optional[np.ndarray]:
+    """Choose the automatic classes of a new surface.
+
+    The classes of a sliced variable cover all of its values, so that they fit
+    every slice and the colors can be compared from one slice to another.
+
+    Args:
+        data_array: Plotted variable.
+        x_name: Dimension plotted along x.
+        y_name: Dimension plotted along y.
+
+    Returns:
+        The class bounds, or None for a two-dimensional variable (chosen when drawing).
+    """
+    if not slice_dimensions(data_array, x_name, y_name):
+        return None
+    return default_levels(np.array(variable_range(data_array)))
 
 
 def clamped_index(index: int, size: int) -> int:
@@ -127,7 +158,11 @@ class XarraySurfacePlotMixin:
         self._detect_date_axis(values[0], "x")
         self._detect_date_axis(values[1], "y")
         surface = draw_surface(
-            self.axes, self.surface_kind, values, size=self.surface_sizes.get(self.surface_kind)
+            self.axes,
+            self.surface_kind,
+            values,
+            levels=initial_levels(ds[z_name], x_name, y_name),
+            size=self.surface_sizes.get(self.surface_kind),
         )
         self._replace_colorbar(surface, label_with_units(ds, z_name))
         self._apply_default_metadata_keys(label, legend=False)
@@ -149,11 +184,11 @@ class XarraySurfacePlotMixin:
         """Choose the x/y dimensions and the plotted variable, and remember them.
 
         By default, as in xarray, the last dimension of the plotted variable is
-        along x and the first one along y (e.g. longitude along x for data
-        stored as ``(latitude, longitude)``).
+        along x and the one before it along y (e.g. longitude along x and
+        latitude along y for data stored as ``(time, latitude, longitude)``).
 
         Args:
-            ds: Dataset holding a two-dimensional variable.
+            ds: Dataset holding a variable with two dimensions or more.
 
         Returns:
             ``(x_name, y_name, z_name)``.
@@ -163,9 +198,9 @@ class XarraySurfacePlotMixin:
         z_name = selection["z"] if selection["z"] in known_names else list(ds.data_vars)[0]
         dimensions = list(ds[z_name].dims) if z_name in ds.data_vars else list(ds.dims)
         x_name = selection["x"] if selection["x"] in dimensions else dimensions[-1]
-        y_name = selection["y"] if selection["y"] in dimensions else dimensions[0]
+        y_name = selection["y"] if selection["y"] in dimensions else dimensions[-2]
         if x_name == y_name:
-            x_name, y_name = dimensions[-1], dimensions[0]
+            x_name, y_name = dimensions[-1], dimensions[-2]
         selection.update(x=x_name, y=y_name, z=z_name)
         return x_name, y_name, z_name
 

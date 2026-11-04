@@ -341,4 +341,5 @@ class SurfaceTab(SettingsTab):
     def _toggle_map(self) -> None:
         """Switch between a geographic map and plain axes, then re-plot."""
         self.canvas.show_map = self.show_map_var.get()
+        self.canvas.view_parameters = self.canvas.get_current_parameters()
         self.canvas.update_plot(is_map=self.canvas.show_map)
