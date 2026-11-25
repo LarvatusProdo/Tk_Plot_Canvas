@@ -113,6 +113,7 @@ tk_plot_canvas/                 Package principal
 │   ├── legend.py               Légende
 │   ├── cartouche.py            Cartouche de métadonnées
 │   ├── colorbar.py             Colorbar et niveaux de contours
+│   ├── vector_field.py         Champ de vecteurs (flèches quiver, ex. direction du vent)
 │   ├── context_menu.py         Menu contextuel et raccourcis clavier
 │   ├── double_click.py         Actions du double-clic sur la figure
 │   ├── figure_export.py        Export et copie de l'image
@@ -129,6 +130,7 @@ tk_plot_canvas/                 Package principal
 │   ├── curves_tab.py           Onglet « Courbes »
 │   ├── legend_tab.py           Onglet « Légende »
 │   ├── surface_tab.py, surface_axes_frame.py   Onglet « Surface » et aspect des cartes
+│   ├── vector_field_tab.py, vector_field_frame.py   Onglet « Vecteurs » (flèches) et sa case à cocher
 │   ├── font_controls.py, font_dialogs.py   Dialogues de police
 │   ├── colorbar_dialog.py      Dialogue colorbar
 │   ├── value_range_dialog.py   Dialogue plage de valeurs / classes

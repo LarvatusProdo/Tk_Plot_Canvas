@@ -22,6 +22,7 @@ from .base_tab import SettingsTab
 from .colorbar_dialog import ColorbarDialog
 from .surface_kind_combobox import SurfaceKindCombobox
 from .value_range_dialog import ValueRangeDialog
+from .vector_field_tab import VectorToggle
 
 COLUMN_TITLES = (
     ("N°", 1),
@@ -63,7 +64,7 @@ class SurfaceTab(SettingsTab):
     """
 
     def build(self) -> None:
-        """Create the column titles, the map toggle and one row per plot."""
+        """Create the column titles, the map and arrows toggles and one row per plot."""
         for title, column in COLUMN_TITLES:
             ttk.Label(self.frame, text=title, style=STYLE_COLUMN_HEADER).grid(
                 row=1, column=column, padx=5, pady=5
@@ -77,6 +78,7 @@ class SurfaceTab(SettingsTab):
         )
         map_checkbutton.grid(row=0, column=0, columnspan=20, sticky="w", padx=5, pady=10)
         ToolTip(map_checkbutton, MAP_HELP)
+        VectorToggle(self, row=0, column=20)
         self.surface_widgets: dict[int, SurfaceWidgets] = {}
         if len(self.canvas.datasets) == 0:
             return

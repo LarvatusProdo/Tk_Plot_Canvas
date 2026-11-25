@@ -167,6 +167,8 @@ class XarraySurfacePlotMixin:
         self._replace_colorbar(surface, label_with_units(ds, z_name))
         self._apply_default_metadata_keys(label, legend=False)
         self._register_plot(surface, label)
+        if len(self.lines) == 1:
+            self.draw_vector_field()
         self._update_cartouche_for_new_plot(label, replot)
         self._apply_surface_texts(title, x_name.capitalize(), y_name.capitalize())
         self._finish_surface_plot()

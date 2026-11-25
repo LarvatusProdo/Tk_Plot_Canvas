@@ -14,6 +14,7 @@ from ..config import (
     KEY_SUBPLOT_PARAMS,
     KEY_SURFACE_KIND,
     KEY_SURFACE_SIZES,
+    KEY_VECTOR_FIELD,
     KEY_XARRAY_3D,
     PLOT_TYPE_2D,
     PLOT_TYPE_3D,
@@ -80,6 +81,7 @@ def restore_xarray_selection(canvas: "TkPlotCanvas", parameters: Parameters) -> 
         kind = parameters[KEY_XARRAY_3D].get(KEY_SURFACE_KIND, DEFAULT_SURFACE_KIND)
         canvas.surface_kind = kind if kind in SURFACE_KINDS else DEFAULT_SURFACE_KIND
         canvas.surface_sizes = _surface_sizes(parameters[KEY_XARRAY_3D].get(KEY_SURFACE_SIZES))
+        canvas.load_vector_field_parameter(parameters[KEY_XARRAY_3D].get(KEY_VECTOR_FIELD))
 
 
 def _surface_sizes(saved: Any) -> dict[str, float]:

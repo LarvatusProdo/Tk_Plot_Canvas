@@ -36,7 +36,7 @@ class SurfaceSlicesMixin:
 
     Requires the host canvas attributes ``datasets``, ``lines``, ``plot_type``,
     ``xarray_variables``, ``slice_indices`` and ``figure_canvas``, and the
-    :class:`SurfaceRedrawMixin` methods.
+    :class:`SurfaceRedrawMixin` and :class:`VectorFieldMixin` methods.
     """
 
     def _sliced_variable(self) -> Any:
@@ -110,4 +110,5 @@ class SurfaceSlicesMixin:
         # The colorbar follows the last redrawn surface: end with the first one.
         for line_index in reversed(range(len(self.lines))):
             self._redraw_surface(line_index, surface_levels(self.lines[line_index]))
+        self.draw_vector_field()
         self.figure_canvas.draw_idle()

@@ -22,6 +22,7 @@ from ..config import (
     KEY_SURFACE_KIND,
     KEY_SURFACE_SIZES,
     KEY_VALUE_RANGE,
+    KEY_VECTOR_FIELD,
     KEY_XARRAY_3D,
     PLOT_TYPE_3D,
     STYLE_CARTOUCHE_CELL,
@@ -234,6 +235,7 @@ def _capture_surface(canvas: "TkPlotCanvas") -> dict[str, Any]:
         "affichage_map": canvas.show_map,
         KEY_COLORBAR_STYLE: canvas.get_colorbar_style_parameter(),
         KEY_SURFACE_AXES_STYLE: canvas.get_surface_axes_style_parameter(),
+        KEY_VECTOR_FIELD: canvas.get_vector_field_parameter(),
     }
 
 

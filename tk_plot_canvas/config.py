@@ -118,6 +118,31 @@ SURFACE_SIZE_RANGES = {
 }
 KEY_SURFACE_SIZES = "surface_sizes"
 
+# --- Vector field (arrows) over 3D plots -------------------------------------
+KEY_VECTOR_FIELD = "vector_field"
+# "enabled": arrows shown; "u"/"v": variables of the x/y components ("" = no
+# arrows); "step": one arrow every "step" grid nodes (0 = automatic); "length":
+# arrow length factor (1 = an arrow of the reference speed, or a unit arrow
+# when "normalize" is set, spans the space between two arrows).
+VECTOR_FIELD_DEFAULT = {
+    "enabled": False,
+    "normalize": False,
+    "u": "",
+    "v": "",
+    "step": 0,
+    "length": 1.0,
+    "color": "black",
+    "key": True,
+}
+VECTOR_NONE_CHOICE = "Aucune"
+VECTOR_COLORS = ["black", "white", "grey", "red", "blue", "darkgreen", "magenta"]
+VECTOR_STEP_RANGE = (0, 100, 1)
+VECTOR_LENGTH_RANGE = (0.1, 10.0, 0.1)
+# Automatic step: about this many arrows along the longest axis.
+VECTOR_AUTO_ARROW_COUNT = 25
+VECTOR_ZORDER = 3
+VECTOR_KEY_POSITION = (0.9, 1.03)
+
 # --- 3D plot axes ------------------------------------------------------------
 KEY_SURFACE_AXES_STYLE = "axes_style"
 # "aspect": None keeps the Matplotlib/cartopy default, else "equal", "auto" or a
@@ -153,6 +178,7 @@ TAB_CARTOUCHE = "Cartouche"
 TAB_CURVES = "Courbes"
 TAB_LEGEND = "Légende"
 TAB_3D = "Surface"
+TAB_VECTORS = "Vecteurs"
 
 # --- Font dialog targets -----------------------------------------------------
 FONT_TARGET_CARTOUCHE = "cartouche"

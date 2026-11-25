@@ -31,6 +31,7 @@ from ..config import (
     STYLE_FRAME,
     SURFACE_AXES_STYLE_DEFAULT,
     SURFACE_SIZE_DEFAULTS,
+    VECTOR_FIELD_DEFAULT,
 )
 from ..fonts import default_font_name
 from ..settings import DialogManager, SettingsWindow
@@ -48,6 +49,7 @@ from .styles import configure_canvas_styles
 from .surface_axes import SurfaceAxesMixin
 from .surface_redraw import SurfaceRedrawMixin
 from .surface_slices import SurfaceSlicesMixin
+from .vector_field import VectorFieldMixin
 from .view_persistence import ViewPersistenceMixin
 from .xarray_curves import XarrayCurvePlotMixin
 from .xarray_surfaces import XarraySurfacePlotMixin
@@ -65,6 +67,7 @@ class TkPlotCanvas(
     SurfaceRedrawMixin,
     SurfaceSlicesMixin,
     SurfaceAxesMixin,
+    VectorFieldMixin,
     ViewPersistenceMixin,
     ContextMenuMixin,
     DoubleClickMixin,
@@ -148,6 +151,9 @@ class TkPlotCanvas(
         self.colorbar_style: dict[str, Any] = dict(COLORBAR_STYLE_DEFAULT)
         self.hidden_colorbar_label: Optional[tuple[str, dict[str, Any]]] = None
         self.surface_axes_style: dict[str, Any] = dict(SURFACE_AXES_STYLE_DEFAULT)
+        self.vector_field: dict[str, Any] = dict(VECTOR_FIELD_DEFAULT)
+        self.vector_artists: list[Any] = []
+        self.vector_reference_cache: dict[tuple[int, str, str], float] = {}
         self.lines: list[Any] = []
         self.line_labels: list[Optional[dict]] = []
         self.xarray_variables = {"x": "", "y": "", "z": ""}
@@ -285,6 +291,7 @@ class TkPlotCanvas(
     def clear_plot(self) -> None:
         """Remove every plot and the colorbar, then redraw."""
         self.remove_colorbar()
+        self.remove_vector_field()
         self.axes.cla()
         self.lines.clear()
         self.figure_canvas.draw()

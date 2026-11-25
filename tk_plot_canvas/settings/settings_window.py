@@ -17,6 +17,7 @@ from ..config import (
     TAB_CARTOUCHE,
     TAB_CURVES,
     TAB_LEGEND,
+    TAB_VECTORS,
 )
 from .axes_tab import AxesTab
 from .base_tab import SettingsTab
@@ -24,6 +25,7 @@ from .cartouche_tab import CartoucheTab
 from .curves_tab import CurvesTab
 from .legend_tab import LegendTab
 from .surface_tab import SurfaceTab
+from .vector_field_tab import VectorFieldTab
 from .window_placement import place_window, setup_secondary_window
 
 if TYPE_CHECKING:
@@ -100,6 +102,21 @@ class SettingsWindow(tk.Toplevel):
             self.tabs[TAB_LEGEND] = LegendTab(self, TAB_LEGEND)
         elif self.canvas.plot_type == PLOT_TYPE_3D:
             self.tabs[TAB_3D] = SurfaceTab(self, TAB_3D)
+            self.show_vector_tab(self.canvas.vector_field["enabled"])
+
+    def show_vector_tab(self, shown: bool) -> None:
+        """Add or remove the "Vecteurs" tab (selected when added).
+
+        Args:
+            shown: Whether the tab must be displayed.
+        """
+        tab = self.tabs.get(TAB_VECTORS)
+        if shown and tab is None:
+            self.tabs[TAB_VECTORS] = VectorFieldTab(self, TAB_VECTORS)
+        elif not shown and tab is not None:
+            self.notebook.forget(tab.frame)
+            tab.frame.destroy()
+            del self.tabs[TAB_VECTORS]
 
     def select_tab(self, tab_name: str) -> None:
         """Select a tab by title (unknown titles are ignored).

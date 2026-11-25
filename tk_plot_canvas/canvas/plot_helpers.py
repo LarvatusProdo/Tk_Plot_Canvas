@@ -17,7 +17,8 @@ class PlotHelpersMixin:
     """
 
     def _reset_plot_data(self) -> None:
-        """Clear the axes and forget the plotted artists and their labels."""
+        """Clear the axes and forget the plotted artists, their labels and the arrows."""
+        self.remove_vector_field()
         self.axes.cla()
         self.lines.clear()
         self.line_labels.clear()
