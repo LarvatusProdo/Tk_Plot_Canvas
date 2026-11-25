@@ -132,7 +132,7 @@ tk_plot_canvas/                 Package principal
 │   ├── surface_tab.py, surface_axes_frame.py   Onglet « Surface » et aspect des cartes
 │   ├── vector_field_tab.py, vector_field_frame.py   Onglet « Vecteurs » (flèches) et sa case à cocher
 │   ├── font_controls.py, font_dialogs.py   Dialogues de police
-│   ├── colorbar_dialog.py      Dialogue colorbar
+│   ├── colorbar_tab.py         Onglet « Colorbar » (affiché avec la colorbar)
 │   ├── value_range_dialog.py   Dialogue plage de valeurs / classes
 │   ├── dialog_manager.py       Un seul dialogue ouvert par élément édité
 │   ├── choices.py              Noms français des choix (styles, échelles, positions)

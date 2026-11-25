@@ -1,13 +1,13 @@
-"""Dialog editing the colorbar label, its font, its position and its geometry.
+"""Settings tab "Colorbar": label, font, position and geometry of the colorbar.
 
-Every change is applied immediately; "Annuler" (or Escape) restores the
-colorbar shown when the dialog opened, "Fermer" keeps the changes.
+The tab is shown while the colorbar is displayed ("Afficher" checkbutton of the
+"Surface" tab). Every change is applied immediately.
 """
 
 import tkinter as tk
 from functools import partial
 from tkinter import ttk
-from typing import TYPE_CHECKING, Any, Optional
+from typing import Any, Optional
 
 from ..config import (
     COLORBAR_LOCATION_NAMES,
@@ -17,16 +17,12 @@ from ..config import (
     STYLE_LABELFRAME,
 )
 from ..widgets import ToolTip
+from .base_tab import SettingsTab
 from .choices import displayed_names, name_of, value_of
 from .font_dialogs import ColorbarFontDialog
-from .window_placement import setup_dialog
-
-if TYPE_CHECKING:
-    from ..canvas.plot_canvas import TkPlotCanvas
 
 PADDING = 5
 SEPARATOR_PADY = (10, 10)
-DIALOG_SIZE_COLORBAR = "440x520"
 SPIN_TYPING_EVENTS = ("<Return>", "<FocusOut>")
 # (style key, label, minimum, maximum, step, help)
 SPIN_FIELDS = [
@@ -53,32 +49,21 @@ SPIN_FIELDS = [
 ]
 
 
-class ColorbarDialog(tk.Toplevel):
-    """Edit the label, font, position and geometry of the colorbar (applied live)."""
+class ColorbarTab(SettingsTab):
+    """Edit the label, font, position and geometry of the colorbar (applied live).
 
-    def __init__(
-        self, parent: tk.Misc, canvas: "TkPlotCanvas", colorbar: Any = None, index: int = 0
-    ) -> None:
-        """Create the dialog.
+    The colorbar describes the first surface plot.
+    """
 
-        Args:
-            parent: Window the dialog is positioned against.
-            canvas: The plot canvas being edited.
-            colorbar: Unused; the colorbar displayed by ``canvas`` is edited.
-            index: Index of the plot described by the colorbar.
-        """
-        super().__init__(parent)
-        self.title("Colorbar")
-        setup_dialog(self, parent, DIALOG_SIZE_COLORBAR, on_escape=self.cancel)
-        self.canvas = canvas
-        self.index = index
-        self._initial_style = dict(canvas.colorbar_style)
-        self._initial_label = self._current_label()
-        frame = ttk.LabelFrame(self, text="Colorbar", padding=(10, 10), style=STYLE_LABELFRAME)
-        frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
-        self._build_label_controls(frame, parent)
+    def build(self) -> None:
+        """Create the label controls and the geometry controls."""
+        self.index = 0
+        frame = ttk.LabelFrame(
+            self.frame, text="Colorbar", padding=(10, 10), style=STYLE_LABELFRAME
+        )
+        frame.grid(row=0, column=0, sticky="nw", padx=10, pady=10)
+        self._build_label_controls(frame)
         self._build_geometry_controls(frame)
-        self._build_buttons()
 
     def _label_text(self) -> Optional[Any]:
         """Return the label of the displayed colorbar.
@@ -116,15 +101,14 @@ class ColorbarDialog(tk.Toplevel):
         label.grid(row=row, column=0, sticky="e", padx=PADDING, pady=PADDING)
         return label
 
-    def _build_label_controls(self, frame: ttk.LabelFrame, parent: tk.Misc) -> None:
+    def _build_label_controls(self, frame: ttk.LabelFrame) -> None:
         """Create the label entry (applied while typing) and the font button.
 
         Args:
             frame: Parent frame.
-            parent: Window owning the font dialog.
         """
         self._add_label(frame, "Libellé :", 0)
-        self.label_var = tk.StringVar(value=self._initial_label)
+        self.label_var = tk.StringVar(value=self._current_label())
         ttk.Entry(frame, textvariable=self.label_var, width=30, style=STYLE_ENTRY).grid(
             row=0, column=1, sticky="w", padx=PADDING, pady=PADDING
         )
@@ -136,7 +120,7 @@ class ColorbarDialog(tk.Toplevel):
             command=partial(
                 self.canvas.dialogs.show,
                 "font:colorbar",
-                partial(ColorbarFontDialog, parent, self.canvas),
+                partial(ColorbarFontDialog, self.window, self.canvas),
             ),
         ).grid(row=10, column=0, columnspan=3, sticky="we", padx=PADDING, pady=PADDING)
 
@@ -204,17 +188,6 @@ class ColorbarDialog(tk.Toplevel):
             spinbox.bind(sequence, lambda _event: self.apply_geometry())
         ToolTip(spinbox, help_text)
 
-    def _build_buttons(self) -> None:
-        """Create the "Annuler" and "Fermer" buttons."""
-        frame = ttk.Frame(self)
-        frame.pack(fill=tk.X, padx=10, pady=(0, 10))
-        ttk.Button(frame, text="Fermer", style=STYLE_BUTTON, command=self.destroy).pack(
-            side="right"
-        )
-        ttk.Button(frame, text="Annuler", style=STYLE_BUTTON, command=self.cancel).pack(
-            side="right", padx=10
-        )
-
     def _typed_style(self) -> dict[str, Any]:
         """Read the position and geometry; invalid values are replaced by the current ones.
 
@@ -232,7 +205,7 @@ class ColorbarDialog(tk.Toplevel):
                 value = -1.0
             if value < 0 or (value == 0 and key != "pad"):
                 variable.set(str(current))
-                self.bell()
+                self.frame.bell()
                 value = current
             style[key] = value
         return style
@@ -245,15 +218,6 @@ class ColorbarDialog(tk.Toplevel):
             return
         self.canvas.set_colorbar_style(style, self.index)
         self.canvas.figure_canvas.draw_idle()
-
-    def cancel(self) -> None:
-        """Restore the colorbar shown when the dialog opened, then close the dialog."""
-        self.canvas.set_colorbar_style(dict(self._initial_style), self.index)
-        label = self._label_text()
-        if label is not None:
-            label.set_text(self._initial_label)
-        self.canvas.figure_canvas.draw_idle()
-        self.destroy()
 
     def _on_label_changed(self, *_trace_args: Any) -> None:
         """Update the colorbar label while the user types.

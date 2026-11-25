@@ -53,6 +53,5 @@ class VectorToggle:
 
     def _toggle(self) -> None:
         """Show or hide the arrows, add or remove the "Vecteurs" tab."""
-        enabled = self.variable.get()
-        self._tab.canvas.set_vector_field({"enabled": enabled})
-        self._tab.window.show_vector_tab(enabled)
+        self._tab.canvas.set_vector_field({"enabled": self.variable.get()})
+        self._tab.window.update_optional_tabs()

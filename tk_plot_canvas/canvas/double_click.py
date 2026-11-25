@@ -11,7 +11,7 @@ from typing import Any, Optional
 from matplotlib.backend_bases import MouseEvent
 from matplotlib.text import Text
 
-from ..config import PLOT_TYPE_2D, TAB_3D, TAB_AXES, TAB_CURVES, TAB_LEGEND
+from ..config import PLOT_TYPE_2D, TAB_AXES, TAB_COLORBAR, TAB_CURVES, TAB_LEGEND
 from ..widgets.inline_text_editor import InlineTextEditor
 from .colorbar import colorbar_label_axis
 
@@ -90,7 +90,7 @@ class DoubleClickMixin:
             A tab name, or None when nothing relevant was clicked.
         """
         if self.colorbar is not None and event.inaxes is self.colorbar.ax:
-            return TAB_3D
+            return TAB_COLORBAR
         legend = self.axes.get_legend()
         if self.plot_type == PLOT_TYPE_2D:
             if legend is not None and legend.contains(event)[0]:

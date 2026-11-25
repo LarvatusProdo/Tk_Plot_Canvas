@@ -19,7 +19,6 @@ from ..config import (
 )
 from ..widgets import CheckedSpinbox, ToolTip
 from .base_tab import SettingsTab
-from .colorbar_dialog import ColorbarDialog
 from .surface_kind_combobox import SurfaceKindCombobox
 from .value_range_dialog import ValueRangeDialog
 from .vector_field_tab import VectorToggle
@@ -53,7 +52,6 @@ class SurfaceWidgets:
     alpha_spinbox: CheckedSpinbox
     size_spinbox: CheckedSpinbox
     colorbar_var: tk.BooleanVar
-    colorbar_button: ttk.Button
 
 
 class SurfaceTab(SettingsTab):
@@ -112,10 +110,6 @@ class SurfaceTab(SettingsTab):
         size_spinbox = self._add_spinbox(row, 35, SIZE_HELP, partial(self._update_size, index))
         self._sync_size_spinbox(size_spinbox)
         colorbar_var = self._add_colorbar_checkbutton(row, index)
-        colorbar_button = self._add_button(
-            row, 50, "Réglages…", partial(self._open_colorbar_dialog, index)
-        )
-        self._update_colorbar_button(colorbar_button)
         return SurfaceWidgets(
             variable_combobox,
             kind_combobox,
@@ -123,7 +117,6 @@ class SurfaceTab(SettingsTab):
             alpha_spinbox,
             size_spinbox,
             colorbar_var,
-            colorbar_button,
         )
 
     def _add_button(self, row: int, column: int, text: str, command: Any) -> ttk.Button:
@@ -141,14 +134,6 @@ class SurfaceTab(SettingsTab):
         button = ttk.Button(self.frame, text=text, command=command, style=STYLE_BUTTON)
         button.grid(row=row, column=column, sticky="w", padx=CELL_PADDING, pady=CELL_PADDING)
         return button
-
-    def _update_colorbar_button(self, button: ttk.Button) -> None:
-        """Enable the colorbar settings button only while a colorbar is displayed.
-
-        Args:
-            button: The colorbar "Réglages…" button.
-        """
-        button.state(["!disabled"] if self.canvas.colorbar is not None else ["disabled"])
 
     def _add_variable_combobox(self, row: int, index: int) -> ttk.Combobox:
         """Create the combobox choosing the plotted variable.
@@ -234,18 +219,6 @@ class SurfaceTab(SettingsTab):
         checkbutton.bind("<ButtonRelease-1>", lambda _event: self._toggle_colorbar(index))
         return colorbar_var
 
-    def _open_colorbar_dialog(self, index: int) -> None:
-        """Open the colorbar dialog (only when a colorbar is displayed).
-
-        Args:
-            index: Plot index.
-        """
-        if self.canvas.colorbar is not None:
-            self.canvas.dialogs.show(
-                "colorbar",
-                partial(ColorbarDialog, self.window, self.canvas, self.canvas.colorbar, index),
-            )
-
     def _open_value_range_dialog(self, index: int) -> None:
         """Open the dialog editing value limits and contour classes.
 
@@ -260,7 +233,7 @@ class SurfaceTab(SettingsTab):
             )
 
     def _toggle_colorbar(self, index: int) -> None:
-        """Show or hide the colorbar (the variable still holds the old state).
+        """Show or hide the colorbar and its tab (the variable still holds the old state).
 
         Args:
             index: Plot index.
@@ -270,7 +243,7 @@ class SurfaceTab(SettingsTab):
         else:
             self.canvas.show_colorbar(index)
         self.redraw()
-        self._update_colorbar_button(self.surface_widgets[index].colorbar_button)
+        self.window.update_optional_tabs()
 
     def _update_colormap(self, index: int) -> None:
         """Apply the selected colormap.

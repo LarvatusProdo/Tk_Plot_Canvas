@@ -15,6 +15,7 @@ from ..config import (
     TAB_3D,
     TAB_AXES,
     TAB_CARTOUCHE,
+    TAB_COLORBAR,
     TAB_CURVES,
     TAB_LEGEND,
     TAB_VECTORS,
@@ -22,6 +23,7 @@ from ..config import (
 from .axes_tab import AxesTab
 from .base_tab import SettingsTab
 from .cartouche_tab import CartoucheTab
+from .colorbar_tab import ColorbarTab
 from .curves_tab import CurvesTab
 from .legend_tab import LegendTab
 from .surface_tab import SurfaceTab
@@ -30,6 +32,12 @@ from .window_placement import place_window, setup_secondary_window
 
 if TYPE_CHECKING:
     from ..canvas.plot_canvas import TkPlotCanvas
+
+# Tabs shown after the "Surface" tab only while their element is displayed, in this order.
+OPTIONAL_3D_TABS: tuple[tuple[str, type[SettingsTab]], ...] = (
+    (TAB_COLORBAR, ColorbarTab),
+    (TAB_VECTORS, VectorFieldTab),
+)
 
 
 class SettingsWindow(tk.Toplevel):
@@ -102,21 +110,37 @@ class SettingsWindow(tk.Toplevel):
             self.tabs[TAB_LEGEND] = LegendTab(self, TAB_LEGEND)
         elif self.canvas.plot_type == PLOT_TYPE_3D:
             self.tabs[TAB_3D] = SurfaceTab(self, TAB_3D)
-            self.show_vector_tab(self.canvas.vector_field["enabled"])
+            self.update_optional_tabs()
 
-    def show_vector_tab(self, shown: bool) -> None:
-        """Add or remove the "Vecteurs" tab (selected when added).
+    def update_optional_tabs(self) -> None:
+        """Add or remove the "Colorbar" and "Vecteurs" tabs to match the plot."""
+        if TAB_3D not in self.tabs:
+            return
+        shown = {
+            TAB_COLORBAR: self.canvas.colorbar is not None,
+            TAB_VECTORS: self.canvas.vector_field["enabled"],
+        }
+        for position, (title, tab_class) in enumerate(OPTIONAL_3D_TABS):
+            if shown[title] and title not in self.tabs:
+                self._insert_tab(title, tab_class, position)
+            elif not shown[title] and title in self.tabs:
+                tab = self.tabs.pop(title)
+                self.notebook.forget(tab.frame)
+                tab.frame.destroy()
+
+    def _insert_tab(self, title: str, tab_class: type[SettingsTab], position: int) -> None:
+        """Create an optional tab and move it to its place after the "Surface" tab.
 
         Args:
-            shown: Whether the tab must be displayed.
+            title: Tab title.
+            tab_class: Class of the tab.
+            position: Index of the tab in ``OPTIONAL_3D_TABS``.
         """
-        tab = self.tabs.get(TAB_VECTORS)
-        if shown and tab is None:
-            self.tabs[TAB_VECTORS] = VectorFieldTab(self, TAB_VECTORS)
-        elif not shown and tab is not None:
-            self.notebook.forget(tab.frame)
-            tab.frame.destroy()
-            del self.tabs[TAB_VECTORS]
+        previous_titles = [name for name, _tab_class in OPTIONAL_3D_TABS[:position]]
+        shown_before = sum(name in self.tabs for name in previous_titles)
+        self.tabs[title] = tab_class(self, title)
+        index = self.notebook.index(self.tabs[TAB_3D].frame) + 1 + shown_before
+        self.notebook.insert(index, self.tabs[title].frame)
 
     def select_tab(self, tab_name: str) -> None:
         """Select a tab by title (unknown titles are ignored).

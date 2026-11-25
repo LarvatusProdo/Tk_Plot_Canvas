@@ -155,6 +155,8 @@ class ColorbarMixin:
         else:
             self.hide_colorbar()
         self.figure_canvas.draw()
+        # Keeps the "Surface" checkbutton and the "Colorbar" tab in step.
+        self._reopen_settings_window(self._selected_settings_tab())
 
     def show_colorbar(self, index: int = 0) -> None:
         """Display the colorbar with the stored style and the remembered label.

@@ -178,6 +178,7 @@ TAB_CARTOUCHE = "Cartouche"
 TAB_CURVES = "Courbes"
 TAB_LEGEND = "Légende"
 TAB_3D = "Surface"
+TAB_COLORBAR = "Colorbar"
 TAB_VECTORS = "Vecteurs"
 
 # --- Font dialog targets -----------------------------------------------------
